@@ -88,7 +88,9 @@ describe('US-04.6 & US-05: Stripe Checkout Pro Exam Pass ($19) & Stateless ?coho
     fireEvent.input(verifierInput, { target: { value: receipt } });
     fireEvent.click(getByTestId('verify-cohort-receipt-btn'));
 
-    expect(getByTestId('cohort-receipt-verdict').textContent).toContain('VALID RECEIPT');
+    const verdictText = getByTestId('cohort-receipt-verdict').textContent ?? '';
+    expect(verdictText).toMatch(/^VALID RECEIPT/);
+    expect(verdictText).not.toContain('INVALID');
   });
 
   it('US-05.2: supports cohort seed lengths 1..64 and score boundaries 0% (0/4 beds) to 100% (4/4 beds)', () => {

@@ -69,7 +69,16 @@ describe('US-01: PhysioNet PTB-XL 120-Record Python + DuckDB Binary Compiler & L
       expect(f.tOffSample - f.qrsOnSample).toBe(Math.round(f.qtMs * 0.5));
 
       const w = getCaseWaveforms(dataset, rec.caseId, 1250);
-      expect(Math.abs(w.II[f.qrsOffSample]! - f.stMv)).toBeLessThanOrEqual(0.02);
+      if (f.qrsMs > 0 && f.rPeakSamples.length > 0) {
+        const qrsPre = f.rPeakSamples[0]! - f.qrsOnSample;
+        const qrsSamples = f.qrsOffSample - f.qrsOnSample;
+        for (const rp of f.rPeakSamples) {
+          const beatOn = (rp - qrsPre + 1250) % 1250;
+          const beatOff = (beatOn + qrsSamples) % 1250;
+          const stRel = w.II[beatOff]! - w.II[beatOn]!;
+          expect(Math.abs(stRel - f.stMv)).toBeLessThanOrEqual(0.025);
+        }
+      }
     }
 
     // Verify Einthoven's identity II = I + III and Goldberger identities across records

@@ -180,9 +180,9 @@ def synthesize_12lead_record(rhythm: str, rec_offset: int, seed: int) -> tuple[l
             continue
 
         # Beat-structured rhythms: NSR, SB, SVT, AFIB, AFLT, AVB3, PEA, STEMI_ANT
-        v_I = wander * 0.6
-        v_II = wander
-        v_prec = [wander * 0.5 for _ in range(6)]
+        v_I = 0.0
+        v_II = 0.0
+        v_prec = [0.0 for _ in range(6)]
 
         if rhythm == "AFIB":
             fib = 0.045 * math.sin(19.0 * theta + phase_seed) + 0.035 * math.cos(29.0 * theta)
@@ -243,11 +243,32 @@ def synthesize_12lead_record(rhythm: str, rec_offset: int, seed: int) -> tuple[l
         for v_idx in range(6):
             precordials[v_idx][s] = max(-4.5, min(4.5, v_prec[v_idx]))
 
-    j_err = st_mv - lead_II[qrs_off]
-    if abs(j_err) > 1e-4:
+    if qrs_ms > 0 and r_peaks:
+        iso_ii = lead_II[qrs_on]
+        iso_i = lead_I[qrs_on]
+        iso_prec = [precordials[v_idx][qrs_on] for v_idx in range(6)]
         for s in range(SAMPLES_PER_TILE):
-            adj = j_err * periodic_gauss(s, qrs_off, 4.0, SAMPLES_PER_TILE)
-            lead_II[s] = max(-4.5, min(4.5, lead_II[s] + adj))
+            lead_II[s] = max(-4.5, min(4.5, lead_II[s] - iso_ii))
+            lead_I[s] = max(-4.5, min(4.5, lead_I[s] - iso_i))
+            for v_idx in range(6):
+                precordials[v_idx][s] = max(-4.5, min(4.5, precordials[v_idx][s] - iso_prec[v_idx]))
+
+        half_w = float(min(24, max(8, qrs_samples - 2)))
+        for rp in r_peaks:
+            rp_qrs_on = (rp - qrs_pre) % SAMPLES_PER_TILE
+            rp_qrs_off = (rp_qrs_on + qrs_samples) % SAMPLES_PER_TILE
+            j_err = st_mv - (lead_II[rp_qrs_off] - lead_II[rp_qrs_on])
+            if abs(j_err) > 1e-5:
+                for s in range(SAMPLES_PER_TILE):
+                    dist = ((s - rp_qrs_off + SAMPLES_PER_TILE // 2) % SAMPLES_PER_TILE) - (SAMPLES_PER_TILE // 2)
+                    if abs(dist) < half_w:
+                        w_st = 0.5 * (1.0 + math.cos(math.pi * dist / half_w))
+                        adj_ii = j_err * w_st
+                        lead_II[s] = max(-4.5, min(4.5, lead_II[s] + adj_ii))
+                        lead_I[s] = max(-4.5, min(4.5, lead_I[s] + 0.65 * adj_ii))
+                        for v_idx in range(6):
+                            st_factor = 1.15 if (rhythm == "STEMI_ANT" and v_idx <= 3) else 0.35
+                            precordials[v_idx][s] = max(-4.5, min(4.5, precordials[v_idx][s] + st_factor * adj_ii))
 
     # Quantize I and II to float32 first, then derive III, aVR, aVL, aVF to satisfy Einthoven & Goldberger identities
     f32_I = list(struct.unpack(f"<{SAMPLES_PER_TILE}f", struct.pack(f"<{SAMPLES_PER_TILE}f", *lead_I)))

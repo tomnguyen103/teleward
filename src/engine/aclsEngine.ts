@@ -667,6 +667,7 @@ export class ShiftController {
     rr: number;
   }>;
   private readonly beds: BedState[];
+  private readonly rescuedFlags: boolean[];
   private elapsedSec = 0;
   private tickCount = 0;
   private fractionalSec = 0;
@@ -677,6 +678,7 @@ export class ShiftController {
     this.bedRngs = [];
     this.continuousStates = [];
     this.beds = [];
+    this.rescuedFlags = [];
 
     for (let i = 0; i < 4; i++) {
       const bedSeed = Math.floor(masterRng() * 0xffffffff) >>> 0;
@@ -697,6 +699,7 @@ export class ShiftController {
 
       const caseId = getCaseIdForRhythm(rhythm, i);
       const meta = BED_PATIENTS[i]!;
+      this.rescuedFlags.push(rhythm === 'NSR');
 
       this.beds.push({
         bedIndex: i,
@@ -764,7 +767,7 @@ export class ShiftController {
           cState,
           bed.vitals.rhythm,
           DT_SEC,
-          bed.stabilized ? 0 : this.elapsedSec,
+          this.rescuedFlags[i] ? 0 : this.elapsedSec,
           rng,
           bed.vitals.paced
         );
@@ -775,10 +778,11 @@ export class ShiftController {
         let nextRhythm = bed.vitals.rhythm;
         let nextPaced = bed.vitals.paced;
 
-        if (!bed.stabilized && !bed.arrested) {
+        if (!this.rescuedFlags[i] && !bed.arrested) {
           bed.countdownSec = Math.max(0, Number((60 - this.elapsedSec).toFixed(1)));
           if (bed.countdownSec <= 0) {
             bed.arrested = true;
+            this.rescuedFlags[i] = false;
             bed.stabilized = false;
             nextRhythm = 'ASYSTOLE';
             nextPaced = false;
@@ -793,9 +797,7 @@ export class ShiftController {
           map: 0,
           paced: nextPaced,
         });
-        if (bed.vitals.sbp < 40 || bed.arrested) {
-          bed.stabilized = false;
-        }
+        bed.stabilized = Boolean(this.rescuedFlags[i] && !bed.arrested && bed.vitals.sbp >= 40);
         bed.alarmPriority =
           bed.ahaViolations.length > 0
             ? 'CRISIS'
@@ -844,7 +846,7 @@ export class ShiftController {
     );
 
     if (decision.converted) {
-      bed.stabilized = true;
+      this.rescuedFlags[bedIndex] = true;
       bed.arrested = false;
     }
 
@@ -852,7 +854,7 @@ export class ShiftController {
       bed.ahaViolations.push(decision.ahaViolationCode);
       if (decision.nextRhythm === 'VFIB' || decision.nextRhythm === 'ASYSTOLE') {
         bed.arrested = true;
-        bed.stabilized = false;
+        this.rescuedFlags[bedIndex] = false;
       }
     }
 
@@ -862,9 +864,7 @@ export class ShiftController {
       map: 0,
       paced: nextPaced,
     });
-    if (bed.vitals.sbp < 40 || bed.arrested) {
-      bed.stabilized = false;
-    }
+    bed.stabilized = Boolean(this.rescuedFlags[bedIndex] && !bed.arrested && bed.vitals.sbp >= 40);
     bed.alarmPriority =
       bed.ahaViolations.length > 0
         ? 'CRISIS'
