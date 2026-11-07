@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.scratch/
+.codegraph/
+graphify-out/
+*.tmp
+*.tmp.*
+__pycache__/
+*.pyc
+.env
+.env.*
+coverage/

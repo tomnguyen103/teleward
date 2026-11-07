@@ -1,0 +1,20 @@
+{
+  "project": "teleward",
+  "version": "1.0.0",
+  "designAuthority": "design.md",
+  "archetypes": {
+    "shift": "monitoring",
+    "daily": "monitoring",
+    "caliper": "editor",
+    "cohort": "settings-admin"
+  },
+  "preEmitCritique": {
+    "philosophy": 5,
+    "hierarchy": 5,
+    "execution": 5,
+    "specificity": 5,
+    "restraint": 5,
+    "variety": 5
+  },
+  "slopGatesPassed": true
+}
