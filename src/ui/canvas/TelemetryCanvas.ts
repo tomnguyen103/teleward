@@ -1,0 +1,319 @@
+import { synthesizeRealtimeSample } from '../../engine/physiology.ts';
+import {
+  LEAD_NAMES,
+  type PtbxlCaseRecord,
+  type VitalState,
+} from '../../types/teleward.ts';
+import type { CaseWaveforms12Lead } from '../../data/ptbxlLoader.ts';
+import {
+  type CaliperHandleState,
+  type CaliperState,
+  type CaliperComputedMetrics,
+  type CaliperSubmissionInput,
+  type CaliperGradeReport,
+  computeCaliperMetrics,
+  nudgeCaliperState,
+  gradeCaliperSubmission,
+} from '../../engine/caliperGrading.ts';
+
+export {
+  type CaliperHandleState,
+  type CaliperState,
+  type CaliperComputedMetrics,
+  type CaliperSubmissionInput,
+  type CaliperGradeReport,
+  computeCaliperMetrics,
+  nudgeCaliperState,
+  gradeCaliperSubmission,
+};
+
+/**
+ * Zero-allocation Float32Array circular buffer for 500 Hz 4-trace ICU bed telemetry.
+ */
+export class TelemetryRingBuffer {
+  public readonly capacity: number;
+  public readonly eraseGapSamples: number;
+  public readonly ecg: Float32Array;
+  public readonly abp: Float32Array;
+  public readonly spo2: Float32Array;
+  public readonly etco2: Float32Array;
+  public writeCursor = 0;
+  public sampleTimeSec = 0;
+  public fractionalSamples = 0;
+
+  constructor(capacity = 2500, eraseGapSamples = 90) {
+    this.capacity = capacity;
+    this.eraseGapSamples = eraseGapSamples;
+    this.ecg = new Float32Array(capacity);
+    this.abp = new Float32Array(capacity);
+    this.spo2 = new Float32Array(capacity);
+    this.etco2 = new Float32Array(capacity);
+  }
+
+  public prefill(vitals: VitalState, samplesToFill = 1200): void {
+    const count = Math.min(this.capacity, samplesToFill);
+    for (let i = 0; i < count; i++) {
+      this.sampleTimeSec += 0.002;
+      const s = synthesizeRealtimeSample(vitals, this.sampleTimeSec);
+      this.ecg[this.writeCursor] = s.ecgMv;
+      this.abp[this.writeCursor] = s.abpMmHg;
+      this.spo2[this.writeCursor] = s.spo2Wave;
+      this.etco2[this.writeCursor] = s.etco2MmHg;
+      this.writeCursor = (this.writeCursor + 1) % this.capacity;
+    }
+  }
+}
+
+export function stepTelemetryFrame(
+  ring: TelemetryRingBuffer,
+  vitals: VitalState,
+  rawDeltaMs: number
+): { clampedDeltaMs: number; samplesWritten: number } {
+  const clampedDeltaMs = Math.max(0, Math.min(100, rawDeltaMs));
+  const exactSamples = (clampedDeltaMs / 1000) * 500 + ring.fractionalSamples;
+  const samplesWritten = Math.floor(exactSamples + 1e-9);
+  ring.fractionalSamples = Math.max(0, exactSamples - samplesWritten);
+
+  for (let i = 0; i < samplesWritten; i++) {
+    ring.sampleTimeSec += 0.002;
+    const s = synthesizeRealtimeSample(vitals, ring.sampleTimeSec);
+    ring.ecg[ring.writeCursor] = s.ecgMv;
+    ring.abp[ring.writeCursor] = s.abpMmHg;
+    ring.spo2[ring.writeCursor] = s.spo2Wave;
+    ring.etco2[ring.writeCursor] = s.etco2MmHg;
+    ring.writeCursor = (ring.writeCursor + 1) % ring.capacity;
+  }
+
+  return { clampedDeltaMs, samplesWritten };
+}
+
+function isInEraseBar(sampleIdx: number, writeCursor: number, eraseGap: number, capacity: number): boolean {
+  const distAhead = (sampleIdx - writeCursor + capacity) % capacity;
+  return distAhead > 0 && distAhead < eraseGap;
+}
+
+export function getSafe2dContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D | null {
+  if (typeof navigator !== 'undefined' && /jsdom/i.test(navigator.userAgent)) {
+    return null;
+  }
+  try {
+    return canvas.getContext('2d');
+  } catch {
+    return null;
+  }
+}
+
+export function renderTelemetryBedCanvas(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  ring: TelemetryRingBuffer,
+  selected: boolean
+): void {
+  ctx.fillStyle = '#0B0F17';
+  ctx.fillRect(0, 0, width, height);
+
+  // Subtle millimeter calibration grid
+  ctx.strokeStyle = selected ? 'rgba(129, 140, 248, 0.14)' : 'rgba(148, 163, 184, 0.07)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let x = 0; x < width; x += 24) {
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
+  }
+  for (let y = 0; y < height; y += 24) {
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
+  }
+  ctx.stroke();
+
+  const stride = Math.max(1, Math.floor(ring.capacity / Math.max(64, width)));
+  const traces: Array<{
+    arr: Float32Array;
+    color: string;
+    centerY: number;
+    scaleY: number;
+    offsetVal: number;
+  }> = [
+    { arr: ring.ecg, color: '#22C55E', centerY: height * 0.24, scaleY: -22, offsetVal: 0 },
+    { arr: ring.abp, color: '#F87171', centerY: height * 0.56, scaleY: -0.25, offsetVal: 70 },
+    { arr: ring.spo2, color: '#38BDF8', centerY: height * 0.77, scaleY: -18, offsetVal: 0.3 },
+    { arr: ring.etco2, color: '#FBBF24', centerY: height * 0.93, scaleY: -0.45, offsetVal: 20 },
+  ];
+
+  for (let t = 0; t < traces.length; t++) {
+    const tr = traces[t]!;
+    ctx.strokeStyle = tr.color;
+    ctx.lineWidth = t === 0 ? 1.75 : 1.3;
+    ctx.beginPath();
+    let penDown = false;
+
+    for (let s = 0; s < ring.capacity; s += stride) {
+      if (isInEraseBar(s, ring.writeCursor, ring.eraseGapSamples, ring.capacity)) {
+        penDown = false;
+        continue;
+      }
+      const x = (s / ring.capacity) * width;
+      const val = tr.arr[s]!;
+      const y = tr.centerY + (val - tr.offsetVal) * tr.scaleY;
+      if (!penDown) {
+        ctx.moveTo(x, y);
+        penDown = true;
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    ctx.stroke();
+  }
+}
+
+export function render12LeadCaliperCanvas(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  waveforms: CaseWaveforms12Lead,
+  caliper: CaliperState,
+  marchingSpikesMs: number[],
+  showGroundTruth: boolean,
+  record: PtbxlCaseRecord,
+  darkTheme: boolean
+): void {
+  ctx.fillStyle = darkTheme ? '#111827' : '#FFFDF9';
+  ctx.fillRect(0, 0, width, height);
+
+  // Standard 25 mm/s, 10 mm/mV ECG paper minor (40ms) and major (200ms) grid
+  ctx.strokeStyle = 'rgba(225, 29, 72, 0.14)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  const minorStepX = Math.max(6, width / 125);
+  const minorStepY = Math.max(6, height / 60);
+  for (let x = 0; x <= width; x += minorStepX) {
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
+  }
+  for (let y = 0; y <= height; y += minorStepY) {
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
+  }
+  ctx.stroke();
+
+  ctx.strokeStyle = 'rgba(225, 29, 72, 0.32)';
+  ctx.beginPath();
+  const majorStepX = minorStepX * 5;
+  const majorStepY = minorStepY * 5;
+  for (let x = 0; x <= width; x += majorStepX) {
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
+  }
+  for (let y = 0; y <= height; y += majorStepY) {
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
+  }
+  ctx.stroke();
+
+  // Render 4 rows x 3 columns for the 12 leads + bottom Lead II rhythm strip
+  const rows = 4;
+  const cols = 3;
+  const cellW = width / cols;
+  const cellH = (height * 0.75) / rows;
+
+  ctx.strokeStyle = darkTheme ? '#22C55E' : '#0F172A';
+  ctx.lineWidth = 1.4;
+
+  for (let l = 0; l < LEAD_NAMES.length; l++) {
+    const leadName = LEAD_NAMES[l]!;
+    const col = Math.floor(l / rows);
+    const row = l % rows;
+    const x0 = col * cellW;
+    const yMid = row * cellH + cellH * 0.52;
+    const samples = waveforms[leadName];
+
+    ctx.beginPath();
+    const sliceSamples = 1250; // 2.5s per column
+    for (let s = 0; s < sliceSamples; s += 2) {
+      const px = x0 + (s / sliceSamples) * (cellW - 8) + 4;
+      const py = yMid - (samples[s] ?? 0) * (cellH * 0.32);
+      if (s === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    if (typeof ctx.fillText === 'function') {
+      ctx.fillStyle = darkTheme ? '#E2E8F0' : '#0F172A';
+      ctx.font = '600 11px monospace';
+      ctx.fillText(leadName, x0 + 6, row * cellH + 14);
+    }
+  }
+
+  // Bottom full-width 10-second Lead II rhythm strip (where T1/T2 calipers operate directly)
+  const stripTop = height * 0.75;
+  const stripMid = stripTop + (height - stripTop) * 0.5;
+  const stripScale = (height - stripTop) * 0.34;
+  const leadII = waveforms.II;
+
+  if (typeof ctx.fillText === 'function') {
+    ctx.fillStyle = darkTheme ? '#38BDF8' : '#1E3A8A';
+    ctx.font = '600 11px monospace';
+    ctx.fillText('II (RHYTHM)', 6, stripTop + 14);
+  }
+
+  ctx.strokeStyle = darkTheme ? '#38BDF8' : '#1E3A8A';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  for (let s = 0; s < leadII.length; s += 4) {
+    const px = (s / 5000) * width;
+    const py = stripMid - (leadII[s] ?? 0) * stripScale;
+    if (s === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+
+  // Marching R-R spikes (dashed)
+  ctx.strokeStyle = 'rgba(251, 191, 36, 0.45)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (const mMs of marchingSpikesMs) {
+    const mx = (mMs / 10000) * width;
+    ctx.moveTo(mx, stripTop);
+    ctx.lineTo(mx, height);
+  }
+  ctx.stroke();
+
+  // Primary T1 & T2 vertical time calipers
+  const xT1 = (caliper.t1Ms / 10000) * width;
+  const xT2 = (caliper.t2Ms / 10000) * width;
+  ctx.strokeStyle = '#818CF8';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(xT1, 0);
+  ctx.lineTo(xT1, height);
+  ctx.moveTo(xT2, 0);
+  ctx.lineTo(xT2, height);
+  ctx.stroke();
+
+  // Horizontal V1 & V2 amplitude calipers on the bottom Lead II strip
+  const yV1 = stripMid - caliper.v1Mv * stripScale;
+  const yV2 = stripMid - caliper.v2Mv * stripScale;
+  ctx.strokeStyle = '#F87171';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(0, yV1);
+  ctx.lineTo(width, yV1);
+  ctx.moveTo(0, yV2);
+  ctx.lineTo(width, yV2);
+  ctx.stroke();
+
+  if (showGroundTruth) {
+    const f = record.fiducials;
+    const xQrsOn = ((f.qrsOnSample * 2) / 10000) * width;
+    const xTOff = ((f.tOffSample * 2) / 10000) * width;
+    ctx.strokeStyle = '#22C55E';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(xQrsOn, stripTop);
+    ctx.lineTo(xQrsOn, height);
+    ctx.moveTo(xTOff, stripTop);
+    ctx.lineTo(xTOff, height);
+    ctx.stroke();
+  }
+}

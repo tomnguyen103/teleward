@@ -1,0 +1,3953 @@
+{
+  "magic": "TWEC",
+  "version": 1,
+  "recordCount": 120,
+  "leadCount": 12,
+  "sampleRateHz": 500,
+  "samplesPerLeadTile": 1250,
+  "binaryByteLength": 7200032,
+  "crc32Hex": "d90e04f6",
+  "sha256Hex": "24a821fb8cb7ce802c59dfa17296565ce7777f91a9dd743e299a02f60c0b363f",
+  "records": [
+    {
+      "caseId": "ptbxl-001",
+      "recordIndex": 0,
+      "ptbxlRecordId": 10001,
+      "rhythmClass": "NSR",
+      "scpCodes": [
+        "NORM",
+        "SR"
+      ],
+      "clinicalSummary": "Normal Sinus Rhythm, normoaxis, no acute ST-T changes",
+      "age": 34,
+      "sex": "F",
+      "freeStarter": true,
+      "fiducials": {
+        "hrBpm": 72,
+        "prMs": 152,
+        "qrsMs": 84,
+        "qtMs": 374,
+        "qtcMs": 410,
+        "stMv": 0.0,
+        "pOnSample": 38,
+        "qrsOnSample": 114,
+        "rPeakSamples": [
+          135,
+          552,
+          968
+        ],
+        "qrsOffSample": 156,
+        "tOffSample": 301,
+        "jPointSample": 156
+      }
+    },
+    {
+      "caseId": "ptbxl-002",
+      "recordIndex": 1,
+      "ptbxlRecordId": 10138,
+      "rhythmClass": "NSR",
+      "scpCodes": [
+        "NORM",
+        "SR"
+      ],
+      "clinicalSummary": "Normal Sinus Rhythm, normoaxis, no acute ST-T changes",
+      "age": 52,
+      "sex": "M",
+      "freeStarter": true,
+      "fiducials": {
+        "hrBpm": 72,
+        "prMs": 154,
+        "qrsMs": 88,
+        "qtMs": 380,
+        "qtcMs": 416,
+        "stMv": 0.0,
+        "pOnSample": 36,
+        "qrsOnSample": 113,
+        "rPeakSamples": [
+          135,
+          552,
+          968
+        ],
+        "qrsOffSample": 157,
+        "tOffSample": 303,
+        "jPointSample": 157
+      }
+    },
+    {
+      "caseId": "ptbxl-003",
+      "recordIndex": 2,
+      "ptbxlRecordId": 10275,
+      "rhythmClass": "SB",
+      "scpCodes": [
+        "SBRAD",
+        "SR"
+      ],
+      "clinicalSummary": "Marked Sinus Bradycardia without AV conduction block",
+      "age": 56,
+      "sex": "F",
+      "freeStarter": true,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 168,
+        "qrsMs": 86,
+        "qtMs": 434,
+        "qtcMs": 388,
+        "stMv": 0.0,
+        "pOnSample": 30,
+        "qrsOnSample": 114,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 157,
+        "tOffSample": 331,
+        "jPointSample": 157
+      }
+    },
+    {
+      "caseId": "ptbxl-004",
+      "recordIndex": 3,
+      "ptbxlRecordId": 10412,
+      "rhythmClass": "SB",
+      "scpCodes": [
+        "SBRAD",
+        "SR"
+      ],
+      "clinicalSummary": "Marked Sinus Bradycardia without AV conduction block",
+      "age": 74,
+      "sex": "M",
+      "freeStarter": true,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 170,
+        "qrsMs": 90,
+        "qtMs": 440,
+        "qtcMs": 394,
+        "stMv": 0.0,
+        "pOnSample": 28,
+        "qrsOnSample": 113,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 158,
+        "tOffSample": 333,
+        "jPointSample": 158
+      }
+    },
+    {
+      "caseId": "ptbxl-005",
+      "recordIndex": 4,
+      "ptbxlRecordId": 10549,
+      "rhythmClass": "SVT",
+      "scpCodes": [
+        "SVTAC",
+        "PSVT"
+      ],
+      "clinicalSummary": "Paroxysmal Narrow-Complex Supraventricular Tachycardia",
+      "age": 78,
+      "sex": "F",
+      "freeStarter": true,
+      "fiducials": {
+        "hrBpm": 168,
+        "prMs": 0,
+        "qrsMs": 80,
+        "qtMs": 234,
+        "qtcMs": 392,
+        "stMv": -0.05,
+        "pOnSample": 115,
+        "qrsOnSample": 115,
+        "rPeakSamples": [
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
+        ],
+        "qrsOffSample": 155,
+        "tOffSample": 232,
+        "jPointSample": 155
+      }
+    },
+    {
+      "caseId": "ptbxl-006",
+      "recordIndex": 5,
+      "ptbxlRecordId": 10686,
+      "rhythmClass": "SVT",
+      "scpCodes": [
+        "SVTAC",
+        "PSVT"
+      ],
+      "clinicalSummary": "Paroxysmal Narrow-Complex Supraventricular Tachycardia",
+      "age": 44,
+      "sex": "M",
+      "freeStarter": true,
+      "fiducials": {
+        "hrBpm": 168,
+        "prMs": 0,
+        "qrsMs": 84,
+        "qtMs": 240,
+        "qtcMs": 402,
+        "stMv": -0.05,
+        "pOnSample": 114,
+        "qrsOnSample": 114,
+        "rPeakSamples": [
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
+        ],
+        "qrsOffSample": 156,
+        "tOffSample": 234,
+        "jPointSample": 156
+      }
+    },
+    {
+      "caseId": "ptbxl-007",
+      "recordIndex": 6,
+      "ptbxlRecordId": 10823,
+      "rhythmClass": "AFIB",
+      "scpCodes": [
+        "AFIB",
+        "IRREG"
+      ],
+      "clinicalSummary": "Atrial Fibrillation with rapid irregular ventricular response",
+      "age": 48,
+      "sex": "F",
+      "freeStarter": true,
+      "fiducials": {
+        "hrBpm": 144,
+        "prMs": 0,
+        "qrsMs": 88,
+        "qtMs": 304,
+        "qtcMs": 471,
+        "stMv": -0.04,
+        "pOnSample": 113,
+        "qrsOnSample": 113,
+        "rPeakSamples": [
+          135,
+          332,
+          560,
+          760,
+          958,
+          1177
+        ],
+        "qrsOffSample": 157,
+        "tOffSample": 265,
+        "jPointSample": 157
+      }
+    },
+    {
+      "caseId": "ptbxl-008",
+      "recordIndex": 7,
+      "ptbxlRecordId": 10960,
+      "rhythmClass": "AFIB",
+      "scpCodes": [
+        "AFIB",
+        "IRREG"
+      ],
+      "clinicalSummary": "Atrial Fibrillation with rapid irregular ventricular response",
+      "age": 66,
+      "sex": "M",
+      "freeStarter": true,
+      "fiducials": {
+        "hrBpm": 144,
+        "prMs": 0,
+        "qrsMs": 92,
+        "qtMs": 310,
+        "qtcMs": 480,
+        "stMv": -0.04,
+        "pOnSample": 112,
+        "qrsOnSample": 112,
+        "rPeakSamples": [
+          135,
+          336,
+          537,
+          748,
+          976,
+          1177
+        ],
+        "qrsOffSample": 158,
+        "tOffSample": 267,
+        "jPointSample": 158
+      }
+    },
+    {
+      "caseId": "ptbxl-009",
+      "recordIndex": 8,
+      "ptbxlRecordId": 11097,
+      "rhythmClass": "AFLT",
+      "scpCodes": [
+        "AFLT",
+        "2:1AV"
+      ],
+      "clinicalSummary": "Typical Counterclockwise Atrial Flutter with 2:1 AV conduction",
+      "age": 70,
+      "sex": "F",
+      "freeStarter": true,
+      "fiducials": {
+        "hrBpm": 144,
+        "prMs": 0,
+        "qrsMs": 86,
+        "qtMs": 284,
+        "qtcMs": 440,
+        "stMv": -0.03,
+        "pOnSample": 114,
+        "qrsOnSample": 114,
+        "rPeakSamples": [
+          135,
+          343,
+          552,
+          760,
+          968,
+          1177
+        ],
+        "qrsOffSample": 157,
+        "tOffSample": 256,
+        "jPointSample": 157
+      }
+    },
+    {
+      "caseId": "ptbxl-010",
+      "recordIndex": 9,
+      "ptbxlRecordId": 11234,
+      "rhythmClass": "AFLT",
+      "scpCodes": [
+        "AFLT",
+        "2:1AV"
+      ],
+      "clinicalSummary": "Typical Counterclockwise Atrial Flutter with 2:1 AV conduction",
+      "age": 36,
+      "sex": "M",
+      "freeStarter": true,
+      "fiducials": {
+        "hrBpm": 144,
+        "prMs": 0,
+        "qrsMs": 90,
+        "qtMs": 290,
+        "qtcMs": 449,
+        "stMv": -0.03,
+        "pOnSample": 113,
+        "qrsOnSample": 113,
+        "rPeakSamples": [
+          135,
+          343,
+          552,
+          760,
+          968,
+          1177
+        ],
+        "qrsOffSample": 158,
+        "tOffSample": 258,
+        "jPointSample": 158
+      }
+    },
+    {
+      "caseId": "ptbxl-011",
+      "recordIndex": 10,
+      "ptbxlRecordId": 11371,
+      "rhythmClass": "AVB3",
+      "scpCodes": [
+        "3AVB",
+        "ESC"
+      ],
+      "clinicalSummary": "Complete Third-Degree AV Block with slow junctional/ventricular escape",
+      "age": 40,
+      "sex": "F",
+      "freeStarter": true,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 0,
+        "qrsMs": 132,
+        "qtMs": 474,
+        "qtcMs": 424,
+        "stMv": 0.02,
+        "pOnSample": 102,
+        "qrsOnSample": 102,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 168,
+        "tOffSample": 339,
+        "jPointSample": 168
+      }
+    },
+    {
+      "caseId": "ptbxl-012",
+      "recordIndex": 11,
+      "ptbxlRecordId": 11508,
+      "rhythmClass": "AVB3",
+      "scpCodes": [
+        "3AVB",
+        "ESC"
+      ],
+      "clinicalSummary": "Complete Third-Degree AV Block with slow junctional/ventricular escape",
+      "age": 58,
+      "sex": "M",
+      "freeStarter": true,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 0,
+        "qrsMs": 136,
+        "qtMs": 480,
+        "qtcMs": 429,
+        "stMv": 0.02,
+        "pOnSample": 101,
+        "qrsOnSample": 101,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 169,
+        "tOffSample": 341,
+        "jPointSample": 169
+      }
+    },
+    {
+      "caseId": "ptbxl-013",
+      "recordIndex": 12,
+      "ptbxlRecordId": 11645,
+      "rhythmClass": "VT_MONO",
+      "scpCodes": [
+        "VTACH",
+        "WIDE"
+      ],
+      "clinicalSummary": "Sustained Monomorphic Ventricular Tachycardia",
+      "age": 62,
+      "sex": "F",
+      "freeStarter": true,
+      "fiducials": {
+        "hrBpm": 168,
+        "prMs": 0,
+        "qrsMs": 152,
+        "qtMs": 294,
+        "qtcMs": 492,
+        "stMv": -0.12,
+        "pOnSample": 97,
+        "qrsOnSample": 97,
+        "rPeakSamples": [
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
+        ],
+        "qrsOffSample": 173,
+        "tOffSample": 244,
+        "jPointSample": 173
+      }
+    },
+    {
+      "caseId": "ptbxl-014",
+      "recordIndex": 13,
+      "ptbxlRecordId": 11782,
+      "rhythmClass": "VT_MONO",
+      "scpCodes": [
+        "VTACH",
+        "WIDE"
+      ],
+      "clinicalSummary": "Sustained Monomorphic Ventricular Tachycardia",
+      "age": 80,
+      "sex": "M",
+      "freeStarter": true,
+      "fiducials": {
+        "hrBpm": 168,
+        "prMs": 0,
+        "qrsMs": 156,
+        "qtMs": 300,
+        "qtcMs": 502,
+        "stMv": -0.12,
+        "pOnSample": 96,
+        "qrsOnSample": 96,
+        "rPeakSamples": [
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
+        ],
+        "qrsOffSample": 174,
+        "tOffSample": 246,
+        "jPointSample": 174
+      }
+    },
+    {
+      "caseId": "ptbxl-015",
+      "recordIndex": 14,
+      "ptbxlRecordId": 11919,
+      "rhythmClass": "TORSADES",
+      "scpCodes": [
+        "TDP",
+        "LQTS"
+      ],
+      "clinicalSummary": "Polymorphic Ventricular Tachycardia (Torsades de Pointes)",
+      "age": 84,
+      "sex": "F",
+      "freeStarter": true,
+      "fiducials": {
+        "hrBpm": 216,
+        "prMs": 0,
+        "qrsMs": 160,
+        "qtMs": 274,
+        "qtcMs": 520,
+        "stMv": -0.15,
+        "pOnSample": 95,
+        "qrsOnSample": 95,
+        "rPeakSamples": [
+          135,
+          274,
+          413,
+          552,
+          691,
+          829,
+          968,
+          1107,
+          1246
+        ],
+        "qrsOffSample": 175,
+        "tOffSample": 232,
+        "jPointSample": 175
+      }
+    },
+    {
+      "caseId": "ptbxl-016",
+      "recordIndex": 15,
+      "ptbxlRecordId": 12056,
+      "rhythmClass": "TORSADES",
+      "scpCodes": [
+        "TDP",
+        "LQTS"
+      ],
+      "clinicalSummary": "Polymorphic Ventricular Tachycardia (Torsades de Pointes)",
+      "age": 50,
+      "sex": "M",
+      "freeStarter": true,
+      "fiducials": {
+        "hrBpm": 216,
+        "prMs": 0,
+        "qrsMs": 164,
+        "qtMs": 280,
+        "qtcMs": 531,
+        "stMv": -0.15,
+        "pOnSample": 94,
+        "qrsOnSample": 94,
+        "rPeakSamples": [
+          135,
+          274,
+          413,
+          552,
+          691,
+          829,
+          968,
+          1107,
+          1246
+        ],
+        "qrsOffSample": 176,
+        "tOffSample": 234,
+        "jPointSample": 176
+      }
+    },
+    {
+      "caseId": "ptbxl-017",
+      "recordIndex": 16,
+      "ptbxlRecordId": 12193,
+      "rhythmClass": "VFIB",
+      "scpCodes": [
+        "VFIB",
+        "ARREST"
+      ],
+      "clinicalSummary": "Coarse Ventricular Fibrillation \u2014 Chaotic Pulseless Arrest",
+      "age": 54,
+      "sex": "F",
+      "freeStarter": true,
+      "fiducials": {
+        "hrBpm": 0,
+        "prMs": 0,
+        "qrsMs": 0,
+        "qtMs": 0,
+        "qtcMs": 0,
+        "stMv": 0.0,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
+        "rPeakSamples": [],
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
+      }
+    },
+    {
+      "caseId": "ptbxl-018",
+      "recordIndex": 17,
+      "ptbxlRecordId": 12330,
+      "rhythmClass": "VFIB",
+      "scpCodes": [
+        "VFIB",
+        "ARREST"
+      ],
+      "clinicalSummary": "Coarse Ventricular Fibrillation \u2014 Chaotic Pulseless Arrest",
+      "age": 72,
+      "sex": "M",
+      "freeStarter": true,
+      "fiducials": {
+        "hrBpm": 0,
+        "prMs": 0,
+        "qrsMs": 0,
+        "qtMs": 0,
+        "qtcMs": 0,
+        "stMv": 0.0,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
+        "rPeakSamples": [],
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
+      }
+    },
+    {
+      "caseId": "ptbxl-019",
+      "recordIndex": 18,
+      "ptbxlRecordId": 12467,
+      "rhythmClass": "ASYSTOLE",
+      "scpCodes": [
+        "ASYS",
+        "FLAT"
+      ],
+      "clinicalSummary": "Ventricular Standstill / Asystole with baseline wander < 0.04 mV",
+      "age": 76,
+      "sex": "F",
+      "freeStarter": true,
+      "fiducials": {
+        "hrBpm": 0,
+        "prMs": 0,
+        "qrsMs": 0,
+        "qtMs": 0,
+        "qtcMs": 0,
+        "stMv": 0.0,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
+        "rPeakSamples": [],
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
+      }
+    },
+    {
+      "caseId": "ptbxl-020",
+      "recordIndex": 19,
+      "ptbxlRecordId": 12604,
+      "rhythmClass": "ASYSTOLE",
+      "scpCodes": [
+        "ASYS",
+        "FLAT"
+      ],
+      "clinicalSummary": "Ventricular Standstill / Asystole with baseline wander < 0.04 mV",
+      "age": 42,
+      "sex": "M",
+      "freeStarter": true,
+      "fiducials": {
+        "hrBpm": 0,
+        "prMs": 0,
+        "qrsMs": 0,
+        "qtMs": 0,
+        "qtcMs": 0,
+        "stMv": 0.0,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
+        "rPeakSamples": [],
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
+      }
+    },
+    {
+      "caseId": "ptbxl-021",
+      "recordIndex": 20,
+      "ptbxlRecordId": 12741,
+      "rhythmClass": "PEA",
+      "scpCodes": [
+        "PEA",
+        "EMD"
+      ],
+      "clinicalSummary": "Pulseless Electrical Activity \u2014 Organized slow electrical complexes without pulse",
+      "age": 46,
+      "sex": "F",
+      "freeStarter": true,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 176,
+        "qrsMs": 112,
+        "qtMs": 414,
+        "qtcMs": 370,
+        "stMv": -0.08,
+        "pOnSample": 19,
+        "qrsOnSample": 107,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 163,
+        "tOffSample": 314,
+        "jPointSample": 163
+      }
+    },
+    {
+      "caseId": "ptbxl-022",
+      "recordIndex": 21,
+      "ptbxlRecordId": 12878,
+      "rhythmClass": "PEA",
+      "scpCodes": [
+        "PEA",
+        "EMD"
+      ],
+      "clinicalSummary": "Pulseless Electrical Activity \u2014 Organized slow electrical complexes without pulse",
+      "age": 64,
+      "sex": "M",
+      "freeStarter": true,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 178,
+        "qrsMs": 116,
+        "qtMs": 420,
+        "qtcMs": 376,
+        "stMv": -0.08,
+        "pOnSample": 17,
+        "qrsOnSample": 106,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 164,
+        "tOffSample": 316,
+        "jPointSample": 164
+      }
+    },
+    {
+      "caseId": "ptbxl-023",
+      "recordIndex": 22,
+      "ptbxlRecordId": 13015,
+      "rhythmClass": "STEMI_ANT",
+      "scpCodes": [
+        "AMI",
+        "STE_V1_V4"
+      ],
+      "clinicalSummary": "Hyperacute Anterior ST-Elevation Myocardial Infarction (LAD occlusion)",
+      "age": 68,
+      "sex": "F",
+      "freeStarter": true,
+      "fiducials": {
+        "hrBpm": 96,
+        "prMs": 156,
+        "qrsMs": 92,
+        "qtMs": 354,
+        "qtcMs": 448,
+        "stMv": 0.3,
+        "pOnSample": 34,
+        "qrsOnSample": 112,
+        "rPeakSamples": [
+          135,
+          448,
+          760,
+          1072
+        ],
+        "qrsOffSample": 158,
+        "tOffSample": 289,
+        "jPointSample": 158
+      }
+    },
+    {
+      "caseId": "ptbxl-024",
+      "recordIndex": 23,
+      "ptbxlRecordId": 13152,
+      "rhythmClass": "STEMI_ANT",
+      "scpCodes": [
+        "AMI",
+        "STE_V1_V4"
+      ],
+      "clinicalSummary": "Hyperacute Anterior ST-Elevation Myocardial Infarction (LAD occlusion)",
+      "age": 34,
+      "sex": "M",
+      "freeStarter": true,
+      "fiducials": {
+        "hrBpm": 96,
+        "prMs": 158,
+        "qrsMs": 96,
+        "qtMs": 360,
+        "qtcMs": 455,
+        "stMv": 0.32,
+        "pOnSample": 32,
+        "qrsOnSample": 111,
+        "rPeakSamples": [
+          135,
+          448,
+          760,
+          1072
+        ],
+        "qrsOffSample": 159,
+        "tOffSample": 291,
+        "jPointSample": 159
+      }
+    },
+    {
+      "caseId": "ptbxl-025",
+      "recordIndex": 24,
+      "ptbxlRecordId": 13289,
+      "rhythmClass": "NSR",
+      "scpCodes": [
+        "NORM",
+        "SR"
+      ],
+      "clinicalSummary": "Normal Sinus Rhythm, normoaxis, no acute ST-T changes",
+      "age": 52,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 72,
+        "prMs": 156,
+        "qrsMs": 92,
+        "qtMs": 386,
+        "qtcMs": 423,
+        "stMv": 0.0,
+        "pOnSample": 34,
+        "qrsOnSample": 112,
+        "rPeakSamples": [
+          135,
+          552,
+          968
+        ],
+        "qrsOffSample": 158,
+        "tOffSample": 305,
+        "jPointSample": 158
+      }
+    },
+    {
+      "caseId": "ptbxl-026",
+      "recordIndex": 25,
+      "ptbxlRecordId": 13426,
+      "rhythmClass": "NSR",
+      "scpCodes": [
+        "NORM",
+        "SR"
+      ],
+      "clinicalSummary": "Normal Sinus Rhythm, normoaxis, no acute ST-T changes",
+      "age": 70,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 72,
+        "prMs": 158,
+        "qrsMs": 84,
+        "qtMs": 374,
+        "qtcMs": 410,
+        "stMv": 0.0,
+        "pOnSample": 35,
+        "qrsOnSample": 114,
+        "rPeakSamples": [
+          135,
+          552,
+          968
+        ],
+        "qrsOffSample": 156,
+        "tOffSample": 301,
+        "jPointSample": 156
+      }
+    },
+    {
+      "caseId": "ptbxl-027",
+      "recordIndex": 26,
+      "ptbxlRecordId": 13563,
+      "rhythmClass": "NSR",
+      "scpCodes": [
+        "NORM",
+        "SR"
+      ],
+      "clinicalSummary": "Normal Sinus Rhythm, normoaxis, no acute ST-T changes",
+      "age": 36,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 72,
+        "prMs": 160,
+        "qrsMs": 88,
+        "qtMs": 380,
+        "qtcMs": 416,
+        "stMv": 0.0,
+        "pOnSample": 33,
+        "qrsOnSample": 113,
+        "rPeakSamples": [
+          135,
+          552,
+          968
+        ],
+        "qrsOffSample": 157,
+        "tOffSample": 303,
+        "jPointSample": 157
+      }
+    },
+    {
+      "caseId": "ptbxl-028",
+      "recordIndex": 27,
+      "ptbxlRecordId": 13700,
+      "rhythmClass": "NSR",
+      "scpCodes": [
+        "NORM",
+        "SR"
+      ],
+      "clinicalSummary": "Normal Sinus Rhythm, normoaxis, no acute ST-T changes",
+      "age": 54,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 72,
+        "prMs": 162,
+        "qrsMs": 92,
+        "qtMs": 386,
+        "qtcMs": 423,
+        "stMv": 0.0,
+        "pOnSample": 31,
+        "qrsOnSample": 112,
+        "rPeakSamples": [
+          135,
+          552,
+          968
+        ],
+        "qrsOffSample": 158,
+        "tOffSample": 305,
+        "jPointSample": 158
+      }
+    },
+    {
+      "caseId": "ptbxl-029",
+      "recordIndex": 28,
+      "ptbxlRecordId": 13837,
+      "rhythmClass": "NSR",
+      "scpCodes": [
+        "NORM",
+        "SR"
+      ],
+      "clinicalSummary": "Normal Sinus Rhythm, normoaxis, no acute ST-T changes",
+      "age": 72,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 72,
+        "prMs": 164,
+        "qrsMs": 84,
+        "qtMs": 374,
+        "qtcMs": 410,
+        "stMv": 0.0,
+        "pOnSample": 32,
+        "qrsOnSample": 114,
+        "rPeakSamples": [
+          135,
+          552,
+          968
+        ],
+        "qrsOffSample": 156,
+        "tOffSample": 301,
+        "jPointSample": 156
+      }
+    },
+    {
+      "caseId": "ptbxl-030",
+      "recordIndex": 29,
+      "ptbxlRecordId": 13974,
+      "rhythmClass": "NSR",
+      "scpCodes": [
+        "NORM",
+        "SR"
+      ],
+      "clinicalSummary": "Normal Sinus Rhythm, normoaxis, no acute ST-T changes",
+      "age": 38,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 72,
+        "prMs": 166,
+        "qrsMs": 88,
+        "qtMs": 380,
+        "qtcMs": 416,
+        "stMv": 0.0,
+        "pOnSample": 30,
+        "qrsOnSample": 113,
+        "rPeakSamples": [
+          135,
+          552,
+          968
+        ],
+        "qrsOffSample": 157,
+        "tOffSample": 303,
+        "jPointSample": 157
+      }
+    },
+    {
+      "caseId": "ptbxl-031",
+      "recordIndex": 30,
+      "ptbxlRecordId": 14111,
+      "rhythmClass": "NSR",
+      "scpCodes": [
+        "NORM",
+        "SR"
+      ],
+      "clinicalSummary": "Normal Sinus Rhythm, normoaxis, no acute ST-T changes",
+      "age": 56,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 72,
+        "prMs": 168,
+        "qrsMs": 92,
+        "qtMs": 386,
+        "qtcMs": 423,
+        "stMv": 0.0,
+        "pOnSample": 28,
+        "qrsOnSample": 112,
+        "rPeakSamples": [
+          135,
+          552,
+          968
+        ],
+        "qrsOffSample": 158,
+        "tOffSample": 305,
+        "jPointSample": 158
+      }
+    },
+    {
+      "caseId": "ptbxl-032",
+      "recordIndex": 31,
+      "ptbxlRecordId": 14248,
+      "rhythmClass": "NSR",
+      "scpCodes": [
+        "NORM",
+        "SR"
+      ],
+      "clinicalSummary": "Normal Sinus Rhythm, normoaxis, no acute ST-T changes",
+      "age": 74,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 72,
+        "prMs": 170,
+        "qrsMs": 84,
+        "qtMs": 374,
+        "qtcMs": 410,
+        "stMv": 0.0,
+        "pOnSample": 29,
+        "qrsOnSample": 114,
+        "rPeakSamples": [
+          135,
+          552,
+          968
+        ],
+        "qrsOffSample": 156,
+        "tOffSample": 301,
+        "jPointSample": 156
+      }
+    },
+    {
+      "caseId": "ptbxl-033",
+      "recordIndex": 32,
+      "ptbxlRecordId": 14385,
+      "rhythmClass": "SB",
+      "scpCodes": [
+        "SBRAD",
+        "SR"
+      ],
+      "clinicalSummary": "Marked Sinus Bradycardia without AV conduction block",
+      "age": 36,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 172,
+        "qrsMs": 94,
+        "qtMs": 446,
+        "qtcMs": 399,
+        "stMv": 0.0,
+        "pOnSample": 26,
+        "qrsOnSample": 112,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 159,
+        "tOffSample": 335,
+        "jPointSample": 159
+      }
+    },
+    {
+      "caseId": "ptbxl-034",
+      "recordIndex": 33,
+      "ptbxlRecordId": 14522,
+      "rhythmClass": "SB",
+      "scpCodes": [
+        "SBRAD",
+        "SR"
+      ],
+      "clinicalSummary": "Marked Sinus Bradycardia without AV conduction block",
+      "age": 54,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 174,
+        "qrsMs": 86,
+        "qtMs": 434,
+        "qtcMs": 388,
+        "stMv": 0.0,
+        "pOnSample": 27,
+        "qrsOnSample": 114,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 157,
+        "tOffSample": 331,
+        "jPointSample": 157
+      }
+    },
+    {
+      "caseId": "ptbxl-035",
+      "recordIndex": 34,
+      "ptbxlRecordId": 14659,
+      "rhythmClass": "SB",
+      "scpCodes": [
+        "SBRAD",
+        "SR"
+      ],
+      "clinicalSummary": "Marked Sinus Bradycardia without AV conduction block",
+      "age": 72,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 176,
+        "qrsMs": 90,
+        "qtMs": 440,
+        "qtcMs": 394,
+        "stMv": 0.0,
+        "pOnSample": 25,
+        "qrsOnSample": 113,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 158,
+        "tOffSample": 333,
+        "jPointSample": 158
+      }
+    },
+    {
+      "caseId": "ptbxl-036",
+      "recordIndex": 35,
+      "ptbxlRecordId": 14796,
+      "rhythmClass": "SB",
+      "scpCodes": [
+        "SBRAD",
+        "SR"
+      ],
+      "clinicalSummary": "Marked Sinus Bradycardia without AV conduction block",
+      "age": 38,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 178,
+        "qrsMs": 94,
+        "qtMs": 446,
+        "qtcMs": 399,
+        "stMv": 0.0,
+        "pOnSample": 23,
+        "qrsOnSample": 112,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 159,
+        "tOffSample": 335,
+        "jPointSample": 159
+      }
+    },
+    {
+      "caseId": "ptbxl-037",
+      "recordIndex": 36,
+      "ptbxlRecordId": 14933,
+      "rhythmClass": "SB",
+      "scpCodes": [
+        "SBRAD",
+        "SR"
+      ],
+      "clinicalSummary": "Marked Sinus Bradycardia without AV conduction block",
+      "age": 56,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 180,
+        "qrsMs": 86,
+        "qtMs": 434,
+        "qtcMs": 388,
+        "stMv": 0.0,
+        "pOnSample": 24,
+        "qrsOnSample": 114,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 157,
+        "tOffSample": 331,
+        "jPointSample": 157
+      }
+    },
+    {
+      "caseId": "ptbxl-038",
+      "recordIndex": 37,
+      "ptbxlRecordId": 15070,
+      "rhythmClass": "SB",
+      "scpCodes": [
+        "SBRAD",
+        "SR"
+      ],
+      "clinicalSummary": "Marked Sinus Bradycardia without AV conduction block",
+      "age": 74,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 182,
+        "qrsMs": 90,
+        "qtMs": 440,
+        "qtcMs": 394,
+        "stMv": 0.0,
+        "pOnSample": 22,
+        "qrsOnSample": 113,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 158,
+        "tOffSample": 333,
+        "jPointSample": 158
+      }
+    },
+    {
+      "caseId": "ptbxl-039",
+      "recordIndex": 38,
+      "ptbxlRecordId": 15207,
+      "rhythmClass": "SB",
+      "scpCodes": [
+        "SBRAD",
+        "SR"
+      ],
+      "clinicalSummary": "Marked Sinus Bradycardia without AV conduction block",
+      "age": 40,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 184,
+        "qrsMs": 94,
+        "qtMs": 446,
+        "qtcMs": 399,
+        "stMv": 0.0,
+        "pOnSample": 20,
+        "qrsOnSample": 112,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 159,
+        "tOffSample": 335,
+        "jPointSample": 159
+      }
+    },
+    {
+      "caseId": "ptbxl-040",
+      "recordIndex": 39,
+      "ptbxlRecordId": 15344,
+      "rhythmClass": "SB",
+      "scpCodes": [
+        "SBRAD",
+        "SR"
+      ],
+      "clinicalSummary": "Marked Sinus Bradycardia without AV conduction block",
+      "age": 58,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 186,
+        "qrsMs": 86,
+        "qtMs": 434,
+        "qtcMs": 388,
+        "stMv": 0.0,
+        "pOnSample": 21,
+        "qrsOnSample": 114,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 157,
+        "tOffSample": 331,
+        "jPointSample": 157
+      }
+    },
+    {
+      "caseId": "ptbxl-041",
+      "recordIndex": 40,
+      "ptbxlRecordId": 15481,
+      "rhythmClass": "SVT",
+      "scpCodes": [
+        "SVTAC",
+        "PSVT"
+      ],
+      "clinicalSummary": "Paroxysmal Narrow-Complex Supraventricular Tachycardia",
+      "age": 72,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 168,
+        "prMs": 0,
+        "qrsMs": 88,
+        "qtMs": 246,
+        "qtcMs": 412,
+        "stMv": -0.05,
+        "pOnSample": 113,
+        "qrsOnSample": 113,
+        "rPeakSamples": [
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
+        ],
+        "qrsOffSample": 157,
+        "tOffSample": 236,
+        "jPointSample": 157
+      }
+    },
+    {
+      "caseId": "ptbxl-042",
+      "recordIndex": 41,
+      "ptbxlRecordId": 15618,
+      "rhythmClass": "SVT",
+      "scpCodes": [
+        "SVTAC",
+        "PSVT"
+      ],
+      "clinicalSummary": "Paroxysmal Narrow-Complex Supraventricular Tachycardia",
+      "age": 38,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 168,
+        "prMs": 0,
+        "qrsMs": 80,
+        "qtMs": 234,
+        "qtcMs": 392,
+        "stMv": -0.05,
+        "pOnSample": 115,
+        "qrsOnSample": 115,
+        "rPeakSamples": [
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
+        ],
+        "qrsOffSample": 155,
+        "tOffSample": 232,
+        "jPointSample": 155
+      }
+    },
+    {
+      "caseId": "ptbxl-043",
+      "recordIndex": 42,
+      "ptbxlRecordId": 15755,
+      "rhythmClass": "SVT",
+      "scpCodes": [
+        "SVTAC",
+        "PSVT"
+      ],
+      "clinicalSummary": "Paroxysmal Narrow-Complex Supraventricular Tachycardia",
+      "age": 56,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 168,
+        "prMs": 0,
+        "qrsMs": 84,
+        "qtMs": 240,
+        "qtcMs": 402,
+        "stMv": -0.05,
+        "pOnSample": 114,
+        "qrsOnSample": 114,
+        "rPeakSamples": [
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
+        ],
+        "qrsOffSample": 156,
+        "tOffSample": 234,
+        "jPointSample": 156
+      }
+    },
+    {
+      "caseId": "ptbxl-044",
+      "recordIndex": 43,
+      "ptbxlRecordId": 15892,
+      "rhythmClass": "SVT",
+      "scpCodes": [
+        "SVTAC",
+        "PSVT"
+      ],
+      "clinicalSummary": "Paroxysmal Narrow-Complex Supraventricular Tachycardia",
+      "age": 74,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 168,
+        "prMs": 0,
+        "qrsMs": 88,
+        "qtMs": 246,
+        "qtcMs": 412,
+        "stMv": -0.05,
+        "pOnSample": 113,
+        "qrsOnSample": 113,
+        "rPeakSamples": [
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
+        ],
+        "qrsOffSample": 157,
+        "tOffSample": 236,
+        "jPointSample": 157
+      }
+    },
+    {
+      "caseId": "ptbxl-045",
+      "recordIndex": 44,
+      "ptbxlRecordId": 16029,
+      "rhythmClass": "SVT",
+      "scpCodes": [
+        "SVTAC",
+        "PSVT"
+      ],
+      "clinicalSummary": "Paroxysmal Narrow-Complex Supraventricular Tachycardia",
+      "age": 40,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 168,
+        "prMs": 0,
+        "qrsMs": 80,
+        "qtMs": 234,
+        "qtcMs": 392,
+        "stMv": -0.05,
+        "pOnSample": 115,
+        "qrsOnSample": 115,
+        "rPeakSamples": [
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
+        ],
+        "qrsOffSample": 155,
+        "tOffSample": 232,
+        "jPointSample": 155
+      }
+    },
+    {
+      "caseId": "ptbxl-046",
+      "recordIndex": 45,
+      "ptbxlRecordId": 16166,
+      "rhythmClass": "SVT",
+      "scpCodes": [
+        "SVTAC",
+        "PSVT"
+      ],
+      "clinicalSummary": "Paroxysmal Narrow-Complex Supraventricular Tachycardia",
+      "age": 58,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 168,
+        "prMs": 0,
+        "qrsMs": 84,
+        "qtMs": 240,
+        "qtcMs": 402,
+        "stMv": -0.05,
+        "pOnSample": 114,
+        "qrsOnSample": 114,
+        "rPeakSamples": [
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
+        ],
+        "qrsOffSample": 156,
+        "tOffSample": 234,
+        "jPointSample": 156
+      }
+    },
+    {
+      "caseId": "ptbxl-047",
+      "recordIndex": 46,
+      "ptbxlRecordId": 16303,
+      "rhythmClass": "SVT",
+      "scpCodes": [
+        "SVTAC",
+        "PSVT"
+      ],
+      "clinicalSummary": "Paroxysmal Narrow-Complex Supraventricular Tachycardia",
+      "age": 76,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 168,
+        "prMs": 0,
+        "qrsMs": 88,
+        "qtMs": 246,
+        "qtcMs": 412,
+        "stMv": -0.05,
+        "pOnSample": 113,
+        "qrsOnSample": 113,
+        "rPeakSamples": [
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
+        ],
+        "qrsOffSample": 157,
+        "tOffSample": 236,
+        "jPointSample": 157
+      }
+    },
+    {
+      "caseId": "ptbxl-048",
+      "recordIndex": 47,
+      "ptbxlRecordId": 16440,
+      "rhythmClass": "SVT",
+      "scpCodes": [
+        "SVTAC",
+        "PSVT"
+      ],
+      "clinicalSummary": "Paroxysmal Narrow-Complex Supraventricular Tachycardia",
+      "age": 42,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 168,
+        "prMs": 0,
+        "qrsMs": 80,
+        "qtMs": 234,
+        "qtcMs": 392,
+        "stMv": -0.05,
+        "pOnSample": 115,
+        "qrsOnSample": 115,
+        "rPeakSamples": [
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
+        ],
+        "qrsOffSample": 155,
+        "tOffSample": 232,
+        "jPointSample": 155
+      }
+    },
+    {
+      "caseId": "ptbxl-049",
+      "recordIndex": 48,
+      "ptbxlRecordId": 16577,
+      "rhythmClass": "AFIB",
+      "scpCodes": [
+        "AFIB",
+        "IRREG"
+      ],
+      "clinicalSummary": "Atrial Fibrillation with rapid irregular ventricular response",
+      "age": 56,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 144,
+        "prMs": 0,
+        "qrsMs": 96,
+        "qtMs": 316,
+        "qtcMs": 490,
+        "stMv": -0.04,
+        "pOnSample": 111,
+        "qrsOnSample": 111,
+        "rPeakSamples": [
+          135,
+          360,
+          564,
+          770,
+          955,
+          1177
+        ],
+        "qrsOffSample": 159,
+        "tOffSample": 269,
+        "jPointSample": 159
+      }
+    },
+    {
+      "caseId": "ptbxl-050",
+      "recordIndex": 49,
+      "ptbxlRecordId": 16714,
+      "rhythmClass": "AFIB",
+      "scpCodes": [
+        "AFIB",
+        "IRREG"
+      ],
+      "clinicalSummary": "Atrial Fibrillation with rapid irregular ventricular response",
+      "age": 74,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 144,
+        "prMs": 0,
+        "qrsMs": 88,
+        "qtMs": 304,
+        "qtcMs": 471,
+        "stMv": -0.04,
+        "pOnSample": 113,
+        "qrsOnSample": 113,
+        "rPeakSamples": [
+          135,
+          331,
+          557,
+          763,
+          966,
+          1177
+        ],
+        "qrsOffSample": 157,
+        "tOffSample": 265,
+        "jPointSample": 157
+      }
+    },
+    {
+      "caseId": "ptbxl-051",
+      "recordIndex": 50,
+      "ptbxlRecordId": 16851,
+      "rhythmClass": "AFIB",
+      "scpCodes": [
+        "AFIB",
+        "IRREG"
+      ],
+      "clinicalSummary": "Atrial Fibrillation with rapid irregular ventricular response",
+      "age": 40,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 144,
+        "prMs": 0,
+        "qrsMs": 92,
+        "qtMs": 310,
+        "qtcMs": 480,
+        "stMv": -0.04,
+        "pOnSample": 112,
+        "qrsOnSample": 112,
+        "rPeakSamples": [
+          135,
+          350,
+          552,
+          752,
+          968,
+          1177
+        ],
+        "qrsOffSample": 158,
+        "tOffSample": 267,
+        "jPointSample": 158
+      }
+    },
+    {
+      "caseId": "ptbxl-052",
+      "recordIndex": 51,
+      "ptbxlRecordId": 16988,
+      "rhythmClass": "AFIB",
+      "scpCodes": [
+        "AFIB",
+        "IRREG"
+      ],
+      "clinicalSummary": "Atrial Fibrillation with rapid irregular ventricular response",
+      "age": 58,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 144,
+        "prMs": 0,
+        "qrsMs": 96,
+        "qtMs": 316,
+        "qtcMs": 490,
+        "stMv": -0.04,
+        "pOnSample": 111,
+        "qrsOnSample": 111,
+        "rPeakSamples": [
+          135,
+          327,
+          552,
+          772,
+          955,
+          1177
+        ],
+        "qrsOffSample": 159,
+        "tOffSample": 269,
+        "jPointSample": 159
+      }
+    },
+    {
+      "caseId": "ptbxl-053",
+      "recordIndex": 52,
+      "ptbxlRecordId": 17125,
+      "rhythmClass": "AFIB",
+      "scpCodes": [
+        "AFIB",
+        "IRREG"
+      ],
+      "clinicalSummary": "Atrial Fibrillation with rapid irregular ventricular response",
+      "age": 76,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 144,
+        "prMs": 0,
+        "qrsMs": 88,
+        "qtMs": 304,
+        "qtcMs": 471,
+        "stMv": -0.04,
+        "pOnSample": 113,
+        "qrsOnSample": 113,
+        "rPeakSamples": [
+          135,
+          345,
+          541,
+          748,
+          969,
+          1177
+        ],
+        "qrsOffSample": 157,
+        "tOffSample": 265,
+        "jPointSample": 157
+      }
+    },
+    {
+      "caseId": "ptbxl-054",
+      "recordIndex": 53,
+      "ptbxlRecordId": 17262,
+      "rhythmClass": "AFIB",
+      "scpCodes": [
+        "AFIB",
+        "IRREG"
+      ],
+      "clinicalSummary": "Atrial Fibrillation with rapid irregular ventricular response",
+      "age": 42,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 144,
+        "prMs": 0,
+        "qrsMs": 92,
+        "qtMs": 310,
+        "qtcMs": 480,
+        "stMv": -0.04,
+        "pOnSample": 112,
+        "qrsOnSample": 112,
+        "rPeakSamples": [
+          135,
+          349,
+          559,
+          774,
+          955,
+          1177
+        ],
+        "qrsOffSample": 158,
+        "tOffSample": 267,
+        "jPointSample": 158
+      }
+    },
+    {
+      "caseId": "ptbxl-055",
+      "recordIndex": 54,
+      "ptbxlRecordId": 17399,
+      "rhythmClass": "AFIB",
+      "scpCodes": [
+        "AFIB",
+        "IRREG"
+      ],
+      "clinicalSummary": "Atrial Fibrillation with rapid irregular ventricular response",
+      "age": 60,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 144,
+        "prMs": 0,
+        "qrsMs": 96,
+        "qtMs": 316,
+        "qtcMs": 490,
+        "stMv": -0.04,
+        "pOnSample": 111,
+        "qrsOnSample": 111,
+        "rPeakSamples": [
+          135,
+          357,
+          541,
+          752,
+          967,
+          1177
+        ],
+        "qrsOffSample": 159,
+        "tOffSample": 269,
+        "jPointSample": 159
+      }
+    },
+    {
+      "caseId": "ptbxl-056",
+      "recordIndex": 55,
+      "ptbxlRecordId": 17536,
+      "rhythmClass": "AFIB",
+      "scpCodes": [
+        "AFIB",
+        "IRREG"
+      ],
+      "clinicalSummary": "Atrial Fibrillation with rapid irregular ventricular response",
+      "age": 78,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 144,
+        "prMs": 0,
+        "qrsMs": 88,
+        "qtMs": 304,
+        "qtcMs": 471,
+        "stMv": -0.04,
+        "pOnSample": 113,
+        "qrsOnSample": 113,
+        "rPeakSamples": [
+          135,
+          330,
+          537,
+          754,
+          963,
+          1177
+        ],
+        "qrsOffSample": 157,
+        "tOffSample": 265,
+        "jPointSample": 157
+      }
+    },
+    {
+      "caseId": "ptbxl-057",
+      "recordIndex": 56,
+      "ptbxlRecordId": 17673,
+      "rhythmClass": "AFLT",
+      "scpCodes": [
+        "AFLT",
+        "2:1AV"
+      ],
+      "clinicalSummary": "Typical Counterclockwise Atrial Flutter with 2:1 AV conduction",
+      "age": 40,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 144,
+        "prMs": 0,
+        "qrsMs": 94,
+        "qtMs": 296,
+        "qtcMs": 459,
+        "stMv": -0.03,
+        "pOnSample": 112,
+        "qrsOnSample": 112,
+        "rPeakSamples": [
+          135,
+          343,
+          552,
+          760,
+          968,
+          1177
+        ],
+        "qrsOffSample": 159,
+        "tOffSample": 260,
+        "jPointSample": 159
+      }
+    },
+    {
+      "caseId": "ptbxl-058",
+      "recordIndex": 57,
+      "ptbxlRecordId": 17810,
+      "rhythmClass": "AFLT",
+      "scpCodes": [
+        "AFLT",
+        "2:1AV"
+      ],
+      "clinicalSummary": "Typical Counterclockwise Atrial Flutter with 2:1 AV conduction",
+      "age": 58,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 144,
+        "prMs": 0,
+        "qrsMs": 86,
+        "qtMs": 284,
+        "qtcMs": 440,
+        "stMv": -0.03,
+        "pOnSample": 114,
+        "qrsOnSample": 114,
+        "rPeakSamples": [
+          135,
+          343,
+          552,
+          760,
+          968,
+          1177
+        ],
+        "qrsOffSample": 157,
+        "tOffSample": 256,
+        "jPointSample": 157
+      }
+    },
+    {
+      "caseId": "ptbxl-059",
+      "recordIndex": 58,
+      "ptbxlRecordId": 17947,
+      "rhythmClass": "AFLT",
+      "scpCodes": [
+        "AFLT",
+        "2:1AV"
+      ],
+      "clinicalSummary": "Typical Counterclockwise Atrial Flutter with 2:1 AV conduction",
+      "age": 76,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 144,
+        "prMs": 0,
+        "qrsMs": 90,
+        "qtMs": 290,
+        "qtcMs": 449,
+        "stMv": -0.03,
+        "pOnSample": 113,
+        "qrsOnSample": 113,
+        "rPeakSamples": [
+          135,
+          343,
+          552,
+          760,
+          968,
+          1177
+        ],
+        "qrsOffSample": 158,
+        "tOffSample": 258,
+        "jPointSample": 158
+      }
+    },
+    {
+      "caseId": "ptbxl-060",
+      "recordIndex": 59,
+      "ptbxlRecordId": 18084,
+      "rhythmClass": "AFLT",
+      "scpCodes": [
+        "AFLT",
+        "2:1AV"
+      ],
+      "clinicalSummary": "Typical Counterclockwise Atrial Flutter with 2:1 AV conduction",
+      "age": 42,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 144,
+        "prMs": 0,
+        "qrsMs": 94,
+        "qtMs": 296,
+        "qtcMs": 459,
+        "stMv": -0.03,
+        "pOnSample": 112,
+        "qrsOnSample": 112,
+        "rPeakSamples": [
+          135,
+          343,
+          552,
+          760,
+          968,
+          1177
+        ],
+        "qrsOffSample": 159,
+        "tOffSample": 260,
+        "jPointSample": 159
+      }
+    },
+    {
+      "caseId": "ptbxl-061",
+      "recordIndex": 60,
+      "ptbxlRecordId": 18221,
+      "rhythmClass": "AFLT",
+      "scpCodes": [
+        "AFLT",
+        "2:1AV"
+      ],
+      "clinicalSummary": "Typical Counterclockwise Atrial Flutter with 2:1 AV conduction",
+      "age": 60,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 144,
+        "prMs": 0,
+        "qrsMs": 86,
+        "qtMs": 284,
+        "qtcMs": 440,
+        "stMv": -0.03,
+        "pOnSample": 114,
+        "qrsOnSample": 114,
+        "rPeakSamples": [
+          135,
+          343,
+          552,
+          760,
+          968,
+          1177
+        ],
+        "qrsOffSample": 157,
+        "tOffSample": 256,
+        "jPointSample": 157
+      }
+    },
+    {
+      "caseId": "ptbxl-062",
+      "recordIndex": 61,
+      "ptbxlRecordId": 18358,
+      "rhythmClass": "AFLT",
+      "scpCodes": [
+        "AFLT",
+        "2:1AV"
+      ],
+      "clinicalSummary": "Typical Counterclockwise Atrial Flutter with 2:1 AV conduction",
+      "age": 78,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 144,
+        "prMs": 0,
+        "qrsMs": 90,
+        "qtMs": 290,
+        "qtcMs": 449,
+        "stMv": -0.03,
+        "pOnSample": 113,
+        "qrsOnSample": 113,
+        "rPeakSamples": [
+          135,
+          343,
+          552,
+          760,
+          968,
+          1177
+        ],
+        "qrsOffSample": 158,
+        "tOffSample": 258,
+        "jPointSample": 158
+      }
+    },
+    {
+      "caseId": "ptbxl-063",
+      "recordIndex": 62,
+      "ptbxlRecordId": 18495,
+      "rhythmClass": "AFLT",
+      "scpCodes": [
+        "AFLT",
+        "2:1AV"
+      ],
+      "clinicalSummary": "Typical Counterclockwise Atrial Flutter with 2:1 AV conduction",
+      "age": 44,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 144,
+        "prMs": 0,
+        "qrsMs": 94,
+        "qtMs": 296,
+        "qtcMs": 459,
+        "stMv": -0.03,
+        "pOnSample": 112,
+        "qrsOnSample": 112,
+        "rPeakSamples": [
+          135,
+          343,
+          552,
+          760,
+          968,
+          1177
+        ],
+        "qrsOffSample": 159,
+        "tOffSample": 260,
+        "jPointSample": 159
+      }
+    },
+    {
+      "caseId": "ptbxl-064",
+      "recordIndex": 63,
+      "ptbxlRecordId": 18632,
+      "rhythmClass": "AFLT",
+      "scpCodes": [
+        "AFLT",
+        "2:1AV"
+      ],
+      "clinicalSummary": "Typical Counterclockwise Atrial Flutter with 2:1 AV conduction",
+      "age": 62,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 144,
+        "prMs": 0,
+        "qrsMs": 86,
+        "qtMs": 284,
+        "qtcMs": 440,
+        "stMv": -0.03,
+        "pOnSample": 114,
+        "qrsOnSample": 114,
+        "rPeakSamples": [
+          135,
+          343,
+          552,
+          760,
+          968,
+          1177
+        ],
+        "qrsOffSample": 157,
+        "tOffSample": 256,
+        "jPointSample": 157
+      }
+    },
+    {
+      "caseId": "ptbxl-065",
+      "recordIndex": 64,
+      "ptbxlRecordId": 18769,
+      "rhythmClass": "AVB3",
+      "scpCodes": [
+        "3AVB",
+        "ESC"
+      ],
+      "clinicalSummary": "Complete Third-Degree AV Block with slow junctional/ventricular escape",
+      "age": 76,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 0,
+        "qrsMs": 140,
+        "qtMs": 486,
+        "qtcMs": 435,
+        "stMv": 0.02,
+        "pOnSample": 100,
+        "qrsOnSample": 100,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 170,
+        "tOffSample": 343,
+        "jPointSample": 170
+      }
+    },
+    {
+      "caseId": "ptbxl-066",
+      "recordIndex": 65,
+      "ptbxlRecordId": 18906,
+      "rhythmClass": "AVB3",
+      "scpCodes": [
+        "3AVB",
+        "ESC"
+      ],
+      "clinicalSummary": "Complete Third-Degree AV Block with slow junctional/ventricular escape",
+      "age": 42,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 0,
+        "qrsMs": 132,
+        "qtMs": 474,
+        "qtcMs": 424,
+        "stMv": 0.02,
+        "pOnSample": 102,
+        "qrsOnSample": 102,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 168,
+        "tOffSample": 339,
+        "jPointSample": 168
+      }
+    },
+    {
+      "caseId": "ptbxl-067",
+      "recordIndex": 66,
+      "ptbxlRecordId": 19043,
+      "rhythmClass": "AVB3",
+      "scpCodes": [
+        "3AVB",
+        "ESC"
+      ],
+      "clinicalSummary": "Complete Third-Degree AV Block with slow junctional/ventricular escape",
+      "age": 60,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 0,
+        "qrsMs": 136,
+        "qtMs": 480,
+        "qtcMs": 429,
+        "stMv": 0.02,
+        "pOnSample": 101,
+        "qrsOnSample": 101,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 169,
+        "tOffSample": 341,
+        "jPointSample": 169
+      }
+    },
+    {
+      "caseId": "ptbxl-068",
+      "recordIndex": 67,
+      "ptbxlRecordId": 19180,
+      "rhythmClass": "AVB3",
+      "scpCodes": [
+        "3AVB",
+        "ESC"
+      ],
+      "clinicalSummary": "Complete Third-Degree AV Block with slow junctional/ventricular escape",
+      "age": 78,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 0,
+        "qrsMs": 140,
+        "qtMs": 486,
+        "qtcMs": 435,
+        "stMv": 0.02,
+        "pOnSample": 100,
+        "qrsOnSample": 100,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 170,
+        "tOffSample": 343,
+        "jPointSample": 170
+      }
+    },
+    {
+      "caseId": "ptbxl-069",
+      "recordIndex": 68,
+      "ptbxlRecordId": 19317,
+      "rhythmClass": "AVB3",
+      "scpCodes": [
+        "3AVB",
+        "ESC"
+      ],
+      "clinicalSummary": "Complete Third-Degree AV Block with slow junctional/ventricular escape",
+      "age": 44,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 0,
+        "qrsMs": 132,
+        "qtMs": 474,
+        "qtcMs": 424,
+        "stMv": 0.02,
+        "pOnSample": 102,
+        "qrsOnSample": 102,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 168,
+        "tOffSample": 339,
+        "jPointSample": 168
+      }
+    },
+    {
+      "caseId": "ptbxl-070",
+      "recordIndex": 69,
+      "ptbxlRecordId": 19454,
+      "rhythmClass": "AVB3",
+      "scpCodes": [
+        "3AVB",
+        "ESC"
+      ],
+      "clinicalSummary": "Complete Third-Degree AV Block with slow junctional/ventricular escape",
+      "age": 62,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 0,
+        "qrsMs": 136,
+        "qtMs": 480,
+        "qtcMs": 429,
+        "stMv": 0.02,
+        "pOnSample": 101,
+        "qrsOnSample": 101,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 169,
+        "tOffSample": 341,
+        "jPointSample": 169
+      }
+    },
+    {
+      "caseId": "ptbxl-071",
+      "recordIndex": 70,
+      "ptbxlRecordId": 19591,
+      "rhythmClass": "AVB3",
+      "scpCodes": [
+        "3AVB",
+        "ESC"
+      ],
+      "clinicalSummary": "Complete Third-Degree AV Block with slow junctional/ventricular escape",
+      "age": 80,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 0,
+        "qrsMs": 140,
+        "qtMs": 486,
+        "qtcMs": 435,
+        "stMv": 0.02,
+        "pOnSample": 100,
+        "qrsOnSample": 100,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 170,
+        "tOffSample": 343,
+        "jPointSample": 170
+      }
+    },
+    {
+      "caseId": "ptbxl-072",
+      "recordIndex": 71,
+      "ptbxlRecordId": 19728,
+      "rhythmClass": "AVB3",
+      "scpCodes": [
+        "3AVB",
+        "ESC"
+      ],
+      "clinicalSummary": "Complete Third-Degree AV Block with slow junctional/ventricular escape",
+      "age": 46,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 0,
+        "qrsMs": 132,
+        "qtMs": 474,
+        "qtcMs": 424,
+        "stMv": 0.02,
+        "pOnSample": 102,
+        "qrsOnSample": 102,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 168,
+        "tOffSample": 339,
+        "jPointSample": 168
+      }
+    },
+    {
+      "caseId": "ptbxl-073",
+      "recordIndex": 72,
+      "ptbxlRecordId": 19865,
+      "rhythmClass": "VT_MONO",
+      "scpCodes": [
+        "VTACH",
+        "WIDE"
+      ],
+      "clinicalSummary": "Sustained Monomorphic Ventricular Tachycardia",
+      "age": 60,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 168,
+        "prMs": 0,
+        "qrsMs": 160,
+        "qtMs": 306,
+        "qtcMs": 512,
+        "stMv": -0.12,
+        "pOnSample": 95,
+        "qrsOnSample": 95,
+        "rPeakSamples": [
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
+        ],
+        "qrsOffSample": 175,
+        "tOffSample": 248,
+        "jPointSample": 175
+      }
+    },
+    {
+      "caseId": "ptbxl-074",
+      "recordIndex": 73,
+      "ptbxlRecordId": 20002,
+      "rhythmClass": "VT_MONO",
+      "scpCodes": [
+        "VTACH",
+        "WIDE"
+      ],
+      "clinicalSummary": "Sustained Monomorphic Ventricular Tachycardia",
+      "age": 78,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 168,
+        "prMs": 0,
+        "qrsMs": 152,
+        "qtMs": 294,
+        "qtcMs": 492,
+        "stMv": -0.12,
+        "pOnSample": 97,
+        "qrsOnSample": 97,
+        "rPeakSamples": [
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
+        ],
+        "qrsOffSample": 173,
+        "tOffSample": 244,
+        "jPointSample": 173
+      }
+    },
+    {
+      "caseId": "ptbxl-075",
+      "recordIndex": 74,
+      "ptbxlRecordId": 20139,
+      "rhythmClass": "VT_MONO",
+      "scpCodes": [
+        "VTACH",
+        "WIDE"
+      ],
+      "clinicalSummary": "Sustained Monomorphic Ventricular Tachycardia",
+      "age": 44,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 168,
+        "prMs": 0,
+        "qrsMs": 156,
+        "qtMs": 300,
+        "qtcMs": 502,
+        "stMv": -0.12,
+        "pOnSample": 96,
+        "qrsOnSample": 96,
+        "rPeakSamples": [
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
+        ],
+        "qrsOffSample": 174,
+        "tOffSample": 246,
+        "jPointSample": 174
+      }
+    },
+    {
+      "caseId": "ptbxl-076",
+      "recordIndex": 75,
+      "ptbxlRecordId": 20276,
+      "rhythmClass": "VT_MONO",
+      "scpCodes": [
+        "VTACH",
+        "WIDE"
+      ],
+      "clinicalSummary": "Sustained Monomorphic Ventricular Tachycardia",
+      "age": 62,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 168,
+        "prMs": 0,
+        "qrsMs": 160,
+        "qtMs": 306,
+        "qtcMs": 512,
+        "stMv": -0.12,
+        "pOnSample": 95,
+        "qrsOnSample": 95,
+        "rPeakSamples": [
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
+        ],
+        "qrsOffSample": 175,
+        "tOffSample": 248,
+        "jPointSample": 175
+      }
+    },
+    {
+      "caseId": "ptbxl-077",
+      "recordIndex": 76,
+      "ptbxlRecordId": 20413,
+      "rhythmClass": "VT_MONO",
+      "scpCodes": [
+        "VTACH",
+        "WIDE"
+      ],
+      "clinicalSummary": "Sustained Monomorphic Ventricular Tachycardia",
+      "age": 80,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 168,
+        "prMs": 0,
+        "qrsMs": 152,
+        "qtMs": 294,
+        "qtcMs": 492,
+        "stMv": -0.12,
+        "pOnSample": 97,
+        "qrsOnSample": 97,
+        "rPeakSamples": [
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
+        ],
+        "qrsOffSample": 173,
+        "tOffSample": 244,
+        "jPointSample": 173
+      }
+    },
+    {
+      "caseId": "ptbxl-078",
+      "recordIndex": 77,
+      "ptbxlRecordId": 20550,
+      "rhythmClass": "VT_MONO",
+      "scpCodes": [
+        "VTACH",
+        "WIDE"
+      ],
+      "clinicalSummary": "Sustained Monomorphic Ventricular Tachycardia",
+      "age": 46,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 168,
+        "prMs": 0,
+        "qrsMs": 156,
+        "qtMs": 300,
+        "qtcMs": 502,
+        "stMv": -0.12,
+        "pOnSample": 96,
+        "qrsOnSample": 96,
+        "rPeakSamples": [
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
+        ],
+        "qrsOffSample": 174,
+        "tOffSample": 246,
+        "jPointSample": 174
+      }
+    },
+    {
+      "caseId": "ptbxl-079",
+      "recordIndex": 78,
+      "ptbxlRecordId": 20687,
+      "rhythmClass": "VT_MONO",
+      "scpCodes": [
+        "VTACH",
+        "WIDE"
+      ],
+      "clinicalSummary": "Sustained Monomorphic Ventricular Tachycardia",
+      "age": 64,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 168,
+        "prMs": 0,
+        "qrsMs": 160,
+        "qtMs": 306,
+        "qtcMs": 512,
+        "stMv": -0.12,
+        "pOnSample": 95,
+        "qrsOnSample": 95,
+        "rPeakSamples": [
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
+        ],
+        "qrsOffSample": 175,
+        "tOffSample": 248,
+        "jPointSample": 175
+      }
+    },
+    {
+      "caseId": "ptbxl-080",
+      "recordIndex": 79,
+      "ptbxlRecordId": 20824,
+      "rhythmClass": "VT_MONO",
+      "scpCodes": [
+        "VTACH",
+        "WIDE"
+      ],
+      "clinicalSummary": "Sustained Monomorphic Ventricular Tachycardia",
+      "age": 82,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 168,
+        "prMs": 0,
+        "qrsMs": 152,
+        "qtMs": 294,
+        "qtcMs": 492,
+        "stMv": -0.12,
+        "pOnSample": 97,
+        "qrsOnSample": 97,
+        "rPeakSamples": [
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
+        ],
+        "qrsOffSample": 173,
+        "tOffSample": 244,
+        "jPointSample": 173
+      }
+    },
+    {
+      "caseId": "ptbxl-081",
+      "recordIndex": 80,
+      "ptbxlRecordId": 20961,
+      "rhythmClass": "TORSADES",
+      "scpCodes": [
+        "TDP",
+        "LQTS"
+      ],
+      "clinicalSummary": "Polymorphic Ventricular Tachycardia (Torsades de Pointes)",
+      "age": 44,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 216,
+        "prMs": 0,
+        "qrsMs": 168,
+        "qtMs": 286,
+        "qtcMs": 543,
+        "stMv": -0.15,
+        "pOnSample": 93,
+        "qrsOnSample": 93,
+        "rPeakSamples": [
+          135,
+          274,
+          413,
+          552,
+          691,
+          829,
+          968,
+          1107,
+          1246
+        ],
+        "qrsOffSample": 177,
+        "tOffSample": 236,
+        "jPointSample": 177
+      }
+    },
+    {
+      "caseId": "ptbxl-082",
+      "recordIndex": 81,
+      "ptbxlRecordId": 21098,
+      "rhythmClass": "TORSADES",
+      "scpCodes": [
+        "TDP",
+        "LQTS"
+      ],
+      "clinicalSummary": "Polymorphic Ventricular Tachycardia (Torsades de Pointes)",
+      "age": 62,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 216,
+        "prMs": 0,
+        "qrsMs": 160,
+        "qtMs": 274,
+        "qtcMs": 520,
+        "stMv": -0.15,
+        "pOnSample": 95,
+        "qrsOnSample": 95,
+        "rPeakSamples": [
+          135,
+          274,
+          413,
+          552,
+          691,
+          829,
+          968,
+          1107,
+          1246
+        ],
+        "qrsOffSample": 175,
+        "tOffSample": 232,
+        "jPointSample": 175
+      }
+    },
+    {
+      "caseId": "ptbxl-083",
+      "recordIndex": 82,
+      "ptbxlRecordId": 21235,
+      "rhythmClass": "TORSADES",
+      "scpCodes": [
+        "TDP",
+        "LQTS"
+      ],
+      "clinicalSummary": "Polymorphic Ventricular Tachycardia (Torsades de Pointes)",
+      "age": 80,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 216,
+        "prMs": 0,
+        "qrsMs": 164,
+        "qtMs": 280,
+        "qtcMs": 531,
+        "stMv": -0.15,
+        "pOnSample": 94,
+        "qrsOnSample": 94,
+        "rPeakSamples": [
+          135,
+          274,
+          413,
+          552,
+          691,
+          829,
+          968,
+          1107,
+          1246
+        ],
+        "qrsOffSample": 176,
+        "tOffSample": 234,
+        "jPointSample": 176
+      }
+    },
+    {
+      "caseId": "ptbxl-084",
+      "recordIndex": 83,
+      "ptbxlRecordId": 21372,
+      "rhythmClass": "TORSADES",
+      "scpCodes": [
+        "TDP",
+        "LQTS"
+      ],
+      "clinicalSummary": "Polymorphic Ventricular Tachycardia (Torsades de Pointes)",
+      "age": 46,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 216,
+        "prMs": 0,
+        "qrsMs": 168,
+        "qtMs": 286,
+        "qtcMs": 543,
+        "stMv": -0.15,
+        "pOnSample": 93,
+        "qrsOnSample": 93,
+        "rPeakSamples": [
+          135,
+          274,
+          413,
+          552,
+          691,
+          829,
+          968,
+          1107,
+          1246
+        ],
+        "qrsOffSample": 177,
+        "tOffSample": 236,
+        "jPointSample": 177
+      }
+    },
+    {
+      "caseId": "ptbxl-085",
+      "recordIndex": 84,
+      "ptbxlRecordId": 21509,
+      "rhythmClass": "TORSADES",
+      "scpCodes": [
+        "TDP",
+        "LQTS"
+      ],
+      "clinicalSummary": "Polymorphic Ventricular Tachycardia (Torsades de Pointes)",
+      "age": 64,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 216,
+        "prMs": 0,
+        "qrsMs": 160,
+        "qtMs": 274,
+        "qtcMs": 520,
+        "stMv": -0.15,
+        "pOnSample": 95,
+        "qrsOnSample": 95,
+        "rPeakSamples": [
+          135,
+          274,
+          413,
+          552,
+          691,
+          829,
+          968,
+          1107,
+          1246
+        ],
+        "qrsOffSample": 175,
+        "tOffSample": 232,
+        "jPointSample": 175
+      }
+    },
+    {
+      "caseId": "ptbxl-086",
+      "recordIndex": 85,
+      "ptbxlRecordId": 21646,
+      "rhythmClass": "TORSADES",
+      "scpCodes": [
+        "TDP",
+        "LQTS"
+      ],
+      "clinicalSummary": "Polymorphic Ventricular Tachycardia (Torsades de Pointes)",
+      "age": 82,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 216,
+        "prMs": 0,
+        "qrsMs": 164,
+        "qtMs": 280,
+        "qtcMs": 531,
+        "stMv": -0.15,
+        "pOnSample": 94,
+        "qrsOnSample": 94,
+        "rPeakSamples": [
+          135,
+          274,
+          413,
+          552,
+          691,
+          829,
+          968,
+          1107,
+          1246
+        ],
+        "qrsOffSample": 176,
+        "tOffSample": 234,
+        "jPointSample": 176
+      }
+    },
+    {
+      "caseId": "ptbxl-087",
+      "recordIndex": 86,
+      "ptbxlRecordId": 21783,
+      "rhythmClass": "TORSADES",
+      "scpCodes": [
+        "TDP",
+        "LQTS"
+      ],
+      "clinicalSummary": "Polymorphic Ventricular Tachycardia (Torsades de Pointes)",
+      "age": 48,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 216,
+        "prMs": 0,
+        "qrsMs": 168,
+        "qtMs": 286,
+        "qtcMs": 543,
+        "stMv": -0.15,
+        "pOnSample": 93,
+        "qrsOnSample": 93,
+        "rPeakSamples": [
+          135,
+          274,
+          413,
+          552,
+          691,
+          829,
+          968,
+          1107,
+          1246
+        ],
+        "qrsOffSample": 177,
+        "tOffSample": 236,
+        "jPointSample": 177
+      }
+    },
+    {
+      "caseId": "ptbxl-088",
+      "recordIndex": 87,
+      "ptbxlRecordId": 21920,
+      "rhythmClass": "TORSADES",
+      "scpCodes": [
+        "TDP",
+        "LQTS"
+      ],
+      "clinicalSummary": "Polymorphic Ventricular Tachycardia (Torsades de Pointes)",
+      "age": 66,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 216,
+        "prMs": 0,
+        "qrsMs": 160,
+        "qtMs": 274,
+        "qtcMs": 520,
+        "stMv": -0.15,
+        "pOnSample": 95,
+        "qrsOnSample": 95,
+        "rPeakSamples": [
+          135,
+          274,
+          413,
+          552,
+          691,
+          829,
+          968,
+          1107,
+          1246
+        ],
+        "qrsOffSample": 175,
+        "tOffSample": 232,
+        "jPointSample": 175
+      }
+    },
+    {
+      "caseId": "ptbxl-089",
+      "recordIndex": 88,
+      "ptbxlRecordId": 22057,
+      "rhythmClass": "VFIB",
+      "scpCodes": [
+        "VFIB",
+        "ARREST"
+      ],
+      "clinicalSummary": "Coarse Ventricular Fibrillation \u2014 Chaotic Pulseless Arrest",
+      "age": 80,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 0,
+        "prMs": 0,
+        "qrsMs": 0,
+        "qtMs": 0,
+        "qtcMs": 0,
+        "stMv": 0.0,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
+        "rPeakSamples": [],
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
+      }
+    },
+    {
+      "caseId": "ptbxl-090",
+      "recordIndex": 89,
+      "ptbxlRecordId": 22194,
+      "rhythmClass": "VFIB",
+      "scpCodes": [
+        "VFIB",
+        "ARREST"
+      ],
+      "clinicalSummary": "Coarse Ventricular Fibrillation \u2014 Chaotic Pulseless Arrest",
+      "age": 46,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 0,
+        "prMs": 0,
+        "qrsMs": 0,
+        "qtMs": 0,
+        "qtcMs": 0,
+        "stMv": 0.0,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
+        "rPeakSamples": [],
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
+      }
+    },
+    {
+      "caseId": "ptbxl-091",
+      "recordIndex": 90,
+      "ptbxlRecordId": 22331,
+      "rhythmClass": "VFIB",
+      "scpCodes": [
+        "VFIB",
+        "ARREST"
+      ],
+      "clinicalSummary": "Coarse Ventricular Fibrillation \u2014 Chaotic Pulseless Arrest",
+      "age": 64,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 0,
+        "prMs": 0,
+        "qrsMs": 0,
+        "qtMs": 0,
+        "qtcMs": 0,
+        "stMv": 0.0,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
+        "rPeakSamples": [],
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
+      }
+    },
+    {
+      "caseId": "ptbxl-092",
+      "recordIndex": 91,
+      "ptbxlRecordId": 22468,
+      "rhythmClass": "VFIB",
+      "scpCodes": [
+        "VFIB",
+        "ARREST"
+      ],
+      "clinicalSummary": "Coarse Ventricular Fibrillation \u2014 Chaotic Pulseless Arrest",
+      "age": 82,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 0,
+        "prMs": 0,
+        "qrsMs": 0,
+        "qtMs": 0,
+        "qtcMs": 0,
+        "stMv": 0.0,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
+        "rPeakSamples": [],
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
+      }
+    },
+    {
+      "caseId": "ptbxl-093",
+      "recordIndex": 92,
+      "ptbxlRecordId": 22605,
+      "rhythmClass": "VFIB",
+      "scpCodes": [
+        "VFIB",
+        "ARREST"
+      ],
+      "clinicalSummary": "Coarse Ventricular Fibrillation \u2014 Chaotic Pulseless Arrest",
+      "age": 48,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 0,
+        "prMs": 0,
+        "qrsMs": 0,
+        "qtMs": 0,
+        "qtcMs": 0,
+        "stMv": 0.0,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
+        "rPeakSamples": [],
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
+      }
+    },
+    {
+      "caseId": "ptbxl-094",
+      "recordIndex": 93,
+      "ptbxlRecordId": 22742,
+      "rhythmClass": "VFIB",
+      "scpCodes": [
+        "VFIB",
+        "ARREST"
+      ],
+      "clinicalSummary": "Coarse Ventricular Fibrillation \u2014 Chaotic Pulseless Arrest",
+      "age": 66,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 0,
+        "prMs": 0,
+        "qrsMs": 0,
+        "qtMs": 0,
+        "qtcMs": 0,
+        "stMv": 0.0,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
+        "rPeakSamples": [],
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
+      }
+    },
+    {
+      "caseId": "ptbxl-095",
+      "recordIndex": 94,
+      "ptbxlRecordId": 22879,
+      "rhythmClass": "VFIB",
+      "scpCodes": [
+        "VFIB",
+        "ARREST"
+      ],
+      "clinicalSummary": "Coarse Ventricular Fibrillation \u2014 Chaotic Pulseless Arrest",
+      "age": 84,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 0,
+        "prMs": 0,
+        "qrsMs": 0,
+        "qtMs": 0,
+        "qtcMs": 0,
+        "stMv": 0.0,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
+        "rPeakSamples": [],
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
+      }
+    },
+    {
+      "caseId": "ptbxl-096",
+      "recordIndex": 95,
+      "ptbxlRecordId": 23016,
+      "rhythmClass": "VFIB",
+      "scpCodes": [
+        "VFIB",
+        "ARREST"
+      ],
+      "clinicalSummary": "Coarse Ventricular Fibrillation \u2014 Chaotic Pulseless Arrest",
+      "age": 50,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 0,
+        "prMs": 0,
+        "qrsMs": 0,
+        "qtMs": 0,
+        "qtcMs": 0,
+        "stMv": 0.0,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
+        "rPeakSamples": [],
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
+      }
+    },
+    {
+      "caseId": "ptbxl-097",
+      "recordIndex": 96,
+      "ptbxlRecordId": 23153,
+      "rhythmClass": "ASYSTOLE",
+      "scpCodes": [
+        "ASYS",
+        "FLAT"
+      ],
+      "clinicalSummary": "Ventricular Standstill / Asystole with baseline wander < 0.04 mV",
+      "age": 64,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 0,
+        "prMs": 0,
+        "qrsMs": 0,
+        "qtMs": 0,
+        "qtcMs": 0,
+        "stMv": 0.0,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
+        "rPeakSamples": [],
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
+      }
+    },
+    {
+      "caseId": "ptbxl-098",
+      "recordIndex": 97,
+      "ptbxlRecordId": 23290,
+      "rhythmClass": "ASYSTOLE",
+      "scpCodes": [
+        "ASYS",
+        "FLAT"
+      ],
+      "clinicalSummary": "Ventricular Standstill / Asystole with baseline wander < 0.04 mV",
+      "age": 82,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 0,
+        "prMs": 0,
+        "qrsMs": 0,
+        "qtMs": 0,
+        "qtcMs": 0,
+        "stMv": 0.0,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
+        "rPeakSamples": [],
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
+      }
+    },
+    {
+      "caseId": "ptbxl-099",
+      "recordIndex": 98,
+      "ptbxlRecordId": 23427,
+      "rhythmClass": "ASYSTOLE",
+      "scpCodes": [
+        "ASYS",
+        "FLAT"
+      ],
+      "clinicalSummary": "Ventricular Standstill / Asystole with baseline wander < 0.04 mV",
+      "age": 48,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 0,
+        "prMs": 0,
+        "qrsMs": 0,
+        "qtMs": 0,
+        "qtcMs": 0,
+        "stMv": 0.0,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
+        "rPeakSamples": [],
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
+      }
+    },
+    {
+      "caseId": "ptbxl-100",
+      "recordIndex": 99,
+      "ptbxlRecordId": 23564,
+      "rhythmClass": "ASYSTOLE",
+      "scpCodes": [
+        "ASYS",
+        "FLAT"
+      ],
+      "clinicalSummary": "Ventricular Standstill / Asystole with baseline wander < 0.04 mV",
+      "age": 66,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 0,
+        "prMs": 0,
+        "qrsMs": 0,
+        "qtMs": 0,
+        "qtcMs": 0,
+        "stMv": 0.0,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
+        "rPeakSamples": [],
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
+      }
+    },
+    {
+      "caseId": "ptbxl-101",
+      "recordIndex": 100,
+      "ptbxlRecordId": 23701,
+      "rhythmClass": "ASYSTOLE",
+      "scpCodes": [
+        "ASYS",
+        "FLAT"
+      ],
+      "clinicalSummary": "Ventricular Standstill / Asystole with baseline wander < 0.04 mV",
+      "age": 84,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 0,
+        "prMs": 0,
+        "qrsMs": 0,
+        "qtMs": 0,
+        "qtcMs": 0,
+        "stMv": 0.0,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
+        "rPeakSamples": [],
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
+      }
+    },
+    {
+      "caseId": "ptbxl-102",
+      "recordIndex": 101,
+      "ptbxlRecordId": 23838,
+      "rhythmClass": "ASYSTOLE",
+      "scpCodes": [
+        "ASYS",
+        "FLAT"
+      ],
+      "clinicalSummary": "Ventricular Standstill / Asystole with baseline wander < 0.04 mV",
+      "age": 50,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 0,
+        "prMs": 0,
+        "qrsMs": 0,
+        "qtMs": 0,
+        "qtcMs": 0,
+        "stMv": 0.0,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
+        "rPeakSamples": [],
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
+      }
+    },
+    {
+      "caseId": "ptbxl-103",
+      "recordIndex": 102,
+      "ptbxlRecordId": 23975,
+      "rhythmClass": "ASYSTOLE",
+      "scpCodes": [
+        "ASYS",
+        "FLAT"
+      ],
+      "clinicalSummary": "Ventricular Standstill / Asystole with baseline wander < 0.04 mV",
+      "age": 68,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 0,
+        "prMs": 0,
+        "qrsMs": 0,
+        "qtMs": 0,
+        "qtcMs": 0,
+        "stMv": 0.0,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
+        "rPeakSamples": [],
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
+      }
+    },
+    {
+      "caseId": "ptbxl-104",
+      "recordIndex": 103,
+      "ptbxlRecordId": 24112,
+      "rhythmClass": "ASYSTOLE",
+      "scpCodes": [
+        "ASYS",
+        "FLAT"
+      ],
+      "clinicalSummary": "Ventricular Standstill / Asystole with baseline wander < 0.04 mV",
+      "age": 34,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 0,
+        "prMs": 0,
+        "qrsMs": 0,
+        "qtMs": 0,
+        "qtcMs": 0,
+        "stMv": 0.0,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
+        "rPeakSamples": [],
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
+      }
+    },
+    {
+      "caseId": "ptbxl-105",
+      "recordIndex": 104,
+      "ptbxlRecordId": 24249,
+      "rhythmClass": "PEA",
+      "scpCodes": [
+        "PEA",
+        "EMD"
+      ],
+      "clinicalSummary": "Pulseless Electrical Activity \u2014 Organized slow electrical complexes without pulse",
+      "age": 48,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 180,
+        "qrsMs": 120,
+        "qtMs": 426,
+        "qtcMs": 381,
+        "stMv": -0.08,
+        "pOnSample": 15,
+        "qrsOnSample": 105,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 165,
+        "tOffSample": 318,
+        "jPointSample": 165
+      }
+    },
+    {
+      "caseId": "ptbxl-106",
+      "recordIndex": 105,
+      "ptbxlRecordId": 24386,
+      "rhythmClass": "PEA",
+      "scpCodes": [
+        "PEA",
+        "EMD"
+      ],
+      "clinicalSummary": "Pulseless Electrical Activity \u2014 Organized slow electrical complexes without pulse",
+      "age": 66,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 182,
+        "qrsMs": 112,
+        "qtMs": 414,
+        "qtcMs": 370,
+        "stMv": -0.08,
+        "pOnSample": 16,
+        "qrsOnSample": 107,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 163,
+        "tOffSample": 314,
+        "jPointSample": 163
+      }
+    },
+    {
+      "caseId": "ptbxl-107",
+      "recordIndex": 106,
+      "ptbxlRecordId": 24523,
+      "rhythmClass": "PEA",
+      "scpCodes": [
+        "PEA",
+        "EMD"
+      ],
+      "clinicalSummary": "Pulseless Electrical Activity \u2014 Organized slow electrical complexes without pulse",
+      "age": 84,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 184,
+        "qrsMs": 116,
+        "qtMs": 420,
+        "qtcMs": 376,
+        "stMv": -0.08,
+        "pOnSample": 14,
+        "qrsOnSample": 106,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 164,
+        "tOffSample": 316,
+        "jPointSample": 164
+      }
+    },
+    {
+      "caseId": "ptbxl-108",
+      "recordIndex": 107,
+      "ptbxlRecordId": 24660,
+      "rhythmClass": "PEA",
+      "scpCodes": [
+        "PEA",
+        "EMD"
+      ],
+      "clinicalSummary": "Pulseless Electrical Activity \u2014 Organized slow electrical complexes without pulse",
+      "age": 50,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 186,
+        "qrsMs": 120,
+        "qtMs": 426,
+        "qtcMs": 381,
+        "stMv": -0.08,
+        "pOnSample": 12,
+        "qrsOnSample": 105,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 165,
+        "tOffSample": 318,
+        "jPointSample": 165
+      }
+    },
+    {
+      "caseId": "ptbxl-109",
+      "recordIndex": 108,
+      "ptbxlRecordId": 24797,
+      "rhythmClass": "PEA",
+      "scpCodes": [
+        "PEA",
+        "EMD"
+      ],
+      "clinicalSummary": "Pulseless Electrical Activity \u2014 Organized slow electrical complexes without pulse",
+      "age": 68,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 188,
+        "qrsMs": 112,
+        "qtMs": 414,
+        "qtcMs": 370,
+        "stMv": -0.08,
+        "pOnSample": 13,
+        "qrsOnSample": 107,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 163,
+        "tOffSample": 314,
+        "jPointSample": 163
+      }
+    },
+    {
+      "caseId": "ptbxl-110",
+      "recordIndex": 109,
+      "ptbxlRecordId": 24934,
+      "rhythmClass": "PEA",
+      "scpCodes": [
+        "PEA",
+        "EMD"
+      ],
+      "clinicalSummary": "Pulseless Electrical Activity \u2014 Organized slow electrical complexes without pulse",
+      "age": 34,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 190,
+        "qrsMs": 116,
+        "qtMs": 420,
+        "qtcMs": 376,
+        "stMv": -0.08,
+        "pOnSample": 11,
+        "qrsOnSample": 106,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 164,
+        "tOffSample": 316,
+        "jPointSample": 164
+      }
+    },
+    {
+      "caseId": "ptbxl-111",
+      "recordIndex": 110,
+      "ptbxlRecordId": 25071,
+      "rhythmClass": "PEA",
+      "scpCodes": [
+        "PEA",
+        "EMD"
+      ],
+      "clinicalSummary": "Pulseless Electrical Activity \u2014 Organized slow electrical complexes without pulse",
+      "age": 52,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 192,
+        "qrsMs": 120,
+        "qtMs": 426,
+        "qtcMs": 381,
+        "stMv": -0.08,
+        "pOnSample": 9,
+        "qrsOnSample": 105,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 165,
+        "tOffSample": 318,
+        "jPointSample": 165
+      }
+    },
+    {
+      "caseId": "ptbxl-112",
+      "recordIndex": 111,
+      "ptbxlRecordId": 25208,
+      "rhythmClass": "PEA",
+      "scpCodes": [
+        "PEA",
+        "EMD"
+      ],
+      "clinicalSummary": "Pulseless Electrical Activity \u2014 Organized slow electrical complexes without pulse",
+      "age": 70,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 48,
+        "prMs": 194,
+        "qrsMs": 112,
+        "qtMs": 414,
+        "qtcMs": 370,
+        "stMv": -0.08,
+        "pOnSample": 10,
+        "qrsOnSample": 107,
+        "rPeakSamples": [
+          135,
+          760
+        ],
+        "qrsOffSample": 163,
+        "tOffSample": 314,
+        "jPointSample": 163
+      }
+    },
+    {
+      "caseId": "ptbxl-113",
+      "recordIndex": 112,
+      "ptbxlRecordId": 25345,
+      "rhythmClass": "STEMI_ANT",
+      "scpCodes": [
+        "AMI",
+        "STE_V1_V4"
+      ],
+      "clinicalSummary": "Hyperacute Anterior ST-Elevation Myocardial Infarction (LAD occlusion)",
+      "age": 84,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 96,
+        "prMs": 160,
+        "qrsMs": 100,
+        "qtMs": 366,
+        "qtcMs": 463,
+        "stMv": 0.34,
+        "pOnSample": 30,
+        "qrsOnSample": 110,
+        "rPeakSamples": [
+          135,
+          448,
+          760,
+          1072
+        ],
+        "qrsOffSample": 160,
+        "tOffSample": 293,
+        "jPointSample": 160
+      }
+    },
+    {
+      "caseId": "ptbxl-114",
+      "recordIndex": 113,
+      "ptbxlRecordId": 25482,
+      "rhythmClass": "STEMI_ANT",
+      "scpCodes": [
+        "AMI",
+        "STE_V1_V4"
+      ],
+      "clinicalSummary": "Hyperacute Anterior ST-Elevation Myocardial Infarction (LAD occlusion)",
+      "age": 50,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 96,
+        "prMs": 162,
+        "qrsMs": 92,
+        "qtMs": 354,
+        "qtcMs": 448,
+        "stMv": 0.3,
+        "pOnSample": 31,
+        "qrsOnSample": 112,
+        "rPeakSamples": [
+          135,
+          448,
+          760,
+          1072
+        ],
+        "qrsOffSample": 158,
+        "tOffSample": 289,
+        "jPointSample": 158
+      }
+    },
+    {
+      "caseId": "ptbxl-115",
+      "recordIndex": 114,
+      "ptbxlRecordId": 25619,
+      "rhythmClass": "STEMI_ANT",
+      "scpCodes": [
+        "AMI",
+        "STE_V1_V4"
+      ],
+      "clinicalSummary": "Hyperacute Anterior ST-Elevation Myocardial Infarction (LAD occlusion)",
+      "age": 68,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 96,
+        "prMs": 164,
+        "qrsMs": 96,
+        "qtMs": 360,
+        "qtcMs": 455,
+        "stMv": 0.32,
+        "pOnSample": 29,
+        "qrsOnSample": 111,
+        "rPeakSamples": [
+          135,
+          448,
+          760,
+          1072
+        ],
+        "qrsOffSample": 159,
+        "tOffSample": 291,
+        "jPointSample": 159
+      }
+    },
+    {
+      "caseId": "ptbxl-116",
+      "recordIndex": 115,
+      "ptbxlRecordId": 25756,
+      "rhythmClass": "STEMI_ANT",
+      "scpCodes": [
+        "AMI",
+        "STE_V1_V4"
+      ],
+      "clinicalSummary": "Hyperacute Anterior ST-Elevation Myocardial Infarction (LAD occlusion)",
+      "age": 34,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 96,
+        "prMs": 166,
+        "qrsMs": 100,
+        "qtMs": 366,
+        "qtcMs": 463,
+        "stMv": 0.34,
+        "pOnSample": 27,
+        "qrsOnSample": 110,
+        "rPeakSamples": [
+          135,
+          448,
+          760,
+          1072
+        ],
+        "qrsOffSample": 160,
+        "tOffSample": 293,
+        "jPointSample": 160
+      }
+    },
+    {
+      "caseId": "ptbxl-117",
+      "recordIndex": 116,
+      "ptbxlRecordId": 25893,
+      "rhythmClass": "STEMI_ANT",
+      "scpCodes": [
+        "AMI",
+        "STE_V1_V4"
+      ],
+      "clinicalSummary": "Hyperacute Anterior ST-Elevation Myocardial Infarction (LAD occlusion)",
+      "age": 52,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 96,
+        "prMs": 168,
+        "qrsMs": 92,
+        "qtMs": 354,
+        "qtcMs": 448,
+        "stMv": 0.3,
+        "pOnSample": 28,
+        "qrsOnSample": 112,
+        "rPeakSamples": [
+          135,
+          448,
+          760,
+          1072
+        ],
+        "qrsOffSample": 158,
+        "tOffSample": 289,
+        "jPointSample": 158
+      }
+    },
+    {
+      "caseId": "ptbxl-118",
+      "recordIndex": 117,
+      "ptbxlRecordId": 26030,
+      "rhythmClass": "STEMI_ANT",
+      "scpCodes": [
+        "AMI",
+        "STE_V1_V4"
+      ],
+      "clinicalSummary": "Hyperacute Anterior ST-Elevation Myocardial Infarction (LAD occlusion)",
+      "age": 70,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 96,
+        "prMs": 170,
+        "qrsMs": 96,
+        "qtMs": 360,
+        "qtcMs": 455,
+        "stMv": 0.32,
+        "pOnSample": 26,
+        "qrsOnSample": 111,
+        "rPeakSamples": [
+          135,
+          448,
+          760,
+          1072
+        ],
+        "qrsOffSample": 159,
+        "tOffSample": 291,
+        "jPointSample": 159
+      }
+    },
+    {
+      "caseId": "ptbxl-119",
+      "recordIndex": 118,
+      "ptbxlRecordId": 26167,
+      "rhythmClass": "STEMI_ANT",
+      "scpCodes": [
+        "AMI",
+        "STE_V1_V4"
+      ],
+      "clinicalSummary": "Hyperacute Anterior ST-Elevation Myocardial Infarction (LAD occlusion)",
+      "age": 36,
+      "sex": "F",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 96,
+        "prMs": 172,
+        "qrsMs": 100,
+        "qtMs": 366,
+        "qtcMs": 463,
+        "stMv": 0.34,
+        "pOnSample": 24,
+        "qrsOnSample": 110,
+        "rPeakSamples": [
+          135,
+          448,
+          760,
+          1072
+        ],
+        "qrsOffSample": 160,
+        "tOffSample": 293,
+        "jPointSample": 160
+      }
+    },
+    {
+      "caseId": "ptbxl-120",
+      "recordIndex": 119,
+      "ptbxlRecordId": 26304,
+      "rhythmClass": "STEMI_ANT",
+      "scpCodes": [
+        "AMI",
+        "STE_V1_V4"
+      ],
+      "clinicalSummary": "Hyperacute Anterior ST-Elevation Myocardial Infarction (LAD occlusion)",
+      "age": 54,
+      "sex": "M",
+      "freeStarter": false,
+      "fiducials": {
+        "hrBpm": 96,
+        "prMs": 174,
+        "qrsMs": 92,
+        "qtMs": 354,
+        "qtcMs": 448,
+        "stMv": 0.3,
+        "pOnSample": 25,
+        "qrsOnSample": 112,
+        "rPeakSamples": [
+          135,
+          448,
+          760,
+          1072
+        ],
+        "qrsOffSample": 158,
+        "tOffSample": 289,
+        "jPointSample": 158
+      }
+    }
+  ]
+}

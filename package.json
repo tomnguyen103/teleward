@@ -1,0 +1,33 @@
+{
+  "name": "teleward",
+  "version": "1.0.0",
+  "description": "ICU Central Telemetry Station, 12-Lead Digital Calipers, and Deterministic AHA ACLS Cardiopulmonary Simulator built on PhysioNet PTB-XL",
+  "type": "module",
+  "bin": {
+    "teleward": "./bin/teleward.mjs"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "compile:ptbxl": "python compiler/compile_ptbxl.py --out-dir public/data"
+  },
+  "dependencies": {
+    "preact": "^10.25.4"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.1",
+    "@tailwindcss/vite": "^4.0.9",
+    "@testing-library/preact": "^3.2.4",
+    "@types/node": "^22.13.5",
+    "jsdom": "^26.0.0",
+    "tailwindcss": "^4.0.9",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3",
+    "vite": "^6.2.0",
+    "vitest": "^3.0.7"
+  }
+}
