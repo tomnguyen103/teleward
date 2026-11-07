@@ -162,7 +162,27 @@ export class Iec60601AlarmSynthesizer {
 
     osc.connect(gain);
     gain.connect(ctx.destination);
+    osc.onended = () => {
+      try {
+        osc.disconnect();
+        gain.disconnect();
+      } catch {
+        // Ignore already-disconnected nodes
+      }
+    };
     osc.start(startTime);
     osc.stop(startTime + durationSec + 0.01);
+  }
+
+  public close(): void {
+    this.armed = false;
+    if (this.audioCtx) {
+      try {
+        void this.audioCtx.close();
+      } catch {
+        // Ignore already-closed AudioContext
+      }
+      this.audioCtx = null;
+    }
   }
 }

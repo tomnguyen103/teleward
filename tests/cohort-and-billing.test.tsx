@@ -47,6 +47,10 @@ describe('US-04.6 & US-05: Stripe Checkout Pro Exam Pass ($19) & Stateless ?coho
     );
     expect(getByTestId('pro-case-gate-panel')).toBeTruthy();
     expect(container.textContent).not.toContain('OVERALL PASS');
+    // Inspector must not leak locked case fiducials or rhythm diagnosis
+    const inspectorText = getByTestId('causal-timeline-inspector').textContent ?? '';
+    expect(inspectorText).not.toContain('PTB-XL Cardiologist Fiducial Ground Truth');
+    expect(inspectorText).not.toContain('ptbxl-051');
   });
 
   it('US-05.1: synchronizes ?cohort=NURS402-FALL26 across students and verifies CRC16 completion receipts on /cohort', () => {
@@ -61,7 +65,8 @@ describe('US-04.6 & US-05: Stripe Checkout Pro Exam Pass ($19) & Stateless ?coho
       bedsStabilized: 4,
       violations: 1,
     });
-    expect(receipt.startsWith('TW-NURS402-FALL26-92-4B1V-')).toBe(true);
+    expect(receipt.startsWith('TW-NURS402-FALL26-92-')).toBe(true);
+    expect(/^TW-NURS402-FALL26-92-[0-9A-F]{4}$/.test(receipt)).toBe(true);
 
     const verification = verifyCohortReceipt(receipt);
     expect(verification.valid).toBe(true);
@@ -123,6 +128,11 @@ describe('US-04.6 & US-05: Stripe Checkout Pro Exam Pass ($19) & Stateless ?coho
     const res = verifyCohortReceipt(tampered);
     expect(res.valid).toBe(false);
     expect(res.reason).toBe('CRC16_MISMATCH');
+
+    // Canonical 4-segment receipt with invalid CRC16 suffix must return CRC16_MISMATCH
+    const deadRes = verifyCohortReceipt('TW-NURS402-FALL26-100-DEAD');
+    expect(deadRes.valid).toBe(false);
+    expect(deadRes.reason).toBe('CRC16_MISMATCH');
   });
 
   it('US-05.4 & US-05.5: activates Stripe Checkout entitlement idempotently, supports offline sandbox activation, and handles ?checkout=cancelled cleanly', () => {
@@ -132,6 +142,21 @@ describe('US-04.6 & US-05: Stripe Checkout Pro Exam Pass ($19) & Stateless ?coho
     expect(act1.tier).toBe('exam_pass');
     expect(act2.tier).toBe('exam_pass');
     expect(readEntitlementFromStorage().tier).toBe('exam_pass');
+
+    // Rejects missing token when allowSandboxMint is not true, and rejects mismatched tier/token
+    window.localStorage.clear();
+    expect(activateEntitlement('exam_pass').valid).toBe(false);
+    expect(readEntitlementFromStorage().tier).toBe('free');
+    expect(activateEntitlement('instructor_cohort', token).valid).toBe(false);
+    expect(readEntitlementFromStorage().tier).toBe('free');
+
+    // Rejects ?checkout=success&tier=exam_pass without token parameter in URL
+    const { container: unauthContainer } = render(
+      <App initialPath="/cohort?checkout=success&tier=exam_pass" preloadedDataset={DATASET} />
+    );
+    expect(unauthContainer.textContent).toContain('Checkout token invalid or missing');
+    expect(readEntitlementFromStorage().tier).toBe('free');
+    cleanup();
 
     window.localStorage.clear();
     const { getByTestId, container } = render(

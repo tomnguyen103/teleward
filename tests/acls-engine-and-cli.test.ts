@@ -157,6 +157,8 @@ describe('US-02: Deterministic Coupled Cardiopulmonary & ACLS State Engine + CLI
       ['sim', '--scenario', 'vfib', '--intervention', 'invalid_drug', '--seed', '42', '--json'],
       ['sim', '--scenario', 'vfib', '--duration', '-5', '--seed', '42', '--json'],
       ['sim', '--scenario', 'vfib', '--duration', '99999', '--seed', '42', '--json'],
+      ['sim', '--scenario', 'vfib', '--at', '', '--seed', '42', '--json'],
+      ['sim', '--scenario', 'vfib', '--duration', '   ', '--seed', '42', '--json'],
       ['sim', '--scenario', 'vfib', '--seed', 'abc', '--json'],
     ];
 
@@ -250,5 +252,28 @@ describe('US-02: Deterministic Coupled Cardiopulmonary & ACLS State Engine + CLI
       seed: 42,
     });
     expect(avb3Atropine.ahaViolations).toContain('AHA_AVB3_ATROPINE_INEFFECTIVE');
+
+    // Verify CRISIS alarm retention across stepSeconds() after an AHA violation & ISCHEMIC_ARREST event on countdown expiry
+    const shift = new ShiftController(42);
+    const avb3BedIdx = shift.getBeds().findIndex((b) => b.vitals.rhythm === 'AVB3' || b.vitals.rhythm === 'SVT');
+    const targetIdx = avb3BedIdx >= 0 ? avb3BedIdx : 0;
+    const wrongAction =
+      shift.getBeds()[targetIdx]!.vitals.rhythm === 'AVB3' ? 'atropine_1mg' : 'defibrillation';
+    shift.applyIntervention(targetIdx, wrongAction, 0);
+    expect(shift.getBeds()[targetIdx]!.ahaViolations.length).toBeGreaterThan(0);
+    expect(shift.getBeds()[targetIdx]!.alarmPriority).toBe('CRISIS');
+
+    // Step forward and confirm CRISIS alarm is retained even if rhythm would otherwise be WARNING
+    shift.stepSeconds(5);
+    expect(shift.getBeds()[targetIdx]!.alarmPriority).toBe('CRISIS');
+
+    // Step past 60s countdown on an unrescued bed and verify ISCHEMIC_ARREST CausalEvent is logged
+    for (let k = 0; k < 6; k++) {
+      shift.stepSeconds(10);
+    }
+    const expiredBed = shift.getBeds().find((b) => b.arrested && b.countdownSec === 0)!;
+    expect(expiredBed).toBeTruthy();
+    expect(expiredBed.vitals.rhythm).toBe('ASYSTOLE');
+    expect(expiredBed.causalTimeline.some((ev) => ev.action === 'ISCHEMIC_ARREST')).toBe(true);
   });
 });

@@ -268,14 +268,48 @@ def synthesize_12lead_record(rhythm: str, rec_offset: int, seed: int) -> tuple[l
     }
 
 
+def reject_if_symlink(path: Path, raw_label: str) -> None:
+    if path.is_symlink():
+        sys.stderr.write(f"ERR_PATH_TRAVERSAL: Symlink rejected for '{raw_label}'\n")
+        sys.exit(2)
+
+
 def validate_safe_path(raw_path: str, workspace_root: Path) -> Path:
-    resolved = (workspace_root / raw_path).resolve() if not Path(raw_path).is_absolute() else Path(raw_path).resolve()
+    candidate = (workspace_root / raw_path) if not Path(raw_path).is_absolute() else Path(raw_path)
+    reject_if_symlink(candidate, raw_path)
+    resolved = candidate.resolve()
     try:
         resolved.relative_to(workspace_root)
     except ValueError:
         sys.stderr.write(f"ERR_PATH_TRAVERSAL: Path '{raw_path}' escapes workspace root '{workspace_root}'\n")
         sys.exit(2)
     return resolved
+
+
+def load_optional_local_wfdb_metadata(ptbxl_dir: Path, conn: duckdb.DuckDBPyConnection) -> dict[int, tuple[int, int, str]]:
+    """
+    If ptbxl_dir contains a local ptbxl_database.csv or .hea files, parse patient metadata
+    (ecg_id, age, sex) so local WFDB archives seed DuckDB records before falling back to
+    offline deterministic synthesis.
+    """
+    overrides: dict[int, tuple[int, int, str]] = {}
+    if not ptbxl_dir.exists() or not ptbxl_dir.is_dir():
+        return overrides
+    csv_path = ptbxl_dir / "ptbxl_database.csv"
+    if csv_path.exists() and csv_path.is_file() and not csv_path.is_symlink():
+        try:
+            rows = conn.execute(
+                "SELECT CAST(ecg_id AS INTEGER), CAST(age AS INTEGER), CAST(sex AS VARCHAR) FROM read_csv_auto(?) LIMIT 120",
+                [str(csv_path)],
+            ).fetchall()
+            for idx, r in enumerate(rows):
+                ecg_id = int(r[0]) if r[0] is not None else (10001 + idx * 137)
+                age_val = max(18, min(95, int(r[1]))) if r[1] is not None else 55
+                sex_val = "F" if str(r[2]).strip() in ("1", "F", "f") else "M"
+                overrides[idx] = (ecg_id, age_val, sex_val)
+        except Exception:
+            pass
+    return overrides
 
 
 def main() -> None:
@@ -290,12 +324,15 @@ def main() -> None:
     _ptbxl_dir = validate_safe_path(args.ptbxl_dir, workspace_root)
 
     out_dir.mkdir(parents=True, exist_ok=True)
+    reject_if_symlink(out_dir, args.out_dir)
 
     # Clean up any stale temporary files from interrupted runs (US-01.5)
     for stale in out_dir.glob("*.tmp*"):
+        reject_if_symlink(stale, str(stale))
         stale.unlink(missing_ok=True)
 
     conn = duckdb.connect(":memory:")
+    local_wfdb_meta = load_optional_local_wfdb_metadata(_ptbxl_dir, conn)
     conn.execute(
         """
         CREATE TABLE ptbxl_records (
@@ -326,9 +363,12 @@ def main() -> None:
 
     for rec_idx, (rhythm_name, within_class_idx, is_free) in enumerate(ordered_pairs):
         case_id = f"ptbxl-{rec_idx + 1:03d}"
-        ptbxl_id = 10001 + rec_idx * 137
-        age = 34 + ((rec_idx * 11 + within_class_idx * 7) % 52)
-        sex = "F" if (rec_idx % 2 == 0) else "M"
+        if rec_idx in local_wfdb_meta:
+            ptbxl_id, age, sex = local_wfdb_meta[rec_idx]
+        else:
+            ptbxl_id = 10001 + rec_idx * 137
+            age = 34 + ((rec_idx * 11 + within_class_idx * 7) % 52)
+            sex = "F" if (rec_idx % 2 == 0) else "M"
 
         samples_f32, meta = synthesize_12lead_record(
             rhythm_name,
@@ -429,14 +469,22 @@ def main() -> None:
     idx_target = out_dir / "ptbxl_index.json"
     idx_tmp = out_dir / f"ptbxl_index.json.tmp.{pid}"
 
+    for p in (bin_target, bin_tmp, idx_target, idx_tmp):
+        reject_if_symlink(p, str(p))
+
     try:
         with open(bin_tmp, "wb") as f_bin:
             f_bin.write(full_binary)
-        os.replace(bin_tmp, bin_target)
+            f_bin.flush()
+            os.fsync(f_bin.fileno())
 
         with open(idx_tmp, "w", encoding="utf-8", newline="\n") as f_idx:
             json.dump(manifest, f_idx, indent=2)
             f_idx.write("\n")
+            f_idx.flush()
+            os.fsync(f_idx.fileno())
+
+        os.replace(bin_tmp, bin_target)
         os.replace(idx_tmp, idx_target)
     finally:
         bin_tmp.unlink(missing_ok=True)

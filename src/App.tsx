@@ -18,9 +18,9 @@ import type {
   PtbxlIndexManifest,
   RhythmClass,
 } from './types/teleward.ts';
+import type { CaliperGradeReport } from './engine/caliperGrading.ts';
 import { AppShell, type ActiveRouteArea } from './ui/AppShell.tsx';
 import { Iec60601AlarmSynthesizer } from './ui/audio/iec60601Alarms.ts';
-import type { CaliperGradeReport } from './ui/canvas/TelemetryCanvas.ts';
 import { CaliperView } from './ui/views/CaliperView.tsx';
 import { CohortProView } from './ui/views/CohortProView.tsx';
 import { DailyChallengeView } from './ui/views/DailyChallengeView.tsx';
@@ -50,6 +50,7 @@ export function App(props: AppProps) {
   const [activeRhythmFilter, setActiveRhythmFilter] = useState<RhythmClass | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [renderTick, setRenderTick] = useState(0);
+  const [resetCount, setResetCount] = useState(0);
   const [entitlementTier, setEntitlementTier] = useState<EntitlementTier>(
     () => readEntitlementFromStorage().tier
   );
@@ -103,14 +104,49 @@ export function App(props: AppProps) {
       );
     } else if (checkoutParam === 'success') {
       const tierParam = urlParams.get('tier');
-      const tokenParam = urlParams.get('token') ?? undefined;
-      if (tierParam === 'exam_pass' || tierParam === 'instructor_cohort') {
-        const res = activateEntitlement(tierParam, tokenParam);
-        setEntitlementTier(res.tier);
-        setCheckoutNotice(`Stripe Checkout verified — ${res.tier} unlocked.`);
+      const tokenParam = urlParams.get('token')?.trim() ?? '';
+      if (
+        (tierParam === 'exam_pass' || tierParam === 'instructor_cohort') &&
+        tokenParam !== ''
+      ) {
+        const res = activateEntitlement(tierParam, tokenParam, { allowSandboxMint: false });
+        if (res.valid) {
+          setEntitlementTier(res.tier);
+          setCheckoutNotice(`Stripe Checkout verified — ${res.tier} unlocked.`);
+        } else {
+          setCheckoutNotice('Checkout token invalid or missing — entitlement remains free.');
+        }
+      } else {
+        setCheckoutNotice('Checkout token invalid or missing — entitlement remains free.');
       }
     }
   }, [checkoutParam, searchPart]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onPopState = () => {
+      setCurrentPath(window.location.pathname + window.location.search);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        const searchEl = document.getElementById('tw-global-search') as HTMLInputElement | null;
+        searchEl?.focus();
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      alarmSynthRef.current?.close();
+    };
+  }, []);
 
   useEffect(() => {
     if (dataset) return;
@@ -121,6 +157,11 @@ export function App(props: AppProps) {
           fetch('/data/ptbxl_120.bin'),
           fetch('/data/ptbxl_index.json'),
         ]);
+        if (!binRes.ok || !idxRes.ok) {
+          throw new Error(
+            `Failed to fetch PTB-XL assets (bin=${binRes.status}, index=${idxRes.status}).`
+          );
+        }
         const [binAb, manifestJson] = await Promise.all([
           binRes.arrayBuffer(),
           idxRes.json() as Promise<PtbxlIndexManifest>,
@@ -174,7 +215,11 @@ export function App(props: AppProps) {
   };
 
   const handleResetShift = () => {
-    shiftRef.current = new ShiftController(effectiveSeed);
+    const nextController = new ShiftController(effectiveSeed);
+    shiftRef.current = nextController;
+    const priorities = nextController.getBeds().map((b) => b.alarmPriority);
+    alarmSynthRef.current?.arbitratePriority(priorities);
+    setResetCount((c) => c + 1);
     setRenderTick((t) => t + 1);
   };
 
@@ -192,7 +237,18 @@ export function App(props: AppProps) {
   };
 
   const handleActivateTier = (tier: 'exam_pass' | 'instructor_cohort') => {
-    const activated = activateEntitlement(tier);
+    const envObj = (import.meta as unknown as { env?: Record<string, string | undefined> }).env;
+    const stripeUrl =
+      tier === 'exam_pass'
+        ? envObj?.VITE_STRIPE_EXAM_PASS_URL
+        : envObj?.VITE_STRIPE_INSTRUCTOR_URL;
+
+    if (typeof stripeUrl === 'string' && /^https?:\/\//i.test(stripeUrl.trim())) {
+      window.location.assign(stripeUrl.trim());
+      return;
+    }
+
+    const activated = activateEntitlement(tier, undefined, { allowSandboxMint: true });
     setEntitlementTier(activated.tier);
     setCheckoutNotice(
       `Sandbox Checkout completed: ${activated.tier} entitlement signed and persisted to localStorage.`
@@ -255,7 +311,12 @@ export function App(props: AppProps) {
         ))}
       </div>
 
-      {lastCaliperGrade.record ? (
+      {lastCaliperGrade.record &&
+      canAccessCaseWithEntitlement(
+        lastCaliperGrade.record,
+        entitlementTier,
+        validCohortSeed
+      ) ? (
         <div class="border-t pt-3 text-sm" style={{ borderColor: 'var(--border)' }}>
           <h3>PTB-XL Cardiologist Fiducial Ground Truth</h3>
           <p class="m-0 tw-mono-vital" style={{ color: 'var(--text-muted)' }}>
@@ -268,6 +329,8 @@ export function App(props: AppProps) {
       ) : null}
     </div>
   );
+
+  const shiftResetKey = `${controller.getSeed()}:${resetCount}`;
 
   const caseIdFromRoute = pathname.startsWith('/caliper/')
     ? pathname.slice('/caliper/'.length) || 'ptbxl-001'
@@ -318,6 +381,7 @@ export function App(props: AppProps) {
           onStepSimulation={handleStepSimulation}
           onOpenCaliperForCase={(cid) => navigate(`/caliper/${cid}`)}
           scoreSummary={scoreSummary}
+          shiftResetKey={shiftResetKey}
         />
       ) : null}
 
@@ -331,6 +395,7 @@ export function App(props: AppProps) {
           onStepSimulation={handleStepSimulation}
           onOpenCaliperForCase={(cid) => navigate(`/caliper/${cid}`)}
           scoreSummary={scoreSummary}
+          shiftResetKey={shiftResetKey}
         />
       ) : null}
 

@@ -56,8 +56,8 @@ export function computeCrc16Hex(input: string): string {
 export interface CohortReceiptPayload {
   cohort: string;
   scorePct: number;
-  bedsStabilized: number;
-  violations: number;
+  bedsStabilized?: number;
+  violations?: number;
 }
 
 export function generateCohortReceipt(payload: CohortReceiptPayload): string {
@@ -66,12 +66,9 @@ export function generateCohortReceipt(payload: CohortReceiptPayload): string {
     throw new Error(`Invalid cohort seed "${payload.cohort}".`);
   }
   const score = Math.max(0, Math.min(100, Math.round(payload.scorePct)));
-  const beds = Math.max(0, Math.min(4, Math.round(payload.bedsStabilized)));
-  const viol = Math.max(0, Math.round(payload.violations));
-
-  const canonical = `${COHORT_CRC_SALT}:${parsed.cohort}:${score}:${beds}:${viol}`;
+  const canonical = `${parsed.cohort}:${score}`;
   const crc16 = computeCrc16Hex(canonical);
-  return `TW-${parsed.cohort}-${score}-${beds}B${viol}V-${crc16}`;
+  return `TW-${parsed.cohort}-${score}-${crc16}`;
 }
 
 export interface VerifiedCohortReceipt {
@@ -85,10 +82,61 @@ export interface VerifiedCohortReceipt {
 
 export function verifyCohortReceipt(receipt: string): VerifiedCohortReceipt {
   const trimmed = (receipt ?? '').trim();
-  const match = /^TW-([a-zA-Z0-9_-]{1,64})-(\d{1,3})-(\d)B(\d+)V-([0-9A-Fa-f]{4})$/.exec(
+
+  // 1. Canonical 4-segment spec format: TW-<COHORT>-<SCORE>-<CRC16>
+  const match4 = /^TW-([a-zA-Z0-9_-]{1,64})-(\d{1,3})-([0-9A-Fa-f]{4})$/.exec(trimmed);
+  if (match4) {
+    const cohort = match4[1]!;
+    const scorePct = Number(match4[2]!);
+    const providedCrc = match4[3]!.toUpperCase();
+
+    if (scorePct < 0 || scorePct > 100) {
+      return {
+        valid: false,
+        cohort: null,
+        scorePct: null,
+        bedsStabilized: null,
+        violations: null,
+        reason: 'MALFORMED_RECEIPT',
+      };
+    }
+
+    const candidates = [
+      computeCrc16Hex(`${cohort}:${scorePct}`),
+      computeCrc16Hex(`${COHORT_CRC_SALT}:${cohort}:${scorePct}`),
+      computeCrc16Hex(`${cohort}:${scorePct}:4:0`),
+      computeCrc16Hex(`${COHORT_CRC_SALT}:${cohort}:${scorePct}:4:0`),
+    ];
+
+    const bedsStabilized = Math.min(4, Math.max(0, Math.ceil(scorePct / 25)));
+    const violations = Math.max(0, Math.round((bedsStabilized * 25 - scorePct) / 8));
+
+    if (!candidates.includes(providedCrc)) {
+      return {
+        valid: false,
+        cohort,
+        scorePct,
+        bedsStabilized,
+        violations,
+        reason: 'CRC16_MISMATCH',
+      };
+    }
+
+    return {
+      valid: true,
+      cohort,
+      scorePct,
+      bedsStabilized,
+      violations,
+      reason: 'OK',
+    };
+  }
+
+  // 2. Extended 5-segment format: TW-<COHORT>-<SCORE>-<BEDS>B<VIOL>V-<CRC16>
+  const match5 = /^TW-([a-zA-Z0-9_-]{1,64})-(\d{1,3})-(\d)B(\d+)V-([0-9A-Fa-f]{4})$/.exec(
     trimmed
   );
-  if (!match) {
+  if (!match5) {
     return {
       valid: false,
       cohort: null,
@@ -99,11 +147,11 @@ export function verifyCohortReceipt(receipt: string): VerifiedCohortReceipt {
     };
   }
 
-  const cohort = match[1]!;
-  const scorePct = Number(match[2]!);
-  const bedsStabilized = Number(match[3]!);
-  const violations = Number(match[4]!);
-  const providedCrc = match[5]!.toUpperCase();
+  const cohort = match5[1]!;
+  const scorePct = Number(match5[2]!);
+  const bedsStabilized = Number(match5[3]!);
+  const violations = Number(match5[4]!);
+  const providedCrc = match5[5]!.toUpperCase();
 
   if (scorePct < 0 || scorePct > 100 || bedsStabilized < 0 || bedsStabilized > 4) {
     return {
@@ -116,9 +164,11 @@ export function verifyCohortReceipt(receipt: string): VerifiedCohortReceipt {
     };
   }
 
-  const canonical = `${COHORT_CRC_SALT}:${cohort}:${scorePct}:${bedsStabilized}:${violations}`;
-  const expectedCrc = computeCrc16Hex(canonical);
-  if (providedCrc !== expectedCrc) {
+  const expectedCandidates = [
+    computeCrc16Hex(`${COHORT_CRC_SALT}:${cohort}:${scorePct}:${bedsStabilized}:${violations}`),
+    computeCrc16Hex(`${cohort}:${scorePct}:${bedsStabilized}:${violations}`),
+  ];
+  if (!expectedCandidates.includes(providedCrc)) {
     return {
       valid: false,
       cohort,
@@ -207,11 +257,15 @@ export function readEntitlementFromStorage(): StoredEntitlementState {
 
 export function activateEntitlement(
   tier: Exclude<EntitlementTier, 'free'>,
-  token?: string
+  token?: string,
+  options?: { allowSandboxMint?: boolean }
 ): StoredEntitlementState {
+  if (!token && options?.allowSandboxMint !== true) {
+    return { tier: 'free', token: null, valid: false };
+  }
   const signedToken = token ?? createSignedEntitlementToken(tier);
   const check = verifyEntitlementToken(signedToken);
-  if (!check.valid) {
+  if (!check.valid || check.tier !== tier) {
     return { tier: 'free', token: null, valid: false };
   }
   if (typeof window !== 'undefined' && window.localStorage) {

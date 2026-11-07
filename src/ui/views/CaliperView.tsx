@@ -7,12 +7,14 @@ import {
 import { RHYTHM_CLASSES, type PtbxlCaseRecord, type RhythmClass } from '../../types/teleward.ts';
 import {
   computeCaliperMetrics,
-  getSafe2dContext,
   gradeCaliperSubmission,
   nudgeCaliperState,
-  render12LeadCaliperCanvas,
   type CaliperGradeReport,
   type CaliperState,
+} from '../../engine/caliperGrading.ts';
+import {
+  getSafe2dContext,
+  render12LeadCaliperCanvas,
 } from '../canvas/TelemetryCanvas.ts';
 
 export interface CaliperViewProps {
@@ -37,6 +39,7 @@ export function CaliperView(props: CaliperViewProps) {
   } = props;
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const isDraggingRef = useRef(false);
   const [activeHandle, setActiveHandle] = useState<'t1' | 't2' | 'v1' | 'v2'>('t2');
   const [caliper, setCaliper] = useState<CaliperState>({
     t1Ms: 240,
@@ -60,23 +63,28 @@ export function CaliperView(props: CaliperViewProps) {
     resolvedRecord = null;
   }
 
+  const isUnlocked = resolvedRecord !== null && canAccessCase(resolvedRecord);
+
   // Reset caliper handles deterministically when route :caseId changes (US-04.4)
   useEffect(() => {
+    isDraggingRef.current = false;
     setCaliper({ t1Ms: 240, t2Ms: 1040, v1Mv: 0.0, v2Mv: 0.25 });
     setFormError(null);
     setGradeReport(null);
-    if (resolvedRecord) {
+    if (resolvedRecord && isUnlocked) {
       setRhythmInput(resolvedRecord.rhythmClass);
+    } else {
+      setRhythmInput('NSR');
     }
-    onGradeUpdate?.(null, resolvedRecord);
-  }, [caseId]);
+    onGradeUpdate?.(null, isUnlocked ? resolvedRecord : null);
+  }, [caseId, isUnlocked]);
 
   const metrics = computeCaliperMetrics(
     caliper.t1Ms,
     caliper.t2Ms,
     caliper.v1Mv,
     caliper.v2Mv,
-    resolvedRecord?.fiducials.qtMs ?? 380
+    isUnlocked && resolvedRecord ? resolvedRecord.fiducials.qtMs : 380
   );
 
   useEffect(() => {
@@ -167,25 +175,51 @@ export function CaliperView(props: CaliperViewProps) {
     }
   };
 
-  const handlePointerPlotClick = (e: MouseEvent) => {
+  const applyPointerCoordinate = (clientX: number, clientY: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return;
-    const relX = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const clickedMs = Math.round(relX * 10000);
-    setCaliper((prev) =>
-      activeHandle === 't1' ? { ...prev, t1Ms: clickedMs } : { ...prev, t2Ms: clickedMs }
-    );
+    const effWidth = rect.width > 0 ? rect.width : canvas.width || 960;
+    const effHeight = rect.height > 0 ? rect.height : canvas.height || 420;
+    if (activeHandle === 't1' || activeHandle === 't2') {
+      const relX = Math.max(0, Math.min(1, (clientX - rect.left) / effWidth));
+      const snappedMs = Math.max(0, Math.min(10000, Math.round((relX * 10000) / 2) * 2));
+      setCaliper((prev) =>
+        activeHandle === 't1' ? { ...prev, t1Ms: snappedMs } : { ...prev, t2Ms: snappedMs }
+      );
+    } else {
+      const relY = Math.max(0, Math.min(1, (clientY - rect.top) / effHeight));
+      const rawMv = (0.5 - relY) * 5.0;
+      const clampedMv = Number(Math.max(-5.0, Math.min(5.0, rawMv)).toFixed(2));
+      setCaliper((prev) =>
+        activeHandle === 'v1' ? { ...prev, v1Mv: clampedMv } : { ...prev, v2Mv: clampedMv }
+      );
+    }
+  };
+
+  const handlePointerDown = (e: PointerEvent) => {
+    isDraggingRef.current = true;
+    applyPointerCoordinate(e.clientX, e.clientY);
+  };
+
+  const handlePointerMove = (e: PointerEvent) => {
+    if (!isDraggingRef.current) return;
+    applyPointerCoordinate(e.clientX, e.clientY);
+  };
+
+  const handlePointerUpOrCancel = () => {
+    isDraggingRef.current = false;
+  };
+
+  const handlePointerPlotClick = (e: MouseEvent) => {
+    applyPointerCoordinate(e.clientX, e.clientY);
   };
 
   const handleAutofillFromFiducials = () => {
-    const f = resolvedRecord.fiducials;
-    setPrInput(String(f.prMs));
-    setQrsInput(String(f.qrsMs));
-    setQtcInput(String(f.qtcMs));
-    setStInput(String(f.stMv));
-    setRhythmInput(resolvedRecord.rhythmClass);
+    setPrInput(String(Math.round(metrics.deltaMs)));
+    setQrsInput(String(Math.round(metrics.deltaMs)));
+    setQtcInput(String(Math.round(metrics.qtcMs)));
+    setStInput(metrics.deltaMv.toFixed(2));
     setFormError(null);
   };
 
@@ -251,11 +285,15 @@ export function CaliperView(props: CaliperViewProps) {
             onChange={(e) => onSelectCaseId((e.target as HTMLSelectElement).value)}
             class="tw-btn-secondary"
           >
-            {dataset.records.map((r) => (
-              <option key={r.caseId} value={r.caseId}>
-                {r.caseId} ({r.rhythmClass}) {r.freeStarter ? '· Free' : '· Pro'}
-              </option>
-            ))}
+            {dataset.records.map((r) => {
+              const unlocked = canAccessCase(r);
+              return (
+                <option key={r.caseId} value={r.caseId}>
+                  {r.caseId} {unlocked ? `(${r.rhythmClass})` : '(Pro Exam Strip — Locked)'}{' '}
+                  {r.freeStarter ? '· Free' : '· Pro'}
+                </option>
+              );
+            })}
           </select>
         </div>
       </section>
@@ -268,6 +306,7 @@ export function CaliperView(props: CaliperViewProps) {
               <button
                 key={h}
                 type="button"
+                data-testid={`caliper-handle-btn-${h}`}
                 onClick={() => setActiveHandle(h)}
                 class={activeHandle === h ? 'tw-btn-primary' : 'tw-btn-secondary'}
               >
@@ -278,16 +317,22 @@ export function CaliperView(props: CaliperViewProps) {
 
           <div class="flex flex-wrap items-center gap-4 text-sm">
             <span>
-              T1: <strong class="tw-mono-vital">{caliper.t1Ms} ms</strong>
+              T1: <strong data-testid="caliper-t1-ms" class="tw-mono-vital">{caliper.t1Ms} ms</strong>
             </span>
             <span>
-              T2: <strong class="tw-mono-vital">{caliper.t2Ms} ms</strong>
+              T2: <strong data-testid="caliper-t2-ms" class="tw-mono-vital">{caliper.t2Ms} ms</strong>
             </span>
             <span>
               Δt: <strong class="tw-mono-vital">{metrics.deltaMs} ms ({metrics.hrDisplay})</strong>
             </span>
             <span>
               Bazett QTc: <strong class="tw-mono-vital">{metrics.qtcMs} ms</strong>
+            </span>
+            <span>
+              V1: <strong data-testid="caliper-v1-mv" class="tw-mono-vital">{caliper.v1Mv} mV</strong>
+            </span>
+            <span>
+              V2: <strong data-testid="caliper-v2-mv" class="tw-mono-vital">{caliper.v2Mv} mV</strong>
             </span>
             <span>
               ΔV: <strong class="tw-mono-vital">{metrics.deltaMv} mV</strong>
@@ -297,8 +342,13 @@ export function CaliperView(props: CaliperViewProps) {
 
         <canvas
           ref={canvasRef}
+          data-testid="caliper-12lead-canvas"
           tabIndex={0}
           onKeyDown={handleKeyDown}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUpOrCancel}
+          onPointerCancel={handlePointerUpOrCancel}
           onClick={handlePointerPlotClick}
           width={960}
           height={420}

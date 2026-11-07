@@ -178,6 +178,51 @@ export interface TransitionDecision {
   rationale: string;
 }
 
+export function applyTransitionToContinuousState(
+  state: {
+    hr: number;
+    sbp: number;
+    dbp: number;
+    spo2: number;
+    etco2: number;
+    rr: number;
+  },
+  decision: TransitionDecision
+): {
+  hr: number;
+  sbp: number;
+  dbp: number;
+  spo2: number;
+  etco2: number;
+  rr: number;
+} {
+  if (decision.converted) {
+    const nsrProfile = RHYTHM_PROFILES.NSR;
+    return {
+      hr: nsrProfile.hr,
+      sbp: Math.max(106, state.sbp),
+      dbp: Math.max(68, state.dbp),
+      spo2: Math.max(96, state.spo2),
+      etco2: Math.max(36, state.etco2),
+      rr: nsrProfile.rr,
+    };
+  }
+  if (decision.ahaViolationCode) {
+    return {
+      ...state,
+      sbp: Math.max(0, state.sbp - 28),
+      dbp: Math.max(0, state.dbp - 18),
+    };
+  }
+  return { ...state };
+}
+
+export function getCaseIdForRhythm(rhythm: RhythmClass, bedIndex = 0): string {
+  const classIdx = Math.max(0, RHYTHM_CLASSES.indexOf(rhythm));
+  const caseNumber = classIdx * 2 + (Math.abs(bedIndex) % 2) + 1;
+  return `ptbxl-${String(caseNumber).padStart(3, '0')}`;
+}
+
 export function evaluateAclsTransition(
   currentRhythm: RhythmClass,
   action: AclsInterventionId,
@@ -325,7 +370,7 @@ export function evaluateAclsTransition(
   if (currentRhythm === 'VT_MONO') {
     if (
       (action === 'sync_cardioversion' || action === 'amiodarone_300mg') &&
-      currentSbp >= 50
+      currentSbp >= 60
     ) {
       return {
         nextRhythm: 'NSR',
@@ -492,6 +537,7 @@ export function runSimulation(rawOptions: SimulationOptions): SimulationResult {
       );
       activeRhythm = decision.nextRhythm;
       paced = decision.paced;
+      continuousState = applyTransitionToContinuousState(continuousState, decision);
       if (decision.converted) {
         unrescuedSec = 0;
       }
@@ -645,8 +691,7 @@ export class ShiftController {
         rr: initVitals.rr,
       });
 
-      const caseNumber = ((i * 2 + 1) % 24) + 1;
-      const caseId = `ptbxl-${String(caseNumber).padStart(3, '0')}`;
+      const caseId = getCaseIdForRhythm(rhythm, i);
       const meta = BED_PATIENTS[i]!;
 
       this.beds.push({
@@ -718,11 +763,17 @@ export class ShiftController {
         );
         this.continuousStates[i] = nextState;
 
+        let expiredThisTick = false;
+        const preArrestVitals = { ...bed.vitals };
+
         if (!bed.stabilized && !bed.arrested) {
           bed.countdownSec = Math.max(0, Number((60 - this.elapsedSec).toFixed(1)));
           if (bed.countdownSec <= 0) {
             bed.arrested = true;
             bed.vitals.rhythm = 'ASYSTOLE';
+            bed.vitals.paced = false;
+            bed.caseId = getCaseIdForRhythm('ASYSTOLE', bed.bedIndex);
+            expiredThisTick = true;
           }
         }
 
@@ -732,7 +783,23 @@ export class ShiftController {
           map: 0,
           paced: bed.vitals.paced,
         });
-        bed.alarmPriority = getAlarmPriorityForRhythm(bed.vitals.rhythm);
+        bed.alarmPriority =
+          bed.ahaViolations.length > 0
+            ? 'CRISIS'
+            : getAlarmPriorityForRhythm(bed.vitals.rhythm);
+
+        if (expiredThisTick) {
+          bed.causalTimeline.push({
+            timeSec: this.elapsedSec,
+            tick: this.tickCount,
+            action: 'ISCHEMIC_ARREST',
+            preVitals: preArrestVitals,
+            postVitals: { ...bed.vitals },
+            converted: false,
+            ahaViolationCode: null,
+            rationale: `${bed.bedLabel} countdown expired without rescuing ACLS intervention; progressed to terminal ischemic Asystole.`,
+          });
+        }
       }
     }
   }
@@ -748,7 +815,7 @@ export class ShiftController {
     }
 
     // Cooldown / idempotency guard against rapid accidental double-clicks (< 250 ms) (US-03.4)
-    if (nowTimestampMs - bed.lastInterventionMs < 250 && bed.lastInterventionMs > 0) {
+    if (bed.lastInterventionMs >= 0 && nowTimestampMs - bed.lastInterventionMs < 250) {
       return { applied: false, event: null };
     }
     bed.lastInterventionMs = nowTimestampMs;
@@ -757,26 +824,19 @@ export class ShiftController {
     const decision = evaluateAclsTransition(bed.vitals.rhythm, action, bed.vitals.sbp);
     bed.vitals.rhythm = decision.nextRhythm;
     bed.vitals.paced = decision.paced;
+    bed.caseId = getCaseIdForRhythm(bed.vitals.rhythm, bed.bedIndex);
+    this.continuousStates[bedIndex] = applyTransitionToContinuousState(
+      this.continuousStates[bedIndex]!,
+      decision
+    );
 
     if (decision.converted) {
       bed.stabilized = true;
       bed.arrested = false;
-      const nsrProfile = RHYTHM_PROFILES.NSR;
-      this.continuousStates[bedIndex] = {
-        hr: nsrProfile.hr,
-        sbp: Math.max(106, this.continuousStates[bedIndex]!.sbp),
-        dbp: Math.max(68, this.continuousStates[bedIndex]!.dbp),
-        spo2: Math.max(96, this.continuousStates[bedIndex]!.spo2),
-        etco2: Math.max(36, this.continuousStates[bedIndex]!.etco2),
-        rr: nsrProfile.rr,
-      };
     }
 
     if (decision.ahaViolationCode) {
       bed.ahaViolations.push(decision.ahaViolationCode);
-      // Accelerate hemodynamic decay on contraindicated treatment (US-03.3)
-      this.continuousStates[bedIndex]!.sbp = Math.max(0, this.continuousStates[bedIndex]!.sbp - 28);
-      this.continuousStates[bedIndex]!.dbp = Math.max(0, this.continuousStates[bedIndex]!.dbp - 18);
       if (decision.nextRhythm === 'VFIB' || decision.nextRhythm === 'ASYSTOLE') {
         bed.arrested = true;
         bed.stabilized = false;
@@ -789,9 +849,10 @@ export class ShiftController {
       map: 0,
       paced: bed.vitals.paced,
     });
-    bed.alarmPriority = decision.ahaViolationCode
-      ? 'CRISIS'
-      : getAlarmPriorityForRhythm(bed.vitals.rhythm);
+    bed.alarmPriority =
+      bed.ahaViolations.length > 0
+        ? 'CRISIS'
+        : getAlarmPriorityForRhythm(bed.vitals.rhythm);
 
     const event: CausalEvent = {
       timeSec: this.elapsedSec,

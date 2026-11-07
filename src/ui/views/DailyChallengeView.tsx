@@ -13,6 +13,7 @@ export interface DailyChallengeViewProps {
   onStepSimulation: (deltaSec: number) => void;
   onOpenCaliperForCase: (caseId: string) => void;
   scoreSummary: { scorePct: number; bedsStabilized: number; totalViolations: number };
+  shiftResetKey?: string;
 }
 
 export function DailyChallengeView(props: DailyChallengeViewProps) {

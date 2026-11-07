@@ -229,13 +229,46 @@ describe('US-03 & US-04: 60fps 2D Canvas 4-Bed ICU Telemetry, IEC 60601-1-8 Alar
     fireEvent.click(submitBtn);
     expect(getByTestId('caliper-form-error').textContent).toContain('Enter finite numeric values');
 
-    // Autofill caliper readings and submit -> grades OVERALL PASS (US-04.1)
+    // "Load Caliper Readings into Form" loads current caliper metrics (deltaMs=800), NOT ground-truth fiducials
     fireEvent.click(getByTestId('autofill-caliper-fiducials-btn'));
+    const prField = container.querySelector('#input-pr-ms') as HTMLInputElement;
+    const stField = container.querySelector('#input-st-mv') as HTMLInputElement;
+    expect(prField.value).toBe('800');
+    expect(stField.value).toBe('0.25');
+
+    // Clicking/dragging with Handle V1 / Handle V2 updates v1Mv / v2Mv
+    fireEvent.click(getByTestId('caliper-handle-btn-v1'));
+    const canvasEl = getByTestId('caliper-12lead-canvas');
+    fireEvent.pointerDown(canvasEl, { clientX: 200, clientY: 84 });
+    fireEvent.pointerMove(canvasEl, { clientX: 200, clientY: 42 });
+    fireEvent.pointerUp(canvasEl);
+    expect(getByTestId('caliper-v1-mv').textContent).not.toBe('0 mV');
+
+    fireEvent.click(getByTestId('caliper-handle-btn-v2'));
+    fireEvent.click(canvasEl, { clientX: 200, clientY: 336 });
+    expect(getByTestId('caliper-v2-mv').textContent).not.toBe('0.25 mV');
+
+    // Enter ground-truth fiducials for ptbxl-001 and submit -> grades OVERALL PASS (US-04.1)
+    const f001 = DATASET.records[0]!.fiducials;
+    fireEvent.input(prField, { target: { value: String(f001.prMs) } });
+    fireEvent.input(container.querySelector('#input-qrs-ms') as HTMLInputElement, {
+      target: { value: String(f001.qrsMs) },
+    });
+    fireEvent.input(container.querySelector('#input-qtc-ms') as HTMLInputElement, {
+      target: { value: String(f001.qtcMs) },
+    });
+    fireEvent.input(stField, { target: { value: String(f001.stMv) } });
     fireEvent.click(submitBtn);
     expect(getByTestId('caliper-grade-result').textContent).toContain('OVERALL PASS');
 
     // Switch to another starter case (ptbxl-003) and verify active case title updates
     const caseSelect = getByTestId('caliper-case-switcher') as HTMLSelectElement;
+    // Locked Pro cases in <select> must show "(Pro Exam Strip — Locked)" and never leak rhythm diagnosis
+    const lockedOptionText =
+      Array.from(caseSelect.options).find((o) => o.value === 'ptbxl-051')?.textContent ?? '';
+    expect(lockedOptionText).toContain('(Pro Exam Strip — Locked)');
+    expect(lockedOptionText).not.toContain(DATASET.records[50]!.rhythmClass);
+
     fireEvent.change(caseSelect, { target: { value: 'ptbxl-003' } });
     expect(getByTestId('active-caliper-case-id').textContent).toContain('ptbxl-003');
   });

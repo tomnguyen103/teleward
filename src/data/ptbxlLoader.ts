@@ -131,7 +131,7 @@ export function validateBinaryChunk(buffer: ArrayBuffer): ValidatedHeader {
   }
 
   const floats = new Float32Array(buffer, HEADER_BYTE_LENGTH, EXPECTED_PAYLOAD_FLOATS);
-  for (let i = 0; i < floats.length; i += 64) {
+  for (let i = 0; i < floats.length; i++) {
     const val = floats[i]!;
     if (!Number.isFinite(val) || val < -5.0 || val > 5.0) {
       throw new TelewardBinaryError(
@@ -164,9 +164,31 @@ export function loadPtbxlBinary(
     );
   }
 
+  const expectedCrcHex = header.crc32.toString(16).padStart(8, '0').toLowerCase();
+  if (
+    typeof manifest.crc32Hex !== 'string' ||
+    manifest.crc32Hex.toLowerCase() !== expectedCrcHex
+  ) {
+    throw new TelewardBinaryError(
+      'BINARY_CORRUPT',
+      `Manifest crc32Hex "${String(manifest.crc32Hex)}" does not match binary header CRC32 "${expectedCrcHex}".`
+    );
+  }
+
   const payloadFloats = new Float32Array(buffer, HEADER_BYTE_LENGTH, EXPECTED_PAYLOAD_FLOATS);
   const recordsById = new Map<string, PtbxlCaseRecord>();
-  for (const rec of manifest.records) {
+  for (let idx = 0; idx < manifest.records.length; idx++) {
+    const rec = manifest.records[idx]!;
+    if (
+      rec.recordIndex !== idx ||
+      !CASE_ID_REGEX.test(rec.caseId) ||
+      recordsById.has(rec.caseId)
+    ) {
+      throw new TelewardBinaryError(
+        'BINARY_CORRUPT',
+        `Manifest record index/caseId mismatch at position ${idx}: recordIndex=${String(rec.recordIndex)}, caseId=${String(rec.caseId)}.`
+      );
+    }
     recordsById.set(rec.caseId, rec);
   }
 
@@ -215,10 +237,10 @@ export function getCaseWaveforms(
     for (let s = 0; s < totalSamples; s++) {
       const tileIdx = s % EXPECTED_SAMPLES_PER_TILE;
       const sampleVal = dataset.payloadFloats[leadOffset + tileIdx]!;
-      if (!Number.isFinite(sampleVal)) {
+      if (!Number.isFinite(sampleVal) || sampleVal < -5.0 || sampleVal > 5.0) {
         throw new TelewardBinaryError(
           'BINARY_CORRUPT',
-          `Non-finite sample encountered in ${caseId} lead ${leadName} at sample ${s}.`
+          `Out-of-range or non-finite sample encountered in ${caseId} lead ${leadName} at sample ${s}: ${sampleVal}.`
         );
       }
       out[s] = sampleVal;

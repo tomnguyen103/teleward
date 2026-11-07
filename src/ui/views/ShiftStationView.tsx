@@ -23,6 +23,7 @@ export interface ShiftStationViewProps {
   onStepSimulation: (deltaSec: number) => void;
   onOpenCaliperForCase: (caseId: string) => void;
   scoreSummary: { scorePct: number; bedsStabilized: number; totalViolations: number };
+  shiftResetKey?: string;
 }
 
 export function ShiftStationView(props: ShiftStationViewProps) {
@@ -37,12 +38,15 @@ export function ShiftStationView(props: ShiftStationViewProps) {
     onStepSimulation,
     onOpenCaliperForCase,
     scoreSummary,
+    shiftResetKey,
   } = props;
 
   const canvasRefs = useRef<Array<HTMLCanvasElement | null>>([null, null, null, null]);
   const ringBuffersRef = useRef<TelemetryRingBuffer[] | null>(null);
+  const lastResetKeyRef = useRef<string | undefined>(undefined);
 
-  if (!ringBuffersRef.current) {
+  if (!ringBuffersRef.current || lastResetKeyRef.current !== shiftResetKey) {
+    lastResetKeyRef.current = shiftResetKey;
     ringBuffersRef.current = beds.map((b) => {
       const rb = new TelemetryRingBuffer(2500, 90);
       rb.prefill(b.vitals, 1250);

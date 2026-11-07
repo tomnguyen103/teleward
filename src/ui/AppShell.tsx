@@ -1,8 +1,11 @@
 import type { ComponentChildren } from 'preact';
+import { useEffect, useState } from 'preact/hooks';
 import { RHYTHM_CLASSES, type PtbxlCaseRecord, type RhythmClass } from '../types/teleward.ts';
 import type { BedState } from '../engine/aclsEngine.ts';
 
 export type ActiveRouteArea = 'shift' | 'daily' | 'caliper' | 'cohort';
+
+const SIDEBAR_STORAGE_KEY = 'teleward_sidebar_collapsed_v1';
 
 export interface AppShellProps {
   activeArea: ActiveRouteArea;
@@ -48,12 +51,53 @@ export function AppShell(props: AppShellProps) {
     children,
   } = props;
 
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window === 'undefined' || !window.localStorage) return false;
+    try {
+      return window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next));
+        } catch {
+          // Ignore storage quota errors
+        }
+      }
+      return next;
+    });
+    setMobileDrawerOpen((m) => !m);
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        toggleSidebar();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   const navItems: Array<{ area: ActiveRouteArea; label: string; href: string }> = [
     { area: 'shift', label: '4-Bed ICU Shift', href: '/shift' },
     { area: 'daily', label: 'Daily Code', href: '/daily' },
     { area: 'caliper', label: '12-Lead Calipers', href: '/caliper/ptbxl-001' },
     { area: 'cohort', label: 'Cohort & Exam Pass', href: '/cohort' },
   ];
+
+  const workspaceGridCols = sidebarCollapsed
+    ? 'grid-cols-1 md:grid-cols-[56px_minmax(0,1fr)] xl:grid-cols-[56px_minmax(0,1fr)_360px]'
+    : 'grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_360px]';
 
   return (
     <div class="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--bg)', color: 'var(--text)' }}>
@@ -78,7 +122,7 @@ export function AppShell(props: AppShellProps) {
         <button
           type="button"
           onClick={onToggleAudioArmOrMute}
-          class="text-sm font-medium underline"
+          class="min-h-9 px-3 inline-flex items-center relative before:absolute before:-inset-1 text-sm font-medium underline"
           style={{ color: 'var(--primary)' }}
         >
           {audioArmed && !audioMuted ? 'Mute Audio' : 'Arm Audio'}
@@ -90,14 +134,30 @@ export function AppShell(props: AppShellProps) {
         class="sticky top-0 z-30 h-16 px-4 border-b grid grid-cols-[1fr_minmax(0,360px)_1fr] items-center gap-4"
         style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
       >
-        <div class="flex items-center gap-6 min-w-0">
+        <div class="flex items-center gap-3 min-w-0">
+          <button
+            type="button"
+            data-testid="sidebar-collapse-toggle"
+            onClick={toggleSidebar}
+            aria-expanded={!sidebarCollapsed}
+            aria-controls="tw-scope-sidebar"
+            aria-label={sidebarCollapsed ? 'Expand ICU Scope Sidebar (Ctrl+B)' : 'Collapse ICU Scope Sidebar (Ctrl+B)'}
+            title="Toggle Scope Sidebar (Ctrl+B)"
+            class="tw-icon-btn shrink-0"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M9 3v18" />
+            </svg>
+          </button>
+
           <a
             href="/shift"
             onClick={(e) => {
               e.preventDefault();
               onNavigate('/shift');
             }}
-            class="flex items-center gap-2 font-semibold text-base no-underline shrink-0"
+            class="h-10 flex items-center gap-2 font-semibold text-base no-underline shrink-0"
             style={{ color: 'var(--text)' }}
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -152,7 +212,7 @@ export function AppShell(props: AppShellProps) {
               value={searchQuery}
               onInput={(e) => onSearchQueryChange((e.target as HTMLInputElement).value)}
               placeholder="Filter 120 PTB-XL cases or rhythm (Ctrl+K)"
-              class="w-full bg-transparent border-0 text-sm focus:outline-none"
+              class="w-full h-10 bg-transparent border-0 text-sm focus:outline-none"
               style={{ color: 'var(--text)' }}
             />
           </div>
@@ -208,12 +268,13 @@ export function AppShell(props: AppShellProps) {
         </div>
       </header>
 
-      {/* Main 3-Pane Workspace: Dark Scope Sidebar (240px xl+) + Fluid Main Canvas + Docked Inspector (360px xl+) */}
-      <div class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_360px]">
+      {/* Main 3-Pane Workspace: Dark Scope Sidebar (240px xl+ or 56px rail) + Fluid Main Canvas + Docked Inspector (360px xl+) */}
+      <div class={`flex-1 min-h-0 grid ${workspaceGridCols}`}>
         {/* Dark Scope Sidebar */}
         <aside
+          id="tw-scope-sidebar"
           aria-label="ICU Bed and Rhythm Scopes"
-          class="hidden md:flex flex-col border-r p-3 gap-4 overflow-y-auto"
+          class={`${mobileDrawerOpen ? 'flex' : 'hidden'} md:flex flex-col border-r ${sidebarCollapsed ? 'w-14 p-1.5' : 'p-3'} gap-4 overflow-y-auto`}
           style={{
             backgroundColor: 'var(--sidebar-bg)',
             color: 'var(--sidebar-text)',
@@ -221,9 +282,11 @@ export function AppShell(props: AppShellProps) {
           }}
         >
           <div>
-            <h2 class="text-sm font-semibold mb-2" style={{ color: 'var(--sidebar-text)' }}>
-              Active ICU Beds
-            </h2>
+            {!sidebarCollapsed ? (
+              <h2 class="text-sm font-semibold mb-2" style={{ color: 'var(--sidebar-text)' }}>
+                Active ICU Beds
+              </h2>
+            ) : null}
             <ul class="list-none p-0 m-0 flex flex-col gap-1">
               {beds.map((bed) => {
                 const isSelected = bed.bedIndex === selectedBedIndex;
@@ -231,22 +294,25 @@ export function AppShell(props: AppShellProps) {
                   <li key={bed.bedIndex}>
                     <button
                       type="button"
+                      title={`${bed.bedLabel} (${bed.vitals.rhythm} · ${bed.vitals.hr} bpm)`}
                       onClick={() => {
                         onSelectBed(bed.bedIndex);
                         if (activeArea !== 'shift' && activeArea !== 'daily') {
                           onNavigate('/shift');
                         }
                       }}
-                      class="w-full text-left px-3 py-2 rounded-md flex items-center justify-between text-sm"
+                      class={`w-full min-h-10 text-left ${sidebarCollapsed ? 'px-1 justify-center' : 'px-3 justify-between'} py-2 rounded-md flex items-center text-sm`}
                       style={{
                         backgroundColor: isSelected ? 'var(--sidebar-active-bg)' : 'transparent',
                         color: 'var(--sidebar-text)',
                       }}
                     >
-                      <span>{bed.bedLabel}</span>
-                      <span class="tw-mono-vital text-sm" style={{ color: 'var(--sidebar-muted)' }}>
-                        {bed.vitals.rhythm} · {bed.vitals.hr}
-                      </span>
+                      <span>{sidebarCollapsed ? `B${bed.bedIndex + 1}` : bed.bedLabel}</span>
+                      {!sidebarCollapsed ? (
+                        <span class="tw-mono-vital text-sm" style={{ color: 'var(--sidebar-muted)' }}>
+                          {bed.vitals.rhythm} · {bed.vitals.hr}
+                        </span>
+                      ) : null}
                     </button>
                   </li>
                 );
@@ -255,24 +321,29 @@ export function AppShell(props: AppShellProps) {
           </div>
 
           <div class="border-t pt-3" style={{ borderColor: 'var(--border)' }}>
-            <h2 class="text-sm font-semibold mb-2" style={{ color: 'var(--sidebar-text)' }}>
-              PTB-XL 12-Rhythm Bank
-            </h2>
+            {!sidebarCollapsed ? (
+              <h2 class="text-sm font-semibold mb-2" style={{ color: 'var(--sidebar-text)' }}>
+                PTB-XL 12-Rhythm Bank
+              </h2>
+            ) : null}
             <ul class="list-none p-0 m-0 flex flex-col gap-1">
               <li>
                 <button
                   type="button"
+                  title="All Curated Strips"
                   onClick={() => onSelectRhythmFilter('ALL')}
-                  class="w-full text-left px-3 py-1.5 rounded-md flex items-center justify-between text-sm"
+                  class={`w-full min-h-10 text-left ${sidebarCollapsed ? 'px-1 justify-center' : 'px-3 justify-between'} py-1.5 rounded-md flex items-center text-sm`}
                   style={{
                     backgroundColor: activeRhythmFilter === 'ALL' ? 'var(--sidebar-active-bg)' : 'transparent',
                     color: 'var(--sidebar-text)',
                   }}
                 >
-                  <span>All Curated Strips</span>
-                  <span class="tw-mono-vital" style={{ color: 'var(--sidebar-muted)' }}>
-                    {records.length}
-                  </span>
+                  <span>{sidebarCollapsed ? 'ALL' : 'All Curated Strips'}</span>
+                  {!sidebarCollapsed ? (
+                    <span class="tw-mono-vital" style={{ color: 'var(--sidebar-muted)' }}>
+                      {records.length}
+                    </span>
+                  ) : null}
                 </button>
               </li>
               {RHYTHM_CLASSES.map((rClass) => {
@@ -282,6 +353,7 @@ export function AppShell(props: AppShellProps) {
                   <li key={rClass}>
                     <button
                       type="button"
+                      title={`${rClass} (${count} strips)`}
                       onClick={() => {
                         onSelectRhythmFilter(rClass);
                         const firstMatch = records.find((r) => r.rhythmClass === rClass);
@@ -289,16 +361,18 @@ export function AppShell(props: AppShellProps) {
                           onNavigate(`/caliper/${firstMatch.caseId}`);
                         }
                       }}
-                      class="w-full text-left px-3 py-1.5 rounded-md flex items-center justify-between text-sm"
+                      class={`w-full min-h-10 text-left ${sidebarCollapsed ? 'px-1 justify-center' : 'px-3 justify-between'} py-1.5 rounded-md flex items-center text-sm`}
                       style={{
                         backgroundColor: active ? 'var(--sidebar-active-bg)' : 'transparent',
                         color: 'var(--sidebar-text)',
                       }}
                     >
-                      <span>{rClass}</span>
-                      <span class="tw-mono-vital" style={{ color: 'var(--sidebar-muted)' }}>
-                        {count}
-                      </span>
+                      <span>{sidebarCollapsed ? rClass.slice(0, 3) : rClass}</span>
+                      {!sidebarCollapsed ? (
+                        <span class="tw-mono-vital" style={{ color: 'var(--sidebar-muted)' }}>
+                          {count}
+                        </span>
+                      ) : null}
                     </button>
                   </li>
                 );

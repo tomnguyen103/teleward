@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import {
   loadPtbxlBinary,
   validateBinaryChunk,
+  computeCrc32,
   getCaseWaveforms,
   getCaseById,
   TelewardBinaryError,
@@ -120,7 +121,25 @@ describe('US-01: PhysioNet PTB-XL 120-Record Python + DuckDB Binary Compiler & L
     floatView.setFloat32(64, 1.2345, true);
     expect(() => validateBinaryChunk(badCrc)).toThrowError(TelewardBinaryError);
 
-    // 4. Unknown or traversal caseId
+    // 4. Non-multiple-of-64 float corruption (index 17) with recomputed CRC32
+    const badFloat17 = validAb.slice(0);
+    const dv17 = new DataView(badFloat17);
+    dv17.setFloat32(32 + 17 * 4, 9.25, true);
+    dv17.setUint32(24, computeCrc32(new Uint8Array(badFloat17, 32)), true);
+    expect(() => validateBinaryChunk(badFloat17)).toThrowError(TelewardBinaryError);
+
+    // 5. Manifest crc32Hex or recordIndex tampering
+    const badCrcManifest = { ...indexJson, crc32Hex: 'deadbeef' };
+    expect(() => loadPtbxlBinary(validAb, badCrcManifest)).toThrowError(TelewardBinaryError);
+
+    const badIdxRecords = indexJson.records.map((r: { recordIndex: number }, i: number) =>
+      i === 5 ? { ...r, recordIndex: 99 } : r
+    );
+    expect(() =>
+      loadPtbxlBinary(validAb, { ...indexJson, records: badIdxRecords })
+    ).toThrowError(TelewardBinaryError);
+
+    // 6. Unknown or traversal caseId
     const dataset = loadPtbxlBinary(validAb, indexJson);
     expect(() => getCaseById(dataset, 'ptbxl-999')).toThrowError(TelewardBinaryError);
     expect(() => getCaseById(dataset, '../etc/passwd')).toThrowError(TelewardBinaryError);

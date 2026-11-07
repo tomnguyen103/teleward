@@ -77,12 +77,16 @@ export function executeCli(argv: string[]): number {
             : Number.NaN;
 
       const atSec =
-        atRaw === undefined ? 10 : typeof atRaw === 'string' ? Number(atRaw) : Number.NaN;
+        atRaw === undefined
+          ? 10
+          : typeof atRaw === 'string' && atRaw.trim() !== ''
+            ? Number(atRaw.trim())
+            : Number.NaN;
       const durationSec =
         durationRaw === undefined
           ? 45
-          : typeof durationRaw === 'string'
-            ? Number(durationRaw)
+          : typeof durationRaw === 'string' && durationRaw.trim() !== ''
+            ? Number(durationRaw.trim())
             : Number.NaN;
 
       const result = runSimulation({
