@@ -508,7 +508,7 @@ export function runSimulation(rawOptions: SimulationOptions): SimulationResult {
 
   const totalSteps = Math.round(cfg.durationSec / DT_SEC);
   const interventionStep =
-    cfg.intervention !== null ? Math.round(cfg.atSec / DT_SEC) : -1;
+    cfg.intervention !== null ? Math.max(1, Math.round(cfg.atSec / DT_SEC)) : -1;
 
   const trajectory: TrajectoryPoint[] = [
     {

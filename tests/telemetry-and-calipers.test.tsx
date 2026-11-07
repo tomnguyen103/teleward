@@ -271,5 +271,10 @@ describe('US-03 & US-04: 60fps 2D Canvas 4-Bed ICU Telemetry, IEC 60601-1-8 Alar
 
     fireEvent.change(caseSelect, { target: { value: 'ptbxl-003' } });
     expect(getByTestId('active-caliper-case-id').textContent).toContain('ptbxl-003');
+    const rhythmSelect = container.querySelector('#select-rhythm-class') as HTMLSelectElement;
+    expect(rhythmSelect.value).toBe('NSR');
+    expect(getByTestId('causal-timeline-inspector').textContent).not.toContain(
+      'PTB-XL Cardiologist Fiducial Ground Truth'
+    );
   });
 });

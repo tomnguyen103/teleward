@@ -149,6 +149,16 @@ describe('US-02: Deterministic Coupled Cardiopulmonary & ACLS State Engine + CLI
     expect(Number.isFinite(waveSample.abpMmHg)).toBe(true);
     expect(Number.isFinite(waveSample.spo2Wave)).toBe(true);
     expect(Number.isFinite(waveSample.etco2MmHg)).toBe(true);
+
+    const atZeroRescue = runSimulation({
+      scenario: 'VFIB',
+      intervention: 'defibrillation',
+      atSec: 0,
+      durationSec: 20,
+      seed: 42,
+    });
+    expect(atZeroRescue.outcome).toBe('STABILIZED');
+    expect(atZeroRescue.causalTimeline.some((e) => e.action === 'defibrillation')).toBe(true);
   });
 
   it('US-02.3: exits with code 2 and RFC 7807 JSON (status 422) on invalid scenario, intervention, duration, or seed flags', () => {

@@ -15,6 +15,7 @@ export interface AppShellProps {
   selectedBedIndex: number;
   onSelectBed: (index: number) => void;
   records: readonly PtbxlCaseRecord[];
+  canAccessCase?: (record: PtbxlCaseRecord) => boolean;
   activeRhythmFilter: RhythmClass | 'ALL';
   onSelectRhythmFilter: (rhythm: RhythmClass | 'ALL') => void;
   searchQuery: string;
@@ -37,6 +38,7 @@ export function AppShell(props: AppShellProps) {
     selectedBedIndex,
     onSelectBed,
     records,
+    canAccessCase,
     activeRhythmFilter,
     onSelectRhythmFilter,
     searchQuery,
@@ -347,7 +349,9 @@ export function AppShell(props: AppShellProps) {
                 </button>
               </li>
               {RHYTHM_CLASSES.map((rClass) => {
-                const count = records.filter((r) => r.rhythmClass === rClass).length;
+                const count = records.filter(
+                  (r) => (!canAccessCase || canAccessCase(r)) && r.rhythmClass === rClass
+                ).length;
                 const active = activeRhythmFilter === rClass;
                 return (
                   <li key={rClass}>
@@ -356,7 +360,9 @@ export function AppShell(props: AppShellProps) {
                       title={`${rClass} (${count} strips)`}
                       onClick={() => {
                         onSelectRhythmFilter(rClass);
-                        const firstMatch = records.find((r) => r.rhythmClass === rClass);
+                        const firstMatch = records.find(
+                          (r) => (!canAccessCase || canAccessCase(r)) && r.rhythmClass === rClass
+                        );
                         if (firstMatch && activeArea === 'caliper') {
                           onNavigate(`/caliper/${firstMatch.caseId}`);
                         }

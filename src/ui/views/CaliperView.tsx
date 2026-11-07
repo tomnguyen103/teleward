@@ -71,11 +71,7 @@ export function CaliperView(props: CaliperViewProps) {
     setCaliper({ t1Ms: 240, t2Ms: 1040, v1Mv: 0.0, v2Mv: 0.25 });
     setFormError(null);
     setGradeReport(null);
-    if (resolvedRecord && isUnlocked) {
-      setRhythmInput(resolvedRecord.rhythmClass);
-    } else {
-      setRhythmInput('NSR');
-    }
+    setRhythmInput('NSR');
     onGradeUpdate?.(null, isUnlocked ? resolvedRecord : null);
   }, [caseId, isUnlocked]);
 

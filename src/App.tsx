@@ -84,17 +84,19 @@ export function App(props: AppProps) {
         ? 'cohort'
         : 'shift';
 
-  const effectiveSeed =
+  const shiftSeed =
     props.initialSeed ??
-    (activeArea === 'daily'
-      ? getDailySeed()
-      : parsedCohort.valid && parsedCohort.numericSeed !== null
-        ? parsedCohort.numericSeed
-        : 42);
+    (parsedCohort.valid && parsedCohort.numericSeed !== null ? parsedCohort.numericSeed : 42);
+  const dailySeed = props.initialSeed ?? getDailySeed();
 
   const shiftRef = useRef<ShiftController | null>(null);
-  if (!shiftRef.current || shiftRef.current.getSeed() !== effectiveSeed) {
-    shiftRef.current = new ShiftController(effectiveSeed);
+  if (!shiftRef.current || shiftRef.current.getSeed() !== shiftSeed) {
+    shiftRef.current = new ShiftController(shiftSeed);
+  }
+
+  const dailyShiftRef = useRef<ShiftController | null>(null);
+  if (!dailyShiftRef.current || dailyShiftRef.current.getSeed() !== dailySeed) {
+    dailyShiftRef.current = new ShiftController(dailySeed);
   }
 
   useEffect(() => {
@@ -188,13 +190,17 @@ export function App(props: AppProps) {
   }, [darkTheme]);
 
   const navigate = (nextPath: string) => {
-    setCurrentPath(nextPath);
+    const resolvedPath =
+      validCohortSeed !== null && !nextPath.includes('?')
+        ? `${nextPath}?cohort=${encodeURIComponent(validCohortSeed)}`
+        : nextPath;
+    setCurrentPath(resolvedPath);
     if (typeof window !== 'undefined' && !props.initialPath) {
-      window.history.pushState({}, '', nextPath);
+      window.history.pushState({}, '', resolvedPath);
     }
   };
 
-  const controller = shiftRef.current;
+  const controller = activeArea === 'daily' ? dailyShiftRef.current : shiftRef.current;
   const beds = controller.getBeds();
   const activeBed = beds[selectedBedIndex] ?? beds[0]!;
   const scoreSummary = controller.computeShiftScore();
@@ -209,16 +215,26 @@ export function App(props: AppProps) {
 
   const handleStepSimulation = (deltaSec: number) => {
     controller.stepSeconds(deltaSec);
-    const priorities = controller.getBeds().map((b) => b.alarmPriority);
+    const updatedBeds = controller.getBeds();
+    const priorities = updatedBeds.map((b) => b.alarmPriority);
     alarmSynthRef.current?.arbitratePriority(priorities);
+    const updatedActiveBed = updatedBeds[selectedBedIndex] ?? updatedBeds[0]!;
+    alarmSynthRef.current?.triggerBurstIfDue(updatedActiveBed.vitals.spo2);
     setRenderTick((t) => t + 1);
   };
 
   const handleResetShift = () => {
-    const nextController = new ShiftController(effectiveSeed);
-    shiftRef.current = nextController;
-    const priorities = nextController.getBeds().map((b) => b.alarmPriority);
-    alarmSynthRef.current?.arbitratePriority(priorities);
+    if (activeArea === 'daily') {
+      const nextController = new ShiftController(dailySeed);
+      dailyShiftRef.current = nextController;
+      const priorities = nextController.getBeds().map((b) => b.alarmPriority);
+      alarmSynthRef.current?.arbitratePriority(priorities);
+    } else {
+      const nextController = new ShiftController(shiftSeed);
+      shiftRef.current = nextController;
+      const priorities = nextController.getBeds().map((b) => b.alarmPriority);
+      alarmSynthRef.current?.arbitratePriority(priorities);
+    }
     setResetCount((c) => c + 1);
     setRenderTick((t) => t + 1);
   };
@@ -229,10 +245,18 @@ export function App(props: AppProps) {
       const ok = synth.armAudio();
       setAudioArmed(ok);
       setAudioMuted(false);
+      const priorities = controller.getBeds().map((b) => b.alarmPriority);
+      synth.arbitratePriority(priorities);
+      synth.triggerBurstIfDue(activeBed.vitals.spo2);
     } else {
       const nextMute = !synth.isMuted();
       synth.setMuted(nextMute);
       setAudioMuted(nextMute);
+      if (!nextMute) {
+        const priorities = controller.getBeds().map((b) => b.alarmPriority);
+        synth.arbitratePriority(priorities);
+        synth.triggerBurstIfDue(activeBed.vitals.spo2);
+      }
     }
   };
 
@@ -260,13 +284,21 @@ export function App(props: AppProps) {
   };
 
   const filteredRecords = (dataset?.records ?? []).filter((r) => {
-    if (activeRhythmFilter !== 'ALL' && r.rhythmClass !== activeRhythmFilter) {
-      return false;
+    const unlocked = canAccessCaseWithEntitlement(r, entitlementTier, validCohortSeed);
+    if (activeRhythmFilter !== 'ALL') {
+      if (!unlocked || r.rhythmClass !== activeRhythmFilter) {
+        return false;
+      }
     }
     if (searchQuery.trim() !== '') {
       const q = searchQuery.trim().toLowerCase();
+      if (r.caseId.toLowerCase().includes(q)) {
+        return true;
+      }
+      if (!unlocked) {
+        return false;
+      }
       return (
-        r.caseId.toLowerCase().includes(q) ||
         r.rhythmClass.toLowerCase().includes(q) ||
         r.clinicalSummary.toLowerCase().includes(q)
       );
@@ -311,7 +343,8 @@ export function App(props: AppProps) {
         ))}
       </div>
 
-      {lastCaliperGrade.record &&
+      {lastCaliperGrade.report !== null &&
+      lastCaliperGrade.record &&
       canAccessCaseWithEntitlement(
         lastCaliperGrade.record,
         entitlementTier,
@@ -324,6 +357,17 @@ export function App(props: AppProps) {
             {lastCaliperGrade.record.fiducials.qrsMs} ms · QTc{' '}
             {lastCaliperGrade.record.fiducials.qtcMs} ms · ST{' '}
             {lastCaliperGrade.record.fiducials.stMv} mV
+          </p>
+        </div>
+      ) : lastCaliperGrade.record &&
+        canAccessCaseWithEntitlement(
+          lastCaliperGrade.record,
+          entitlementTier,
+          validCohortSeed
+        ) ? (
+        <div class="border-t pt-3 text-sm" style={{ borderColor: 'var(--border)' }}>
+          <p class="m-0" style={{ color: 'var(--text-muted)' }}>
+            Position T1/T2 and V1/V2 calipers and click Grade 12-Lead Strip to reveal PTB-XL cardiologist fiducial ground truth.
           </p>
         </div>
       ) : null}
@@ -351,6 +395,7 @@ export function App(props: AppProps) {
       selectedBedIndex={selectedBedIndex}
       onSelectBed={setSelectedBedIndex}
       records={filteredRecords}
+      canAccessCase={canAccessCase}
       activeRhythmFilter={activeRhythmFilter}
       onSelectRhythmFilter={setActiveRhythmFilter}
       searchQuery={searchQuery}

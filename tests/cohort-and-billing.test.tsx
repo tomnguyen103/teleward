@@ -75,10 +75,15 @@ describe('US-04.6 & US-05: Stripe Checkout Pro Exam Pass ($19) & Stateless ?coho
     expect(verification.bedsStabilized).toBe(4);
     expect(verification.violations).toBe(1);
 
-    // Verify UI flow on /cohort
-    const { getByTestId } = render(
-      <App initialPath="/cohort" preloadedDataset={DATASET} />
+    // Verify UI flow on /cohort and cohort seed preservation across navigation
+    const { getByTestId, container } = render(
+      <App initialPath="/shift?cohort=NURS402-FALL26" preloadedDataset={DATASET} />
     );
+    expect(getByTestId('audio-arm-banner').textContent).toContain('NURS402-FALL26');
+    const cohortNav = container.querySelector('a[href="/cohort"]') as HTMLAnchorElement;
+    fireEvent.click(cohortNav);
+    expect(getByTestId('audio-arm-banner').textContent).toContain('NURS402-FALL26');
+
     const verifierInput = getByTestId('cohort-receipt-input') as HTMLInputElement;
     fireEvent.input(verifierInput, { target: { value: receipt } });
     fireEvent.click(getByTestId('verify-cohort-receipt-btn'));
