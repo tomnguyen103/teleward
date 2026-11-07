@@ -44,9 +44,11 @@ export function ShiftStationView(props: ShiftStationViewProps) {
   const canvasRefs = useRef<Array<HTMLCanvasElement | null>>([null, null, null, null]);
   const ringBuffersRef = useRef<TelemetryRingBuffer[] | null>(null);
   const lastResetKeyRef = useRef<string | undefined>(undefined);
+  const accumSimMsRef = useRef(0);
 
   if (!ringBuffersRef.current || lastResetKeyRef.current !== shiftResetKey) {
     lastResetKeyRef.current = shiftResetKey;
+    accumSimMsRef.current = 0;
     ringBuffersRef.current = beds.map((b) => {
       const rb = new TelemetryRingBuffer(2500, 90);
       rb.prefill(b.vitals, 1250);
@@ -57,17 +59,17 @@ export function ShiftStationView(props: ShiftStationViewProps) {
   useEffect(() => {
     let rafId = 0;
     let lastTime = performance.now();
-    let accumSimMs = 0;
 
     const tick = (now: number) => {
       const rawDelta = now - lastTime;
       lastTime = now;
       const clampedDelta = Math.max(0, Math.min(100, rawDelta));
-      accumSimMs += clampedDelta;
+      accumSimMsRef.current += clampedDelta;
 
-      if (accumSimMs >= 250) {
-        onStepSimulation(accumSimMs / 1000);
-        accumSimMs = 0;
+      if (accumSimMsRef.current >= 250) {
+        const dtSec = accumSimMsRef.current / 1000;
+        accumSimMsRef.current = 0;
+        onStepSimulation(dtSec);
       }
 
       const rings = ringBuffersRef.current;
@@ -172,7 +174,11 @@ export function ShiftStationView(props: ShiftStationViewProps) {
 
                 <div class="flex items-center gap-2">
                   <span class="tw-mono-vital text-sm" style={{ color: '#CBD5E1' }}>
-                    {bed.stabilized ? 'ROSC / STABLE' : `T-${bed.countdownSec.toFixed(0)}s`}
+                    {bed.stabilized
+                      ? 'ROSC / STABLE'
+                      : bed.arrested
+                        ? 'ARRESTED'
+                        : `T-${bed.countdownSec.toFixed(0)}s`}
                   </span>
                   <button
                     type="button"

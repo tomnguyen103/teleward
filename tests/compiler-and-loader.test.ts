@@ -57,6 +57,21 @@ describe('US-01: PhysioNet PTB-XL 120-Record Python + DuckDB Binary Compiler & L
     const freeCount = dataset.records.filter((r) => r.freeStarter).length;
     expect(freeCount).toBe(24);
 
+    // Verify fiducial sample alignment, NSR PR bounds (140..190 ms), and Lead II J-point stMv across all 120 records
+    for (const rec of dataset.records) {
+      const f = rec.fiducials;
+      if (rec.rhythmClass === 'NSR') {
+        expect(f.prMs).toBeGreaterThanOrEqual(140);
+        expect(f.prMs).toBeLessThanOrEqual(190);
+      }
+      expect(f.qrsOnSample - f.pOnSample).toBe(Math.round(f.prMs * 0.5));
+      expect(f.qrsOffSample - f.qrsOnSample).toBe(Math.round(f.qrsMs * 0.5));
+      expect(f.tOffSample - f.qrsOnSample).toBe(Math.round(f.qtMs * 0.5));
+
+      const w = getCaseWaveforms(dataset, rec.caseId, 1250);
+      expect(Math.abs(w.II[f.qrsOffSample]! - f.stMv)).toBeLessThanOrEqual(0.02);
+    }
+
     // Verify Einthoven's identity II = I + III and Goldberger identities across records
     for (let idx = 0; idx < 120; idx += 11) {
       const rec = dataset.records[idx]!;

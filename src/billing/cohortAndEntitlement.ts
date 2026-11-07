@@ -35,13 +35,16 @@ export function parseCohortSeed(raw: string | null | undefined): ParsedCohortSee
   };
 }
 
+const utf8Encoder = new TextEncoder();
+
 /**
  * Computes CRC-16-CCITT (poly 0x1021, init 0xFFFF) over UTF-8 string bytes.
  */
 export function computeCrc16Hex(input: string): string {
+  const bytes = utf8Encoder.encode(input);
   let crc = 0xffff;
-  for (let i = 0; i < input.length; i++) {
-    crc ^= (input.charCodeAt(i) & 0xff) << 8;
+  for (let i = 0; i < bytes.byteLength; i++) {
+    crc ^= (bytes[i]! & 0xff) << 8;
     for (let b = 0; b < 8; b++) {
       if ((crc & 0x8000) !== 0) {
         crc = ((crc << 1) ^ 0x1021) & 0xffff;
@@ -65,8 +68,25 @@ export function generateCohortReceipt(payload: CohortReceiptPayload): string {
   if (!parsed.valid || !parsed.cohort) {
     throw new Error(`Invalid cohort seed "${payload.cohort}".`);
   }
+  if (!Number.isFinite(payload.scorePct)) {
+    throw new Error(`Invalid scorePct "${String(payload.scorePct)}".`);
+  }
   const score = Math.max(0, Math.min(100, Math.round(payload.scorePct)));
-  const canonical = `${parsed.cohort}:${score}`;
+  const hasAttestedCounts =
+    payload.bedsStabilized !== undefined &&
+    payload.violations !== undefined &&
+    Number.isFinite(payload.bedsStabilized) &&
+    Number.isFinite(payload.violations);
+  const beds = hasAttestedCounts
+    ? Math.max(0, Math.min(4, Math.round(payload.bedsStabilized!)))
+    : null;
+  const viol = hasAttestedCounts
+    ? Math.max(0, Math.min(15, Math.round(payload.violations!)))
+    : null;
+  const canonical =
+    beds !== null && viol !== null
+      ? `${parsed.cohort}:${score}:${beds}:${viol}`
+      : `${parsed.cohort}:${score}`;
   const crc16 = computeCrc16Hex(canonical);
   return `TW-${parsed.cohort}-${score}-${crc16}`;
 }
@@ -101,23 +121,44 @@ export function verifyCohortReceipt(receipt: string): VerifiedCohortReceipt {
       };
     }
 
-    const candidates = [
-      computeCrc16Hex(`${cohort}:${scorePct}`),
-      computeCrc16Hex(`${COHORT_CRC_SALT}:${cohort}:${scorePct}`),
-      computeCrc16Hex(`${cohort}:${scorePct}:4:0`),
-      computeCrc16Hex(`${COHORT_CRC_SALT}:${cohort}:${scorePct}:4:0`),
-    ];
+    let matchedBeds: number | null = null;
+    let matchedViolations: number | null = null;
+    let crcMatched = false;
 
-    const bedsStabilized = Math.min(4, Math.max(0, Math.ceil(scorePct / 25)));
-    const violations = Math.max(0, Math.round((bedsStabilized * 25 - scorePct) / 8));
+    for (let b = 0; b <= 4 && !crcMatched; b++) {
+      for (let v = 0; v <= 15; v++) {
+        if (
+          computeCrc16Hex(`${cohort}:${scorePct}:${b}:${v}`) === providedCrc ||
+          computeCrc16Hex(`${COHORT_CRC_SALT}:${cohort}:${scorePct}:${b}:${v}`) === providedCrc
+        ) {
+          matchedBeds = b;
+          matchedViolations = v;
+          crcMatched = true;
+          break;
+        }
+      }
+    }
 
-    if (!candidates.includes(providedCrc)) {
+    if (
+      !crcMatched &&
+      (computeCrc16Hex(`${cohort}:${scorePct}`) === providedCrc ||
+        computeCrc16Hex(`${COHORT_CRC_SALT}:${cohort}:${scorePct}`) === providedCrc)
+    ) {
+      matchedBeds = Math.min(4, Math.max(0, Math.ceil(scorePct / 25)));
+      matchedViolations = Math.max(0, Math.round((matchedBeds * 25 - scorePct) / 8));
+      crcMatched = true;
+    }
+
+    const fallbackBeds = Math.min(4, Math.max(0, Math.ceil(scorePct / 25)));
+    const fallbackViolations = Math.max(0, Math.round((fallbackBeds * 25 - scorePct) / 8));
+
+    if (!crcMatched) {
       return {
         valid: false,
         cohort,
         scorePct,
-        bedsStabilized,
-        violations,
+        bedsStabilized: fallbackBeds,
+        violations: fallbackViolations,
         reason: 'CRC16_MISMATCH',
       };
     }
@@ -126,8 +167,8 @@ export function verifyCohortReceipt(receipt: string): VerifiedCohortReceipt {
       valid: true,
       cohort,
       scorePct,
-      bedsStabilized,
-      violations,
+      bedsStabilized: matchedBeds ?? fallbackBeds,
+      violations: matchedViolations ?? fallbackViolations,
       reason: 'OK',
     };
   }
@@ -190,11 +231,7 @@ export function verifyCohortReceipt(receipt: string): VerifiedCohortReceipt {
 }
 
 function encodeAscii(str: string): Uint8Array {
-  const out = new Uint8Array(str.length);
-  for (let i = 0; i < str.length; i++) {
-    out[i] = str.charCodeAt(i) & 0xff;
-  }
-  return out;
+  return utf8Encoder.encode(str);
 }
 
 export function createSignedEntitlementToken(
@@ -235,18 +272,22 @@ export interface StoredEntitlementState {
 }
 
 export function readEntitlementFromStorage(): StoredEntitlementState {
-  if (typeof window === 'undefined' || !window.localStorage) {
+  if (typeof window === 'undefined') {
     return { tier: 'free', token: null, valid: true };
   }
   try {
-    const raw = window.localStorage.getItem(ENTITLEMENT_STORAGE_KEY);
+    const storage = window.localStorage;
+    if (!storage) {
+      return { tier: 'free', token: null, valid: true };
+    }
+    const raw = storage.getItem(ENTITLEMENT_STORAGE_KEY);
     if (!raw) {
       return { tier: 'free', token: null, valid: true };
     }
     const parsed = JSON.parse(raw) as { tier?: string; token?: string };
     const check = verifyEntitlementToken(parsed.token);
     if (!check.valid) {
-      window.localStorage.removeItem(ENTITLEMENT_STORAGE_KEY);
+      storage.removeItem(ENTITLEMENT_STORAGE_KEY);
       return { tier: 'free', token: null, valid: false };
     }
     return { tier: check.tier, token: parsed.token ?? null, valid: true };
@@ -268,9 +309,10 @@ export function activateEntitlement(
   if (!check.valid || check.tier !== tier) {
     return { tier: 'free', token: null, valid: false };
   }
-  if (typeof window !== 'undefined' && window.localStorage) {
+  if (typeof window !== 'undefined') {
     try {
-      window.localStorage.setItem(
+      const storage = window.localStorage;
+      storage?.setItem(
         ENTITLEMENT_STORAGE_KEY,
         JSON.stringify({ tier: check.tier, token: signedToken })
       );

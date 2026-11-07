@@ -19,10 +19,12 @@ const MEDIUM_PRIORITY_FREQS = [261.63, 329.63, 392.0] as const;
  */
 export class Iec60601AlarmSynthesizer {
   private activePriority: AlarmPriority = 'NORMAL';
+  private lastBurstPriority: AlarmPriority = 'NORMAL';
   private armed = false;
   private muted = false;
   private audioCtx: AudioContext | null = null;
   private lastBurstTimeMs = 0;
+  private activeOscillators = new Set<OscillatorNode>();
 
   public isArmed(): boolean {
     return this.armed;
@@ -34,6 +36,21 @@ export class Iec60601AlarmSynthesizer {
 
   public setMuted(muted: boolean): void {
     this.muted = muted;
+    if (muted) {
+      this.stopActiveOscillators();
+    }
+  }
+
+  private stopActiveOscillators(): void {
+    for (const osc of this.activeOscillators) {
+      try {
+        osc.stop();
+        osc.disconnect();
+      } catch {
+        // Ignore already-stopped nodes
+      }
+    }
+    this.activeOscillators.clear();
   }
 
   public getActivePriority(): AlarmPriority {
@@ -95,7 +112,9 @@ export class Iec60601AlarmSynthesizer {
         this.audioCtx = new AudioContextCtor();
       }
       if (this.audioCtx.state === 'suspended') {
-        void this.audioCtx.resume();
+        void Promise.resolve(this.audioCtx.resume()).catch(() => {
+          this.armed = false;
+        });
       }
       this.armed = true;
       return true;
@@ -116,10 +135,15 @@ export class Iec60601AlarmSynthesizer {
           ? 3800
           : 1200;
 
-    if (nowMs - this.lastBurstTimeMs < cooldownMs) {
+    const priorityRank = (p: AlarmPriority): number =>
+      p === 'CRISIS' ? 2 : p === 'WARNING' ? 1 : 0;
+    const escalated = priorityRank(this.activePriority) > priorityRank(this.lastBurstPriority);
+
+    if (!escalated && nowMs - this.lastBurstTimeMs < cooldownMs) {
       return;
     }
     this.lastBurstTimeMs = nowMs;
+    this.lastBurstPriority = this.activePriority;
 
     try {
       const ctx = this.audioCtx;
@@ -162,7 +186,9 @@ export class Iec60601AlarmSynthesizer {
 
     osc.connect(gain);
     gain.connect(ctx.destination);
+    this.activeOscillators.add(osc);
     osc.onended = () => {
+      this.activeOscillators.delete(osc);
       try {
         osc.disconnect();
         gain.disconnect();
@@ -176,6 +202,7 @@ export class Iec60601AlarmSynthesizer {
 
   public close(): void {
     this.armed = false;
+    this.stopActiveOscillators();
     if (this.audioCtx) {
       try {
         void this.audioCtx.close();

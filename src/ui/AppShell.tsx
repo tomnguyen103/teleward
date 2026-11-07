@@ -54,9 +54,9 @@ export function AppShell(props: AppShellProps) {
   } = props;
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
-    if (typeof window === 'undefined' || !window.localStorage) return false;
+    if (typeof window === 'undefined') return false;
     try {
-      return window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true';
+      return window.localStorage?.getItem(SIDEBAR_STORAGE_KEY) === 'true';
     } catch {
       return false;
     }
@@ -66,9 +66,9 @@ export function AppShell(props: AppShellProps) {
   const toggleSidebar = () => {
     setSidebarCollapsed((prev) => {
       const next = !prev;
-      if (typeof window !== 'undefined' && window.localStorage) {
+      if (typeof window !== 'undefined') {
         try {
-          window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next));
+          window.localStorage?.setItem(SIDEBAR_STORAGE_KEY, String(next));
         } catch {
           // Ignore storage quota errors
         }

@@ -39,6 +39,7 @@ export class TelemetryRingBuffer {
   public readonly etco2: Float32Array;
   public writeCursor = 0;
   public sampleTimeSec = 0;
+  public fractionalSamples = 0;
 
   constructor(capacity = 2500, eraseGapSamples = 90) {
     this.capacity = capacity;
@@ -69,7 +70,9 @@ export function stepTelemetryFrame(
   rawDeltaMs: number
 ): { clampedDeltaMs: number; samplesWritten: number } {
   const clampedDeltaMs = Math.max(0, Math.min(100, rawDeltaMs));
-  const samplesWritten = Math.max(1, Math.round((clampedDeltaMs / 1000) * 500));
+  const exactSamples = (clampedDeltaMs / 1000) * 500 + ring.fractionalSamples;
+  const samplesWritten = Math.floor(exactSamples + 1e-9);
+  ring.fractionalSamples = Math.max(0, exactSamples - samplesWritten);
 
   for (let i = 0; i < samplesWritten; i++) {
     ring.sampleTimeSec += 0.002;
@@ -212,7 +215,7 @@ export function render12LeadCaliperCanvas(
   const rows = 4;
   const cols = 3;
   const cellW = width / cols;
-  const cellH = (height * 0.76) / rows;
+  const cellH = (height * 0.75) / rows;
 
   ctx.strokeStyle = darkTheme ? '#22C55E' : '#0F172A';
   ctx.lineWidth = 1.4;
@@ -234,13 +237,25 @@ export function render12LeadCaliperCanvas(
       else ctx.lineTo(px, py);
     }
     ctx.stroke();
+
+    if (typeof ctx.fillText === 'function') {
+      ctx.fillStyle = darkTheme ? '#E2E8F0' : '#0F172A';
+      ctx.font = '600 11px monospace';
+      ctx.fillText(leadName, x0 + 6, row * cellH + 14);
+    }
   }
 
   // Bottom full-width 10-second Lead II rhythm strip (where T1/T2 calipers operate directly)
-  const stripTop = height * 0.78;
-  const stripMid = height * 0.89;
-  const stripScale = height * 0.075;
+  const stripTop = height * 0.75;
+  const stripMid = stripTop + (height - stripTop) * 0.5;
+  const stripScale = (height - stripTop) * 0.34;
   const leadII = waveforms.II;
+
+  if (typeof ctx.fillText === 'function') {
+    ctx.fillStyle = darkTheme ? '#38BDF8' : '#1E3A8A';
+    ctx.font = '600 11px monospace';
+    ctx.fillText('II (RHYTHM)', 6, stripTop + 14);
+  }
 
   ctx.strokeStyle = darkTheme ? '#38BDF8' : '#1E3A8A';
   ctx.lineWidth = 1.6;

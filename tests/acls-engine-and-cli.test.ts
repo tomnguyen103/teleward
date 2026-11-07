@@ -77,15 +77,26 @@ describe('US-02: Deterministic Coupled Cardiopulmonary & ACLS State Engine + CLI
     expect(
       runSimulation({ scenario: 'SB', intervention: 'atropine_1mg', atSec: 8, durationSec: 30, seed: 42 }).outcome
     ).toBe('STABILIZED');
-    expect(
-      runSimulation({
-        scenario: 'AVB3',
-        intervention: 'transcutaneous_pacing',
-        atSec: 8,
-        durationSec: 30,
-        seed: 42,
-      }).outcome
-    ).toBe('STABILIZED');
+    const avb3Paced = runSimulation({
+      scenario: 'AVB3',
+      intervention: 'transcutaneous_pacing',
+      atSec: 8,
+      durationSec: 30,
+      seed: 42,
+    });
+    expect(avb3Paced.outcome).toBe('STABILIZED');
+    expect(avb3Paced.finalVitals.paced).toBe(true);
+    expect(avb3Paced.finalVitals.hr).toBe(70);
+
+    const avb3UnsyncShock = runSimulation({
+      scenario: 'AVB3',
+      intervention: 'defibrillation',
+      atSec: 5,
+      durationSec: 25,
+      seed: 42,
+    });
+    expect(avb3UnsyncShock.ahaViolations).toContain('AHA_UNSYNC_SHOCK_ON_PERFUSING');
+    expect(avb3UnsyncShock.finalVitals.rhythm).toBe('VFIB');
     expect(
       runSimulation({
         scenario: 'AFIB',
@@ -158,7 +169,17 @@ describe('US-02: Deterministic Coupled Cardiopulmonary & ACLS State Engine + CLI
       seed: 42,
     });
     expect(atZeroRescue.outcome).toBe('STABILIZED');
-    expect(atZeroRescue.causalTimeline.some((e) => e.action === 'defibrillation')).toBe(true);
+    const defibEv = atZeroRescue.causalTimeline.find((e) => e.action === 'defibrillation');
+    expect(defibEv).toBeTruthy();
+    expect(defibEv?.timeSec).toBe(0);
+
+    const shortUntreated = runSimulation({
+      scenario: 'NSR',
+      intervention: null,
+      durationSec: 5,
+      seed: 42,
+    });
+    expect(shortUntreated.durationSec).toBe(5);
   });
 
   it('US-02.3: exits with code 2 and RFC 7807 JSON (status 422) on invalid scenario, intervention, duration, or seed flags', () => {
@@ -170,6 +191,7 @@ describe('US-02: Deterministic Coupled Cardiopulmonary & ACLS State Engine + CLI
       ['sim', '--scenario', 'vfib', '--at', '', '--seed', '42', '--json'],
       ['sim', '--scenario', 'vfib', '--duration', '   ', '--seed', '42', '--json'],
       ['sim', '--scenario', 'vfib', '--seed', 'abc', '--json'],
+      ['sim', '--scenario', 'vfib', '--intervention', '--json'],
     ];
 
     for (const args of invalidInvocations) {

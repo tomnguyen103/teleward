@@ -6,8 +6,8 @@
   "sampleRateHz": 500,
   "samplesPerLeadTile": 1250,
   "binaryByteLength": 7200032,
-  "crc32Hex": "c00a87c2",
-  "sha256Hex": "93282817e50ebd95a1659e301e14abc9edf04689a316d248fcb8cdcadb269711",
+  "crc32Hex": "f26d4e34",
+  "sha256Hex": "74e0737e125249fd34a1c3be2849210b70d6b21061ebb5f7b445844577b7561e",
   "records": [
     {
       "caseId": "ptbxl-001",
@@ -29,16 +29,16 @@
         "qtMs": 374,
         "qtcMs": 410,
         "stMv": 0.0,
-        "pOnSample": 44,
-        "qrsOnSample": 99,
+        "pOnSample": 38,
+        "qrsOnSample": 114,
         "rPeakSamples": [
-          120,
-          537,
-          953
+          135,
+          552,
+          968
         ],
-        "qrsOffSample": 141,
-        "tOffSample": 286,
-        "jPointSample": 145
+        "qrsOffSample": 156,
+        "tOffSample": 301,
+        "jPointSample": 156
       }
     },
     {
@@ -56,21 +56,21 @@
       "freeStarter": true,
       "fiducials": {
         "hrBpm": 72,
-        "prMs": 174,
-        "qrsMs": 92,
-        "qtMs": 386,
-        "qtcMs": 423,
+        "prMs": 154,
+        "qrsMs": 88,
+        "qtMs": 380,
+        "qtcMs": 416,
         "stMv": 0.0,
-        "pOnSample": 33,
-        "qrsOnSample": 97,
+        "pOnSample": 36,
+        "qrsOnSample": 113,
         "rPeakSamples": [
-          120,
-          537,
-          953
+          135,
+          552,
+          968
         ],
-        "qrsOffSample": 143,
-        "tOffSample": 290,
-        "jPointSample": 147
+        "qrsOffSample": 157,
+        "tOffSample": 303,
+        "jPointSample": 157
       }
     },
     {
@@ -88,20 +88,20 @@
       "freeStarter": true,
       "fiducials": {
         "hrBpm": 48,
-        "prMs": 208,
-        "qrsMs": 94,
-        "qtMs": 446,
-        "qtcMs": 399,
+        "prMs": 168,
+        "qrsMs": 86,
+        "qtMs": 434,
+        "qtcMs": 388,
         "stMv": 0.0,
-        "pOnSample": 16,
-        "qrsOnSample": 96,
+        "pOnSample": 30,
+        "qrsOnSample": 114,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 144,
-        "tOffSample": 319,
-        "jPointSample": 148
+        "qrsOffSample": 157,
+        "tOffSample": 331,
+        "jPointSample": 157
       }
     },
     {
@@ -119,20 +119,20 @@
       "freeStarter": true,
       "fiducials": {
         "hrBpm": 48,
-        "prMs": 230,
+        "prMs": 170,
         "qrsMs": 90,
         "qtMs": 440,
         "qtcMs": 394,
         "stMv": 0.0,
-        "pOnSample": 5,
-        "qrsOnSample": 98,
+        "pOnSample": 28,
+        "qrsOnSample": 113,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 142,
-        "tOffSample": 318,
-        "jPointSample": 146
+        "qrsOffSample": 158,
+        "tOffSample": 333,
+        "jPointSample": 158
       }
     },
     {
@@ -151,24 +151,24 @@
       "fiducials": {
         "hrBpm": 168,
         "prMs": 0,
-        "qrsMs": 84,
-        "qtMs": 240,
-        "qtcMs": 402,
+        "qrsMs": 80,
+        "qtMs": 234,
+        "qtcMs": 392,
         "stMv": -0.05,
-        "pOnSample": 120,
-        "qrsOnSample": 99,
+        "pOnSample": 115,
+        "qrsOnSample": 115,
         "rPeakSamples": [
-          120,
-          299,
-          477,
-          656,
-          834,
-          1013,
-          1191
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
         ],
-        "qrsOffSample": 141,
-        "tOffSample": 219,
-        "jPointSample": 145
+        "qrsOffSample": 155,
+        "tOffSample": 232,
+        "jPointSample": 155
       }
     },
     {
@@ -187,24 +187,24 @@
       "fiducials": {
         "hrBpm": 168,
         "prMs": 0,
-        "qrsMs": 80,
-        "qtMs": 234,
-        "qtcMs": 392,
+        "qrsMs": 84,
+        "qtMs": 240,
+        "qtcMs": 402,
         "stMv": -0.05,
-        "pOnSample": 120,
-        "qrsOnSample": 100,
+        "pOnSample": 114,
+        "qrsOnSample": 114,
         "rPeakSamples": [
-          120,
-          299,
-          477,
-          656,
-          834,
-          1013,
-          1191
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
         ],
-        "qrsOffSample": 140,
-        "tOffSample": 217,
-        "jPointSample": 144
+        "qrsOffSample": 156,
+        "tOffSample": 234,
+        "jPointSample": 156
       }
     },
     {
@@ -227,19 +227,19 @@
         "qtMs": 304,
         "qtcMs": 471,
         "stMv": -0.04,
-        "pOnSample": 120,
-        "qrsOnSample": 98,
+        "pOnSample": 113,
+        "qrsOnSample": 113,
         "rPeakSamples": [
-          120,
-          317,
-          545,
-          745,
-          943,
-          1162
+          135,
+          332,
+          560,
+          760,
+          958,
+          1177
         ],
-        "qrsOffSample": 142,
-        "tOffSample": 250,
-        "jPointSample": 146
+        "qrsOffSample": 157,
+        "tOffSample": 265,
+        "jPointSample": 157
       }
     },
     {
@@ -258,23 +258,23 @@
       "fiducials": {
         "hrBpm": 144,
         "prMs": 0,
-        "qrsMs": 96,
-        "qtMs": 316,
-        "qtcMs": 490,
+        "qrsMs": 92,
+        "qtMs": 310,
+        "qtcMs": 480,
         "stMv": -0.04,
-        "pOnSample": 120,
-        "qrsOnSample": 96,
+        "pOnSample": 112,
+        "qrsOnSample": 112,
         "rPeakSamples": [
-          120,
-          321,
-          522,
-          733,
-          961,
-          1162
+          135,
+          336,
+          537,
+          748,
+          976,
+          1177
         ],
-        "qrsOffSample": 144,
-        "tOffSample": 254,
-        "jPointSample": 148
+        "qrsOffSample": 158,
+        "tOffSample": 267,
+        "jPointSample": 158
       }
     },
     {
@@ -293,23 +293,23 @@
       "fiducials": {
         "hrBpm": 144,
         "prMs": 0,
-        "qrsMs": 94,
-        "qtMs": 296,
-        "qtcMs": 459,
+        "qrsMs": 86,
+        "qtMs": 284,
+        "qtcMs": 440,
         "stMv": -0.03,
-        "pOnSample": 120,
-        "qrsOnSample": 96,
+        "pOnSample": 114,
+        "qrsOnSample": 114,
         "rPeakSamples": [
-          120,
-          328,
-          537,
-          745,
-          953,
-          1162
+          135,
+          343,
+          552,
+          760,
+          968,
+          1177
         ],
-        "qrsOffSample": 144,
-        "tOffSample": 244,
-        "jPointSample": 148
+        "qrsOffSample": 157,
+        "tOffSample": 256,
+        "jPointSample": 157
       }
     },
     {
@@ -332,19 +332,19 @@
         "qtMs": 290,
         "qtcMs": 449,
         "stMv": -0.03,
-        "pOnSample": 120,
-        "qrsOnSample": 98,
+        "pOnSample": 113,
+        "qrsOnSample": 113,
         "rPeakSamples": [
-          120,
-          328,
-          537,
-          745,
-          953,
-          1162
+          135,
+          343,
+          552,
+          760,
+          968,
+          1177
         ],
-        "qrsOffSample": 142,
-        "tOffSample": 243,
-        "jPointSample": 146
+        "qrsOffSample": 158,
+        "tOffSample": 258,
+        "jPointSample": 158
       }
     },
     {
@@ -363,19 +363,19 @@
       "fiducials": {
         "hrBpm": 48,
         "prMs": 0,
-        "qrsMs": 136,
-        "qtMs": 480,
-        "qtcMs": 429,
+        "qrsMs": 132,
+        "qtMs": 474,
+        "qtcMs": 424,
         "stMv": 0.02,
-        "pOnSample": 120,
-        "qrsOnSample": 86,
+        "pOnSample": 102,
+        "qrsOnSample": 102,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 154,
-        "tOffSample": 326,
-        "jPointSample": 158
+        "qrsOffSample": 168,
+        "tOffSample": 339,
+        "jPointSample": 168
       }
     },
     {
@@ -394,19 +394,19 @@
       "fiducials": {
         "hrBpm": 48,
         "prMs": 0,
-        "qrsMs": 132,
-        "qtMs": 474,
-        "qtcMs": 424,
+        "qrsMs": 136,
+        "qtMs": 480,
+        "qtcMs": 429,
         "stMv": 0.02,
-        "pOnSample": 120,
-        "qrsOnSample": 87,
+        "pOnSample": 101,
+        "qrsOnSample": 101,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 153,
-        "tOffSample": 324,
-        "jPointSample": 157
+        "qrsOffSample": 169,
+        "tOffSample": 341,
+        "jPointSample": 169
       }
     },
     {
@@ -429,20 +429,20 @@
         "qtMs": 294,
         "qtcMs": 492,
         "stMv": -0.12,
-        "pOnSample": 120,
-        "qrsOnSample": 82,
+        "pOnSample": 97,
+        "qrsOnSample": 97,
         "rPeakSamples": [
-          120,
-          299,
-          477,
-          656,
-          834,
-          1013,
-          1191
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
         ],
-        "qrsOffSample": 158,
-        "tOffSample": 229,
-        "jPointSample": 162
+        "qrsOffSample": 173,
+        "tOffSample": 244,
+        "jPointSample": 173
       }
     },
     {
@@ -461,24 +461,24 @@
       "fiducials": {
         "hrBpm": 168,
         "prMs": 0,
-        "qrsMs": 160,
-        "qtMs": 306,
-        "qtcMs": 512,
+        "qrsMs": 156,
+        "qtMs": 300,
+        "qtcMs": 502,
         "stMv": -0.12,
-        "pOnSample": 120,
-        "qrsOnSample": 80,
+        "pOnSample": 96,
+        "qrsOnSample": 96,
         "rPeakSamples": [
-          120,
-          299,
-          477,
-          656,
-          834,
-          1013,
-          1191
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
         ],
-        "qrsOffSample": 160,
-        "tOffSample": 233,
-        "jPointSample": 164
+        "qrsOffSample": 174,
+        "tOffSample": 246,
+        "jPointSample": 174
       }
     },
     {
@@ -497,26 +497,26 @@
       "fiducials": {
         "hrBpm": 216,
         "prMs": 0,
-        "qrsMs": 168,
-        "qtMs": 286,
-        "qtcMs": 543,
+        "qrsMs": 160,
+        "qtMs": 274,
+        "qtcMs": 520,
         "stMv": -0.15,
-        "pOnSample": 120,
-        "qrsOnSample": 78,
+        "pOnSample": 95,
+        "qrsOnSample": 95,
         "rPeakSamples": [
-          120,
-          259,
-          398,
-          537,
-          676,
-          814,
-          953,
-          1092,
-          1231
+          135,
+          274,
+          413,
+          552,
+          691,
+          829,
+          968,
+          1107,
+          1246
         ],
-        "qrsOffSample": 162,
-        "tOffSample": 221,
-        "jPointSample": 166
+        "qrsOffSample": 175,
+        "tOffSample": 232,
+        "jPointSample": 175
       }
     },
     {
@@ -539,22 +539,22 @@
         "qtMs": 280,
         "qtcMs": 531,
         "stMv": -0.15,
-        "pOnSample": 120,
-        "qrsOnSample": 79,
+        "pOnSample": 94,
+        "qrsOnSample": 94,
         "rPeakSamples": [
-          120,
-          259,
-          398,
-          537,
-          676,
-          814,
-          953,
-          1092,
-          1231
+          135,
+          274,
+          413,
+          552,
+          691,
+          829,
+          968,
+          1107,
+          1246
         ],
-        "qrsOffSample": 161,
-        "tOffSample": 219,
-        "jPointSample": 165
+        "qrsOffSample": 176,
+        "tOffSample": 234,
+        "jPointSample": 176
       }
     },
     {
@@ -577,12 +577,12 @@
         "qtMs": 0,
         "qtcMs": 0,
         "stMv": 0.0,
-        "pOnSample": 120,
-        "qrsOnSample": 116,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
         "rPeakSamples": [],
-        "qrsOffSample": 124,
-        "tOffSample": 120,
-        "jPointSample": 128
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
       }
     },
     {
@@ -605,12 +605,12 @@
         "qtMs": 0,
         "qtcMs": 0,
         "stMv": 0.0,
-        "pOnSample": 120,
-        "qrsOnSample": 116,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
         "rPeakSamples": [],
-        "qrsOffSample": 124,
-        "tOffSample": 120,
-        "jPointSample": 128
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
       }
     },
     {
@@ -633,12 +633,12 @@
         "qtMs": 0,
         "qtcMs": 0,
         "stMv": 0.0,
-        "pOnSample": 120,
-        "qrsOnSample": 116,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
         "rPeakSamples": [],
-        "qrsOffSample": 124,
-        "tOffSample": 120,
-        "jPointSample": 128
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
       }
     },
     {
@@ -661,12 +661,12 @@
         "qtMs": 0,
         "qtcMs": 0,
         "stMv": 0.0,
-        "pOnSample": 120,
-        "qrsOnSample": 116,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
         "rPeakSamples": [],
-        "qrsOffSample": 124,
-        "tOffSample": 120,
-        "jPointSample": 128
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
       }
     },
     {
@@ -684,20 +684,20 @@
       "freeStarter": true,
       "fiducials": {
         "hrBpm": 48,
-        "prMs": 576,
-        "qrsMs": 120,
-        "qtMs": 426,
-        "qtcMs": 381,
+        "prMs": 176,
+        "qrsMs": 112,
+        "qtMs": 414,
+        "qtcMs": 370,
         "stMv": -0.08,
-        "pOnSample": 0,
-        "qrsOnSample": 90,
+        "pOnSample": 19,
+        "qrsOnSample": 107,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 150,
-        "tOffSample": 303,
-        "jPointSample": 154
+        "qrsOffSample": 163,
+        "tOffSample": 314,
+        "jPointSample": 163
       }
     },
     {
@@ -715,20 +715,20 @@
       "freeStarter": true,
       "fiducials": {
         "hrBpm": 48,
-        "prMs": 598,
+        "prMs": 178,
         "qrsMs": 116,
         "qtMs": 420,
         "qtcMs": 376,
         "stMv": -0.08,
-        "pOnSample": 0,
-        "qrsOnSample": 91,
+        "pOnSample": 17,
+        "qrsOnSample": 106,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 149,
-        "tOffSample": 301,
-        "jPointSample": 153
+        "qrsOffSample": 164,
+        "tOffSample": 316,
+        "jPointSample": 164
       }
     },
     {
@@ -746,22 +746,22 @@
       "freeStarter": true,
       "fiducials": {
         "hrBpm": 96,
-        "prMs": 596,
-        "qrsMs": 96,
-        "qtMs": 360,
-        "qtcMs": 455,
-        "stMv": 0.32,
-        "pOnSample": 0,
-        "qrsOnSample": 96,
+        "prMs": 156,
+        "qrsMs": 92,
+        "qtMs": 354,
+        "qtcMs": 448,
+        "stMv": 0.3,
+        "pOnSample": 34,
+        "qrsOnSample": 112,
         "rPeakSamples": [
-          120,
-          432,
-          745,
-          1058
+          135,
+          448,
+          760,
+          1072
         ],
-        "qrsOffSample": 144,
-        "tOffSample": 276,
-        "jPointSample": 148
+        "qrsOffSample": 158,
+        "tOffSample": 289,
+        "jPointSample": 158
       }
     },
     {
@@ -779,22 +779,22 @@
       "freeStarter": true,
       "fiducials": {
         "hrBpm": 96,
-        "prMs": 618,
-        "qrsMs": 92,
-        "qtMs": 354,
-        "qtcMs": 448,
-        "stMv": 0.3,
-        "pOnSample": 0,
-        "qrsOnSample": 97,
+        "prMs": 158,
+        "qrsMs": 96,
+        "qtMs": 360,
+        "qtcMs": 455,
+        "stMv": 0.32,
+        "pOnSample": 32,
+        "qrsOnSample": 111,
         "rPeakSamples": [
-          120,
-          432,
-          745,
-          1058
+          135,
+          448,
+          760,
+          1072
         ],
-        "qrsOffSample": 143,
-        "tOffSample": 274,
-        "jPointSample": 147
+        "qrsOffSample": 159,
+        "tOffSample": 291,
+        "jPointSample": 159
       }
     },
     {
@@ -812,21 +812,21 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 72,
-        "prMs": 636,
+        "prMs": 156,
         "qrsMs": 92,
         "qtMs": 386,
         "qtcMs": 423,
         "stMv": 0.0,
-        "pOnSample": 0,
-        "qrsOnSample": 97,
+        "pOnSample": 34,
+        "qrsOnSample": 112,
         "rPeakSamples": [
-          120,
-          537,
-          953
+          135,
+          552,
+          968
         ],
-        "qrsOffSample": 143,
-        "tOffSample": 290,
-        "jPointSample": 147
+        "qrsOffSample": 158,
+        "tOffSample": 305,
+        "jPointSample": 158
       }
     },
     {
@@ -844,21 +844,21 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 72,
-        "prMs": 658,
-        "qrsMs": 88,
-        "qtMs": 380,
-        "qtcMs": 416,
+        "prMs": 158,
+        "qrsMs": 84,
+        "qtMs": 374,
+        "qtcMs": 410,
         "stMv": 0.0,
-        "pOnSample": 0,
-        "qrsOnSample": 98,
+        "pOnSample": 35,
+        "qrsOnSample": 114,
         "rPeakSamples": [
-          120,
-          537,
-          953
+          135,
+          552,
+          968
         ],
-        "qrsOffSample": 142,
-        "tOffSample": 288,
-        "jPointSample": 146
+        "qrsOffSample": 156,
+        "tOffSample": 301,
+        "jPointSample": 156
       }
     },
     {
@@ -876,21 +876,21 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 72,
-        "prMs": 680,
-        "qrsMs": 84,
-        "qtMs": 374,
-        "qtcMs": 410,
+        "prMs": 160,
+        "qrsMs": 88,
+        "qtMs": 380,
+        "qtcMs": 416,
         "stMv": 0.0,
-        "pOnSample": 0,
-        "qrsOnSample": 99,
+        "pOnSample": 33,
+        "qrsOnSample": 113,
         "rPeakSamples": [
-          120,
-          537,
-          953
+          135,
+          552,
+          968
         ],
-        "qrsOffSample": 141,
-        "tOffSample": 286,
-        "jPointSample": 145
+        "qrsOffSample": 157,
+        "tOffSample": 303,
+        "jPointSample": 157
       }
     },
     {
@@ -908,21 +908,21 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 72,
-        "prMs": 702,
+        "prMs": 162,
         "qrsMs": 92,
         "qtMs": 386,
         "qtcMs": 423,
         "stMv": 0.0,
-        "pOnSample": 0,
-        "qrsOnSample": 97,
+        "pOnSample": 31,
+        "qrsOnSample": 112,
         "rPeakSamples": [
-          120,
-          537,
-          953
+          135,
+          552,
+          968
         ],
-        "qrsOffSample": 143,
-        "tOffSample": 290,
-        "jPointSample": 147
+        "qrsOffSample": 158,
+        "tOffSample": 305,
+        "jPointSample": 158
       }
     },
     {
@@ -940,21 +940,21 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 72,
-        "prMs": 724,
-        "qrsMs": 88,
-        "qtMs": 380,
-        "qtcMs": 416,
+        "prMs": 164,
+        "qrsMs": 84,
+        "qtMs": 374,
+        "qtcMs": 410,
         "stMv": 0.0,
-        "pOnSample": 0,
-        "qrsOnSample": 98,
+        "pOnSample": 32,
+        "qrsOnSample": 114,
         "rPeakSamples": [
-          120,
-          537,
-          953
+          135,
+          552,
+          968
         ],
-        "qrsOffSample": 142,
-        "tOffSample": 288,
-        "jPointSample": 146
+        "qrsOffSample": 156,
+        "tOffSample": 301,
+        "jPointSample": 156
       }
     },
     {
@@ -972,21 +972,21 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 72,
-        "prMs": 746,
-        "qrsMs": 84,
-        "qtMs": 374,
-        "qtcMs": 410,
+        "prMs": 166,
+        "qrsMs": 88,
+        "qtMs": 380,
+        "qtcMs": 416,
         "stMv": 0.0,
-        "pOnSample": 0,
-        "qrsOnSample": 99,
+        "pOnSample": 30,
+        "qrsOnSample": 113,
         "rPeakSamples": [
-          120,
-          537,
-          953
+          135,
+          552,
+          968
         ],
-        "qrsOffSample": 141,
-        "tOffSample": 286,
-        "jPointSample": 145
+        "qrsOffSample": 157,
+        "tOffSample": 303,
+        "jPointSample": 157
       }
     },
     {
@@ -1004,21 +1004,21 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 72,
-        "prMs": 768,
+        "prMs": 168,
         "qrsMs": 92,
         "qtMs": 386,
         "qtcMs": 423,
         "stMv": 0.0,
-        "pOnSample": 0,
-        "qrsOnSample": 97,
+        "pOnSample": 28,
+        "qrsOnSample": 112,
         "rPeakSamples": [
-          120,
-          537,
-          953
+          135,
+          552,
+          968
         ],
-        "qrsOffSample": 143,
-        "tOffSample": 290,
-        "jPointSample": 147
+        "qrsOffSample": 158,
+        "tOffSample": 305,
+        "jPointSample": 158
       }
     },
     {
@@ -1036,21 +1036,21 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 72,
-        "prMs": 790,
-        "qrsMs": 88,
-        "qtMs": 380,
-        "qtcMs": 416,
+        "prMs": 170,
+        "qrsMs": 84,
+        "qtMs": 374,
+        "qtcMs": 410,
         "stMv": 0.0,
-        "pOnSample": 0,
-        "qrsOnSample": 98,
+        "pOnSample": 29,
+        "qrsOnSample": 114,
         "rPeakSamples": [
-          120,
-          537,
-          953
+          135,
+          552,
+          968
         ],
-        "qrsOffSample": 142,
-        "tOffSample": 288,
-        "jPointSample": 146
+        "qrsOffSample": 156,
+        "tOffSample": 301,
+        "jPointSample": 156
       }
     },
     {
@@ -1068,20 +1068,20 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 48,
-        "prMs": 812,
-        "qrsMs": 90,
-        "qtMs": 440,
-        "qtcMs": 394,
+        "prMs": 172,
+        "qrsMs": 94,
+        "qtMs": 446,
+        "qtcMs": 399,
         "stMv": 0.0,
-        "pOnSample": 0,
-        "qrsOnSample": 98,
+        "pOnSample": 26,
+        "qrsOnSample": 112,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 142,
-        "tOffSample": 318,
-        "jPointSample": 146
+        "qrsOffSample": 159,
+        "tOffSample": 335,
+        "jPointSample": 159
       }
     },
     {
@@ -1099,20 +1099,20 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 48,
-        "prMs": 834,
+        "prMs": 174,
         "qrsMs": 86,
         "qtMs": 434,
         "qtcMs": 388,
         "stMv": 0.0,
-        "pOnSample": 0,
-        "qrsOnSample": 98,
+        "pOnSample": 27,
+        "qrsOnSample": 114,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 142,
-        "tOffSample": 315,
-        "jPointSample": 146
+        "qrsOffSample": 157,
+        "tOffSample": 331,
+        "jPointSample": 157
       }
     },
     {
@@ -1130,20 +1130,20 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 48,
-        "prMs": 856,
-        "qrsMs": 94,
-        "qtMs": 446,
-        "qtcMs": 399,
+        "prMs": 176,
+        "qrsMs": 90,
+        "qtMs": 440,
+        "qtcMs": 394,
         "stMv": 0.0,
-        "pOnSample": 0,
-        "qrsOnSample": 96,
+        "pOnSample": 25,
+        "qrsOnSample": 113,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 144,
-        "tOffSample": 319,
-        "jPointSample": 148
+        "qrsOffSample": 158,
+        "tOffSample": 333,
+        "jPointSample": 158
       }
     },
     {
@@ -1161,20 +1161,20 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 48,
-        "prMs": 878,
-        "qrsMs": 90,
-        "qtMs": 440,
-        "qtcMs": 394,
+        "prMs": 178,
+        "qrsMs": 94,
+        "qtMs": 446,
+        "qtcMs": 399,
         "stMv": 0.0,
-        "pOnSample": 0,
-        "qrsOnSample": 98,
+        "pOnSample": 23,
+        "qrsOnSample": 112,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 142,
-        "tOffSample": 318,
-        "jPointSample": 146
+        "qrsOffSample": 159,
+        "tOffSample": 335,
+        "jPointSample": 159
       }
     },
     {
@@ -1192,20 +1192,20 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 48,
-        "prMs": 900,
+        "prMs": 180,
         "qrsMs": 86,
         "qtMs": 434,
         "qtcMs": 388,
         "stMv": 0.0,
-        "pOnSample": 0,
-        "qrsOnSample": 98,
+        "pOnSample": 24,
+        "qrsOnSample": 114,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 142,
-        "tOffSample": 315,
-        "jPointSample": 146
+        "qrsOffSample": 157,
+        "tOffSample": 331,
+        "jPointSample": 157
       }
     },
     {
@@ -1223,20 +1223,20 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 48,
-        "prMs": 922,
-        "qrsMs": 94,
-        "qtMs": 446,
-        "qtcMs": 399,
+        "prMs": 182,
+        "qrsMs": 90,
+        "qtMs": 440,
+        "qtcMs": 394,
         "stMv": 0.0,
-        "pOnSample": 0,
-        "qrsOnSample": 96,
+        "pOnSample": 22,
+        "qrsOnSample": 113,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 144,
-        "tOffSample": 319,
-        "jPointSample": 148
+        "qrsOffSample": 158,
+        "tOffSample": 333,
+        "jPointSample": 158
       }
     },
     {
@@ -1254,20 +1254,20 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 48,
-        "prMs": 944,
-        "qrsMs": 90,
-        "qtMs": 440,
-        "qtcMs": 394,
+        "prMs": 184,
+        "qrsMs": 94,
+        "qtMs": 446,
+        "qtcMs": 399,
         "stMv": 0.0,
-        "pOnSample": 0,
-        "qrsOnSample": 98,
+        "pOnSample": 20,
+        "qrsOnSample": 112,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 142,
-        "tOffSample": 318,
-        "jPointSample": 146
+        "qrsOffSample": 159,
+        "tOffSample": 335,
+        "jPointSample": 159
       }
     },
     {
@@ -1285,20 +1285,20 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 48,
-        "prMs": 966,
+        "prMs": 186,
         "qrsMs": 86,
         "qtMs": 434,
         "qtcMs": 388,
         "stMv": 0.0,
-        "pOnSample": 0,
-        "qrsOnSample": 98,
+        "pOnSample": 21,
+        "qrsOnSample": 114,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 142,
-        "tOffSample": 315,
-        "jPointSample": 146
+        "qrsOffSample": 157,
+        "tOffSample": 331,
+        "jPointSample": 157
       }
     },
     {
@@ -1317,24 +1317,24 @@
       "fiducials": {
         "hrBpm": 168,
         "prMs": 0,
-        "qrsMs": 80,
-        "qtMs": 234,
-        "qtcMs": 392,
+        "qrsMs": 88,
+        "qtMs": 246,
+        "qtcMs": 412,
         "stMv": -0.05,
-        "pOnSample": 120,
-        "qrsOnSample": 100,
+        "pOnSample": 113,
+        "qrsOnSample": 113,
         "rPeakSamples": [
-          120,
-          299,
-          477,
-          656,
-          834,
-          1013,
-          1191
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
         ],
-        "qrsOffSample": 140,
-        "tOffSample": 217,
-        "jPointSample": 144
+        "qrsOffSample": 157,
+        "tOffSample": 236,
+        "jPointSample": 157
       }
     },
     {
@@ -1353,24 +1353,24 @@
       "fiducials": {
         "hrBpm": 168,
         "prMs": 0,
-        "qrsMs": 88,
-        "qtMs": 246,
-        "qtcMs": 412,
+        "qrsMs": 80,
+        "qtMs": 234,
+        "qtcMs": 392,
         "stMv": -0.05,
-        "pOnSample": 120,
-        "qrsOnSample": 98,
+        "pOnSample": 115,
+        "qrsOnSample": 115,
         "rPeakSamples": [
-          120,
-          299,
-          477,
-          656,
-          834,
-          1013,
-          1191
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
         ],
-        "qrsOffSample": 142,
-        "tOffSample": 221,
-        "jPointSample": 146
+        "qrsOffSample": 155,
+        "tOffSample": 232,
+        "jPointSample": 155
       }
     },
     {
@@ -1393,20 +1393,20 @@
         "qtMs": 240,
         "qtcMs": 402,
         "stMv": -0.05,
-        "pOnSample": 120,
-        "qrsOnSample": 99,
+        "pOnSample": 114,
+        "qrsOnSample": 114,
         "rPeakSamples": [
-          120,
-          299,
-          477,
-          656,
-          834,
-          1013,
-          1191
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
         ],
-        "qrsOffSample": 141,
-        "tOffSample": 219,
-        "jPointSample": 145
+        "qrsOffSample": 156,
+        "tOffSample": 234,
+        "jPointSample": 156
       }
     },
     {
@@ -1425,24 +1425,24 @@
       "fiducials": {
         "hrBpm": 168,
         "prMs": 0,
-        "qrsMs": 80,
-        "qtMs": 234,
-        "qtcMs": 392,
+        "qrsMs": 88,
+        "qtMs": 246,
+        "qtcMs": 412,
         "stMv": -0.05,
-        "pOnSample": 120,
-        "qrsOnSample": 100,
+        "pOnSample": 113,
+        "qrsOnSample": 113,
         "rPeakSamples": [
-          120,
-          299,
-          477,
-          656,
-          834,
-          1013,
-          1191
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
         ],
-        "qrsOffSample": 140,
-        "tOffSample": 217,
-        "jPointSample": 144
+        "qrsOffSample": 157,
+        "tOffSample": 236,
+        "jPointSample": 157
       }
     },
     {
@@ -1461,24 +1461,24 @@
       "fiducials": {
         "hrBpm": 168,
         "prMs": 0,
-        "qrsMs": 88,
-        "qtMs": 246,
-        "qtcMs": 412,
+        "qrsMs": 80,
+        "qtMs": 234,
+        "qtcMs": 392,
         "stMv": -0.05,
-        "pOnSample": 120,
-        "qrsOnSample": 98,
+        "pOnSample": 115,
+        "qrsOnSample": 115,
         "rPeakSamples": [
-          120,
-          299,
-          477,
-          656,
-          834,
-          1013,
-          1191
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
         ],
-        "qrsOffSample": 142,
-        "tOffSample": 221,
-        "jPointSample": 146
+        "qrsOffSample": 155,
+        "tOffSample": 232,
+        "jPointSample": 155
       }
     },
     {
@@ -1501,20 +1501,20 @@
         "qtMs": 240,
         "qtcMs": 402,
         "stMv": -0.05,
-        "pOnSample": 120,
-        "qrsOnSample": 99,
+        "pOnSample": 114,
+        "qrsOnSample": 114,
         "rPeakSamples": [
-          120,
-          299,
-          477,
-          656,
-          834,
-          1013,
-          1191
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
         ],
-        "qrsOffSample": 141,
-        "tOffSample": 219,
-        "jPointSample": 145
+        "qrsOffSample": 156,
+        "tOffSample": 234,
+        "jPointSample": 156
       }
     },
     {
@@ -1533,24 +1533,24 @@
       "fiducials": {
         "hrBpm": 168,
         "prMs": 0,
-        "qrsMs": 80,
-        "qtMs": 234,
-        "qtcMs": 392,
+        "qrsMs": 88,
+        "qtMs": 246,
+        "qtcMs": 412,
         "stMv": -0.05,
-        "pOnSample": 120,
-        "qrsOnSample": 100,
+        "pOnSample": 113,
+        "qrsOnSample": 113,
         "rPeakSamples": [
-          120,
-          299,
-          477,
-          656,
-          834,
-          1013,
-          1191
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
         ],
-        "qrsOffSample": 140,
-        "tOffSample": 217,
-        "jPointSample": 144
+        "qrsOffSample": 157,
+        "tOffSample": 236,
+        "jPointSample": 157
       }
     },
     {
@@ -1569,24 +1569,24 @@
       "fiducials": {
         "hrBpm": 168,
         "prMs": 0,
-        "qrsMs": 88,
-        "qtMs": 246,
-        "qtcMs": 412,
+        "qrsMs": 80,
+        "qtMs": 234,
+        "qtcMs": 392,
         "stMv": -0.05,
-        "pOnSample": 120,
-        "qrsOnSample": 98,
+        "pOnSample": 115,
+        "qrsOnSample": 115,
         "rPeakSamples": [
-          120,
-          299,
-          477,
-          656,
-          834,
-          1013,
-          1191
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
         ],
-        "qrsOffSample": 142,
-        "tOffSample": 221,
-        "jPointSample": 146
+        "qrsOffSample": 155,
+        "tOffSample": 232,
+        "jPointSample": 155
       }
     },
     {
@@ -1609,19 +1609,19 @@
         "qtMs": 316,
         "qtcMs": 490,
         "stMv": -0.04,
-        "pOnSample": 120,
-        "qrsOnSample": 96,
+        "pOnSample": 111,
+        "qrsOnSample": 111,
         "rPeakSamples": [
-          120,
-          345,
-          549,
-          755,
-          940,
-          1162
+          135,
+          360,
+          564,
+          770,
+          955,
+          1177
         ],
-        "qrsOffSample": 144,
-        "tOffSample": 254,
-        "jPointSample": 148
+        "qrsOffSample": 159,
+        "tOffSample": 269,
+        "jPointSample": 159
       }
     },
     {
@@ -1640,23 +1640,23 @@
       "fiducials": {
         "hrBpm": 144,
         "prMs": 0,
-        "qrsMs": 92,
-        "qtMs": 310,
-        "qtcMs": 480,
+        "qrsMs": 88,
+        "qtMs": 304,
+        "qtcMs": 471,
         "stMv": -0.04,
-        "pOnSample": 120,
-        "qrsOnSample": 97,
+        "pOnSample": 113,
+        "qrsOnSample": 113,
         "rPeakSamples": [
-          120,
-          316,
-          542,
-          748,
-          951,
-          1162
+          135,
+          331,
+          557,
+          763,
+          966,
+          1177
         ],
-        "qrsOffSample": 143,
-        "tOffSample": 252,
-        "jPointSample": 147
+        "qrsOffSample": 157,
+        "tOffSample": 265,
+        "jPointSample": 157
       }
     },
     {
@@ -1675,23 +1675,23 @@
       "fiducials": {
         "hrBpm": 144,
         "prMs": 0,
-        "qrsMs": 88,
-        "qtMs": 304,
-        "qtcMs": 471,
+        "qrsMs": 92,
+        "qtMs": 310,
+        "qtcMs": 480,
         "stMv": -0.04,
-        "pOnSample": 120,
-        "qrsOnSample": 98,
+        "pOnSample": 112,
+        "qrsOnSample": 112,
         "rPeakSamples": [
-          120,
-          335,
-          537,
-          737,
-          953,
-          1162
+          135,
+          350,
+          552,
+          752,
+          968,
+          1177
         ],
-        "qrsOffSample": 142,
-        "tOffSample": 250,
-        "jPointSample": 146
+        "qrsOffSample": 158,
+        "tOffSample": 267,
+        "jPointSample": 158
       }
     },
     {
@@ -1714,19 +1714,19 @@
         "qtMs": 316,
         "qtcMs": 490,
         "stMv": -0.04,
-        "pOnSample": 120,
-        "qrsOnSample": 96,
+        "pOnSample": 111,
+        "qrsOnSample": 111,
         "rPeakSamples": [
-          120,
-          312,
-          537,
-          757,
-          940,
-          1162
+          135,
+          327,
+          552,
+          772,
+          955,
+          1177
         ],
-        "qrsOffSample": 144,
-        "tOffSample": 254,
-        "jPointSample": 148
+        "qrsOffSample": 159,
+        "tOffSample": 269,
+        "jPointSample": 159
       }
     },
     {
@@ -1745,23 +1745,23 @@
       "fiducials": {
         "hrBpm": 144,
         "prMs": 0,
-        "qrsMs": 92,
-        "qtMs": 310,
-        "qtcMs": 480,
+        "qrsMs": 88,
+        "qtMs": 304,
+        "qtcMs": 471,
         "stMv": -0.04,
-        "pOnSample": 120,
-        "qrsOnSample": 97,
+        "pOnSample": 113,
+        "qrsOnSample": 113,
         "rPeakSamples": [
-          120,
-          330,
-          526,
-          733,
-          954,
-          1162
+          135,
+          345,
+          541,
+          748,
+          969,
+          1177
         ],
-        "qrsOffSample": 143,
-        "tOffSample": 252,
-        "jPointSample": 147
+        "qrsOffSample": 157,
+        "tOffSample": 265,
+        "jPointSample": 157
       }
     },
     {
@@ -1780,23 +1780,23 @@
       "fiducials": {
         "hrBpm": 144,
         "prMs": 0,
-        "qrsMs": 88,
-        "qtMs": 304,
-        "qtcMs": 471,
+        "qrsMs": 92,
+        "qtMs": 310,
+        "qtcMs": 480,
         "stMv": -0.04,
-        "pOnSample": 120,
-        "qrsOnSample": 98,
+        "pOnSample": 112,
+        "qrsOnSample": 112,
         "rPeakSamples": [
-          120,
-          334,
-          544,
-          759,
-          940,
-          1162
+          135,
+          349,
+          559,
+          774,
+          955,
+          1177
         ],
-        "qrsOffSample": 142,
-        "tOffSample": 250,
-        "jPointSample": 146
+        "qrsOffSample": 158,
+        "tOffSample": 267,
+        "jPointSample": 158
       }
     },
     {
@@ -1819,19 +1819,19 @@
         "qtMs": 316,
         "qtcMs": 490,
         "stMv": -0.04,
-        "pOnSample": 120,
-        "qrsOnSample": 96,
+        "pOnSample": 111,
+        "qrsOnSample": 111,
         "rPeakSamples": [
-          120,
-          342,
-          526,
-          737,
-          952,
-          1162
+          135,
+          357,
+          541,
+          752,
+          967,
+          1177
         ],
-        "qrsOffSample": 144,
-        "tOffSample": 254,
-        "jPointSample": 148
+        "qrsOffSample": 159,
+        "tOffSample": 269,
+        "jPointSample": 159
       }
     },
     {
@@ -1850,23 +1850,23 @@
       "fiducials": {
         "hrBpm": 144,
         "prMs": 0,
-        "qrsMs": 92,
-        "qtMs": 310,
-        "qtcMs": 480,
+        "qrsMs": 88,
+        "qtMs": 304,
+        "qtcMs": 471,
         "stMv": -0.04,
-        "pOnSample": 120,
-        "qrsOnSample": 97,
+        "pOnSample": 113,
+        "qrsOnSample": 113,
         "rPeakSamples": [
-          120,
-          315,
-          522,
-          739,
-          948,
-          1162
+          135,
+          330,
+          537,
+          754,
+          963,
+          1177
         ],
-        "qrsOffSample": 143,
-        "tOffSample": 252,
-        "jPointSample": 147
+        "qrsOffSample": 157,
+        "tOffSample": 265,
+        "jPointSample": 157
       }
     },
     {
@@ -1885,23 +1885,23 @@
       "fiducials": {
         "hrBpm": 144,
         "prMs": 0,
-        "qrsMs": 90,
-        "qtMs": 290,
-        "qtcMs": 449,
+        "qrsMs": 94,
+        "qtMs": 296,
+        "qtcMs": 459,
         "stMv": -0.03,
-        "pOnSample": 120,
-        "qrsOnSample": 98,
+        "pOnSample": 112,
+        "qrsOnSample": 112,
         "rPeakSamples": [
-          120,
-          328,
-          537,
-          745,
-          953,
-          1162
+          135,
+          343,
+          552,
+          760,
+          968,
+          1177
         ],
-        "qrsOffSample": 142,
-        "tOffSample": 243,
-        "jPointSample": 146
+        "qrsOffSample": 159,
+        "tOffSample": 260,
+        "jPointSample": 159
       }
     },
     {
@@ -1924,19 +1924,19 @@
         "qtMs": 284,
         "qtcMs": 440,
         "stMv": -0.03,
-        "pOnSample": 120,
-        "qrsOnSample": 98,
+        "pOnSample": 114,
+        "qrsOnSample": 114,
         "rPeakSamples": [
-          120,
-          328,
-          537,
-          745,
-          953,
-          1162
+          135,
+          343,
+          552,
+          760,
+          968,
+          1177
         ],
-        "qrsOffSample": 142,
-        "tOffSample": 240,
-        "jPointSample": 146
+        "qrsOffSample": 157,
+        "tOffSample": 256,
+        "jPointSample": 157
       }
     },
     {
@@ -1955,23 +1955,23 @@
       "fiducials": {
         "hrBpm": 144,
         "prMs": 0,
-        "qrsMs": 94,
-        "qtMs": 296,
-        "qtcMs": 459,
+        "qrsMs": 90,
+        "qtMs": 290,
+        "qtcMs": 449,
         "stMv": -0.03,
-        "pOnSample": 120,
-        "qrsOnSample": 96,
+        "pOnSample": 113,
+        "qrsOnSample": 113,
         "rPeakSamples": [
-          120,
-          328,
-          537,
-          745,
-          953,
-          1162
+          135,
+          343,
+          552,
+          760,
+          968,
+          1177
         ],
-        "qrsOffSample": 144,
-        "tOffSample": 244,
-        "jPointSample": 148
+        "qrsOffSample": 158,
+        "tOffSample": 258,
+        "jPointSample": 158
       }
     },
     {
@@ -1990,23 +1990,23 @@
       "fiducials": {
         "hrBpm": 144,
         "prMs": 0,
-        "qrsMs": 90,
-        "qtMs": 290,
-        "qtcMs": 449,
+        "qrsMs": 94,
+        "qtMs": 296,
+        "qtcMs": 459,
         "stMv": -0.03,
-        "pOnSample": 120,
-        "qrsOnSample": 98,
+        "pOnSample": 112,
+        "qrsOnSample": 112,
         "rPeakSamples": [
-          120,
-          328,
-          537,
-          745,
-          953,
-          1162
+          135,
+          343,
+          552,
+          760,
+          968,
+          1177
         ],
-        "qrsOffSample": 142,
-        "tOffSample": 243,
-        "jPointSample": 146
+        "qrsOffSample": 159,
+        "tOffSample": 260,
+        "jPointSample": 159
       }
     },
     {
@@ -2029,19 +2029,19 @@
         "qtMs": 284,
         "qtcMs": 440,
         "stMv": -0.03,
-        "pOnSample": 120,
-        "qrsOnSample": 98,
+        "pOnSample": 114,
+        "qrsOnSample": 114,
         "rPeakSamples": [
-          120,
-          328,
-          537,
-          745,
-          953,
-          1162
+          135,
+          343,
+          552,
+          760,
+          968,
+          1177
         ],
-        "qrsOffSample": 142,
-        "tOffSample": 240,
-        "jPointSample": 146
+        "qrsOffSample": 157,
+        "tOffSample": 256,
+        "jPointSample": 157
       }
     },
     {
@@ -2060,23 +2060,23 @@
       "fiducials": {
         "hrBpm": 144,
         "prMs": 0,
-        "qrsMs": 94,
-        "qtMs": 296,
-        "qtcMs": 459,
+        "qrsMs": 90,
+        "qtMs": 290,
+        "qtcMs": 449,
         "stMv": -0.03,
-        "pOnSample": 120,
-        "qrsOnSample": 96,
+        "pOnSample": 113,
+        "qrsOnSample": 113,
         "rPeakSamples": [
-          120,
-          328,
-          537,
-          745,
-          953,
-          1162
+          135,
+          343,
+          552,
+          760,
+          968,
+          1177
         ],
-        "qrsOffSample": 144,
-        "tOffSample": 244,
-        "jPointSample": 148
+        "qrsOffSample": 158,
+        "tOffSample": 258,
+        "jPointSample": 158
       }
     },
     {
@@ -2095,23 +2095,23 @@
       "fiducials": {
         "hrBpm": 144,
         "prMs": 0,
-        "qrsMs": 90,
-        "qtMs": 290,
-        "qtcMs": 449,
+        "qrsMs": 94,
+        "qtMs": 296,
+        "qtcMs": 459,
         "stMv": -0.03,
-        "pOnSample": 120,
-        "qrsOnSample": 98,
+        "pOnSample": 112,
+        "qrsOnSample": 112,
         "rPeakSamples": [
-          120,
-          328,
-          537,
-          745,
-          953,
-          1162
+          135,
+          343,
+          552,
+          760,
+          968,
+          1177
         ],
-        "qrsOffSample": 142,
-        "tOffSample": 243,
-        "jPointSample": 146
+        "qrsOffSample": 159,
+        "tOffSample": 260,
+        "jPointSample": 159
       }
     },
     {
@@ -2134,19 +2134,19 @@
         "qtMs": 284,
         "qtcMs": 440,
         "stMv": -0.03,
-        "pOnSample": 120,
-        "qrsOnSample": 98,
+        "pOnSample": 114,
+        "qrsOnSample": 114,
         "rPeakSamples": [
-          120,
-          328,
-          537,
-          745,
-          953,
-          1162
+          135,
+          343,
+          552,
+          760,
+          968,
+          1177
         ],
-        "qrsOffSample": 142,
-        "tOffSample": 240,
-        "jPointSample": 146
+        "qrsOffSample": 157,
+        "tOffSample": 256,
+        "jPointSample": 157
       }
     },
     {
@@ -2165,19 +2165,19 @@
       "fiducials": {
         "hrBpm": 48,
         "prMs": 0,
-        "qrsMs": 132,
-        "qtMs": 474,
-        "qtcMs": 424,
+        "qrsMs": 140,
+        "qtMs": 486,
+        "qtcMs": 435,
         "stMv": 0.02,
-        "pOnSample": 120,
-        "qrsOnSample": 87,
+        "pOnSample": 100,
+        "qrsOnSample": 100,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 153,
-        "tOffSample": 324,
-        "jPointSample": 157
+        "qrsOffSample": 170,
+        "tOffSample": 343,
+        "jPointSample": 170
       }
     },
     {
@@ -2196,19 +2196,19 @@
       "fiducials": {
         "hrBpm": 48,
         "prMs": 0,
-        "qrsMs": 140,
-        "qtMs": 486,
-        "qtcMs": 435,
+        "qrsMs": 132,
+        "qtMs": 474,
+        "qtcMs": 424,
         "stMv": 0.02,
-        "pOnSample": 120,
-        "qrsOnSample": 85,
+        "pOnSample": 102,
+        "qrsOnSample": 102,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 155,
-        "tOffSample": 328,
-        "jPointSample": 159
+        "qrsOffSample": 168,
+        "tOffSample": 339,
+        "jPointSample": 168
       }
     },
     {
@@ -2231,15 +2231,15 @@
         "qtMs": 480,
         "qtcMs": 429,
         "stMv": 0.02,
-        "pOnSample": 120,
-        "qrsOnSample": 86,
+        "pOnSample": 101,
+        "qrsOnSample": 101,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 154,
-        "tOffSample": 326,
-        "jPointSample": 158
+        "qrsOffSample": 169,
+        "tOffSample": 341,
+        "jPointSample": 169
       }
     },
     {
@@ -2258,19 +2258,19 @@
       "fiducials": {
         "hrBpm": 48,
         "prMs": 0,
-        "qrsMs": 132,
-        "qtMs": 474,
-        "qtcMs": 424,
+        "qrsMs": 140,
+        "qtMs": 486,
+        "qtcMs": 435,
         "stMv": 0.02,
-        "pOnSample": 120,
-        "qrsOnSample": 87,
+        "pOnSample": 100,
+        "qrsOnSample": 100,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 153,
-        "tOffSample": 324,
-        "jPointSample": 157
+        "qrsOffSample": 170,
+        "tOffSample": 343,
+        "jPointSample": 170
       }
     },
     {
@@ -2289,19 +2289,19 @@
       "fiducials": {
         "hrBpm": 48,
         "prMs": 0,
-        "qrsMs": 140,
-        "qtMs": 486,
-        "qtcMs": 435,
+        "qrsMs": 132,
+        "qtMs": 474,
+        "qtcMs": 424,
         "stMv": 0.02,
-        "pOnSample": 120,
-        "qrsOnSample": 85,
+        "pOnSample": 102,
+        "qrsOnSample": 102,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 155,
-        "tOffSample": 328,
-        "jPointSample": 159
+        "qrsOffSample": 168,
+        "tOffSample": 339,
+        "jPointSample": 168
       }
     },
     {
@@ -2324,15 +2324,15 @@
         "qtMs": 480,
         "qtcMs": 429,
         "stMv": 0.02,
-        "pOnSample": 120,
-        "qrsOnSample": 86,
+        "pOnSample": 101,
+        "qrsOnSample": 101,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 154,
-        "tOffSample": 326,
-        "jPointSample": 158
+        "qrsOffSample": 169,
+        "tOffSample": 341,
+        "jPointSample": 169
       }
     },
     {
@@ -2351,19 +2351,19 @@
       "fiducials": {
         "hrBpm": 48,
         "prMs": 0,
-        "qrsMs": 132,
-        "qtMs": 474,
-        "qtcMs": 424,
+        "qrsMs": 140,
+        "qtMs": 486,
+        "qtcMs": 435,
         "stMv": 0.02,
-        "pOnSample": 120,
-        "qrsOnSample": 87,
+        "pOnSample": 100,
+        "qrsOnSample": 100,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 153,
-        "tOffSample": 324,
-        "jPointSample": 157
+        "qrsOffSample": 170,
+        "tOffSample": 343,
+        "jPointSample": 170
       }
     },
     {
@@ -2382,19 +2382,19 @@
       "fiducials": {
         "hrBpm": 48,
         "prMs": 0,
-        "qrsMs": 140,
-        "qtMs": 486,
-        "qtcMs": 435,
+        "qrsMs": 132,
+        "qtMs": 474,
+        "qtcMs": 424,
         "stMv": 0.02,
-        "pOnSample": 120,
-        "qrsOnSample": 85,
+        "pOnSample": 102,
+        "qrsOnSample": 102,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 155,
-        "tOffSample": 328,
-        "jPointSample": 159
+        "qrsOffSample": 168,
+        "tOffSample": 339,
+        "jPointSample": 168
       }
     },
     {
@@ -2417,20 +2417,20 @@
         "qtMs": 306,
         "qtcMs": 512,
         "stMv": -0.12,
-        "pOnSample": 120,
-        "qrsOnSample": 80,
+        "pOnSample": 95,
+        "qrsOnSample": 95,
         "rPeakSamples": [
-          120,
-          299,
-          477,
-          656,
-          834,
-          1013,
-          1191
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
         ],
-        "qrsOffSample": 160,
-        "tOffSample": 233,
-        "jPointSample": 164
+        "qrsOffSample": 175,
+        "tOffSample": 248,
+        "jPointSample": 175
       }
     },
     {
@@ -2449,24 +2449,24 @@
       "fiducials": {
         "hrBpm": 168,
         "prMs": 0,
-        "qrsMs": 156,
-        "qtMs": 300,
-        "qtcMs": 502,
+        "qrsMs": 152,
+        "qtMs": 294,
+        "qtcMs": 492,
         "stMv": -0.12,
-        "pOnSample": 120,
-        "qrsOnSample": 81,
+        "pOnSample": 97,
+        "qrsOnSample": 97,
         "rPeakSamples": [
-          120,
-          299,
-          477,
-          656,
-          834,
-          1013,
-          1191
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
         ],
-        "qrsOffSample": 159,
-        "tOffSample": 231,
-        "jPointSample": 163
+        "qrsOffSample": 173,
+        "tOffSample": 244,
+        "jPointSample": 173
       }
     },
     {
@@ -2485,24 +2485,24 @@
       "fiducials": {
         "hrBpm": 168,
         "prMs": 0,
-        "qrsMs": 152,
-        "qtMs": 294,
-        "qtcMs": 492,
+        "qrsMs": 156,
+        "qtMs": 300,
+        "qtcMs": 502,
         "stMv": -0.12,
-        "pOnSample": 120,
-        "qrsOnSample": 82,
+        "pOnSample": 96,
+        "qrsOnSample": 96,
         "rPeakSamples": [
-          120,
-          299,
-          477,
-          656,
-          834,
-          1013,
-          1191
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
         ],
-        "qrsOffSample": 158,
-        "tOffSample": 229,
-        "jPointSample": 162
+        "qrsOffSample": 174,
+        "tOffSample": 246,
+        "jPointSample": 174
       }
     },
     {
@@ -2525,20 +2525,20 @@
         "qtMs": 306,
         "qtcMs": 512,
         "stMv": -0.12,
-        "pOnSample": 120,
-        "qrsOnSample": 80,
+        "pOnSample": 95,
+        "qrsOnSample": 95,
         "rPeakSamples": [
-          120,
-          299,
-          477,
-          656,
-          834,
-          1013,
-          1191
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
         ],
-        "qrsOffSample": 160,
-        "tOffSample": 233,
-        "jPointSample": 164
+        "qrsOffSample": 175,
+        "tOffSample": 248,
+        "jPointSample": 175
       }
     },
     {
@@ -2557,24 +2557,24 @@
       "fiducials": {
         "hrBpm": 168,
         "prMs": 0,
-        "qrsMs": 156,
-        "qtMs": 300,
-        "qtcMs": 502,
+        "qrsMs": 152,
+        "qtMs": 294,
+        "qtcMs": 492,
         "stMv": -0.12,
-        "pOnSample": 120,
-        "qrsOnSample": 81,
+        "pOnSample": 97,
+        "qrsOnSample": 97,
         "rPeakSamples": [
-          120,
-          299,
-          477,
-          656,
-          834,
-          1013,
-          1191
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
         ],
-        "qrsOffSample": 159,
-        "tOffSample": 231,
-        "jPointSample": 163
+        "qrsOffSample": 173,
+        "tOffSample": 244,
+        "jPointSample": 173
       }
     },
     {
@@ -2593,24 +2593,24 @@
       "fiducials": {
         "hrBpm": 168,
         "prMs": 0,
-        "qrsMs": 152,
-        "qtMs": 294,
-        "qtcMs": 492,
+        "qrsMs": 156,
+        "qtMs": 300,
+        "qtcMs": 502,
         "stMv": -0.12,
-        "pOnSample": 120,
-        "qrsOnSample": 82,
+        "pOnSample": 96,
+        "qrsOnSample": 96,
         "rPeakSamples": [
-          120,
-          299,
-          477,
-          656,
-          834,
-          1013,
-          1191
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
         ],
-        "qrsOffSample": 158,
-        "tOffSample": 229,
-        "jPointSample": 162
+        "qrsOffSample": 174,
+        "tOffSample": 246,
+        "jPointSample": 174
       }
     },
     {
@@ -2633,20 +2633,20 @@
         "qtMs": 306,
         "qtcMs": 512,
         "stMv": -0.12,
-        "pOnSample": 120,
-        "qrsOnSample": 80,
+        "pOnSample": 95,
+        "qrsOnSample": 95,
         "rPeakSamples": [
-          120,
-          299,
-          477,
-          656,
-          834,
-          1013,
-          1191
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
         ],
-        "qrsOffSample": 160,
-        "tOffSample": 233,
-        "jPointSample": 164
+        "qrsOffSample": 175,
+        "tOffSample": 248,
+        "jPointSample": 175
       }
     },
     {
@@ -2665,24 +2665,24 @@
       "fiducials": {
         "hrBpm": 168,
         "prMs": 0,
-        "qrsMs": 156,
-        "qtMs": 300,
-        "qtcMs": 502,
+        "qrsMs": 152,
+        "qtMs": 294,
+        "qtcMs": 492,
         "stMv": -0.12,
-        "pOnSample": 120,
-        "qrsOnSample": 81,
+        "pOnSample": 97,
+        "qrsOnSample": 97,
         "rPeakSamples": [
-          120,
-          299,
-          477,
-          656,
-          834,
-          1013,
-          1191
+          135,
+          314,
+          492,
+          671,
+          849,
+          1028,
+          1206
         ],
-        "qrsOffSample": 159,
-        "tOffSample": 231,
-        "jPointSample": 163
+        "qrsOffSample": 173,
+        "tOffSample": 244,
+        "jPointSample": 173
       }
     },
     {
@@ -2701,26 +2701,26 @@
       "fiducials": {
         "hrBpm": 216,
         "prMs": 0,
-        "qrsMs": 164,
-        "qtMs": 280,
-        "qtcMs": 531,
+        "qrsMs": 168,
+        "qtMs": 286,
+        "qtcMs": 543,
         "stMv": -0.15,
-        "pOnSample": 120,
-        "qrsOnSample": 79,
+        "pOnSample": 93,
+        "qrsOnSample": 93,
         "rPeakSamples": [
-          120,
-          259,
-          398,
-          537,
-          676,
-          814,
-          953,
-          1092,
-          1231
+          135,
+          274,
+          413,
+          552,
+          691,
+          829,
+          968,
+          1107,
+          1246
         ],
-        "qrsOffSample": 161,
-        "tOffSample": 219,
-        "jPointSample": 165
+        "qrsOffSample": 177,
+        "tOffSample": 236,
+        "jPointSample": 177
       }
     },
     {
@@ -2743,22 +2743,22 @@
         "qtMs": 274,
         "qtcMs": 520,
         "stMv": -0.15,
-        "pOnSample": 120,
-        "qrsOnSample": 80,
+        "pOnSample": 95,
+        "qrsOnSample": 95,
         "rPeakSamples": [
-          120,
-          259,
-          398,
-          537,
-          676,
-          814,
-          953,
-          1092,
-          1231
+          135,
+          274,
+          413,
+          552,
+          691,
+          829,
+          968,
+          1107,
+          1246
         ],
-        "qrsOffSample": 160,
-        "tOffSample": 217,
-        "jPointSample": 164
+        "qrsOffSample": 175,
+        "tOffSample": 232,
+        "jPointSample": 175
       }
     },
     {
@@ -2777,26 +2777,26 @@
       "fiducials": {
         "hrBpm": 216,
         "prMs": 0,
-        "qrsMs": 168,
-        "qtMs": 286,
-        "qtcMs": 543,
+        "qrsMs": 164,
+        "qtMs": 280,
+        "qtcMs": 531,
         "stMv": -0.15,
-        "pOnSample": 120,
-        "qrsOnSample": 78,
+        "pOnSample": 94,
+        "qrsOnSample": 94,
         "rPeakSamples": [
-          120,
-          259,
-          398,
-          537,
-          676,
-          814,
-          953,
-          1092,
-          1231
+          135,
+          274,
+          413,
+          552,
+          691,
+          829,
+          968,
+          1107,
+          1246
         ],
-        "qrsOffSample": 162,
-        "tOffSample": 221,
-        "jPointSample": 166
+        "qrsOffSample": 176,
+        "tOffSample": 234,
+        "jPointSample": 176
       }
     },
     {
@@ -2815,26 +2815,26 @@
       "fiducials": {
         "hrBpm": 216,
         "prMs": 0,
-        "qrsMs": 164,
-        "qtMs": 280,
-        "qtcMs": 531,
+        "qrsMs": 168,
+        "qtMs": 286,
+        "qtcMs": 543,
         "stMv": -0.15,
-        "pOnSample": 120,
-        "qrsOnSample": 79,
+        "pOnSample": 93,
+        "qrsOnSample": 93,
         "rPeakSamples": [
-          120,
-          259,
-          398,
-          537,
-          676,
-          814,
-          953,
-          1092,
-          1231
+          135,
+          274,
+          413,
+          552,
+          691,
+          829,
+          968,
+          1107,
+          1246
         ],
-        "qrsOffSample": 161,
-        "tOffSample": 219,
-        "jPointSample": 165
+        "qrsOffSample": 177,
+        "tOffSample": 236,
+        "jPointSample": 177
       }
     },
     {
@@ -2857,22 +2857,22 @@
         "qtMs": 274,
         "qtcMs": 520,
         "stMv": -0.15,
-        "pOnSample": 120,
-        "qrsOnSample": 80,
+        "pOnSample": 95,
+        "qrsOnSample": 95,
         "rPeakSamples": [
-          120,
-          259,
-          398,
-          537,
-          676,
-          814,
-          953,
-          1092,
-          1231
+          135,
+          274,
+          413,
+          552,
+          691,
+          829,
+          968,
+          1107,
+          1246
         ],
-        "qrsOffSample": 160,
-        "tOffSample": 217,
-        "jPointSample": 164
+        "qrsOffSample": 175,
+        "tOffSample": 232,
+        "jPointSample": 175
       }
     },
     {
@@ -2891,26 +2891,26 @@
       "fiducials": {
         "hrBpm": 216,
         "prMs": 0,
-        "qrsMs": 168,
-        "qtMs": 286,
-        "qtcMs": 543,
+        "qrsMs": 164,
+        "qtMs": 280,
+        "qtcMs": 531,
         "stMv": -0.15,
-        "pOnSample": 120,
-        "qrsOnSample": 78,
+        "pOnSample": 94,
+        "qrsOnSample": 94,
         "rPeakSamples": [
-          120,
-          259,
-          398,
-          537,
-          676,
-          814,
-          953,
-          1092,
-          1231
+          135,
+          274,
+          413,
+          552,
+          691,
+          829,
+          968,
+          1107,
+          1246
         ],
-        "qrsOffSample": 162,
-        "tOffSample": 221,
-        "jPointSample": 166
+        "qrsOffSample": 176,
+        "tOffSample": 234,
+        "jPointSample": 176
       }
     },
     {
@@ -2929,26 +2929,26 @@
       "fiducials": {
         "hrBpm": 216,
         "prMs": 0,
-        "qrsMs": 164,
-        "qtMs": 280,
-        "qtcMs": 531,
+        "qrsMs": 168,
+        "qtMs": 286,
+        "qtcMs": 543,
         "stMv": -0.15,
-        "pOnSample": 120,
-        "qrsOnSample": 79,
+        "pOnSample": 93,
+        "qrsOnSample": 93,
         "rPeakSamples": [
-          120,
-          259,
-          398,
-          537,
-          676,
-          814,
-          953,
-          1092,
-          1231
+          135,
+          274,
+          413,
+          552,
+          691,
+          829,
+          968,
+          1107,
+          1246
         ],
-        "qrsOffSample": 161,
-        "tOffSample": 219,
-        "jPointSample": 165
+        "qrsOffSample": 177,
+        "tOffSample": 236,
+        "jPointSample": 177
       }
     },
     {
@@ -2971,22 +2971,22 @@
         "qtMs": 274,
         "qtcMs": 520,
         "stMv": -0.15,
-        "pOnSample": 120,
-        "qrsOnSample": 80,
+        "pOnSample": 95,
+        "qrsOnSample": 95,
         "rPeakSamples": [
-          120,
-          259,
-          398,
-          537,
-          676,
-          814,
-          953,
-          1092,
-          1231
+          135,
+          274,
+          413,
+          552,
+          691,
+          829,
+          968,
+          1107,
+          1246
         ],
-        "qrsOffSample": 160,
-        "tOffSample": 217,
-        "jPointSample": 164
+        "qrsOffSample": 175,
+        "tOffSample": 232,
+        "jPointSample": 175
       }
     },
     {
@@ -3009,12 +3009,12 @@
         "qtMs": 0,
         "qtcMs": 0,
         "stMv": 0.0,
-        "pOnSample": 120,
-        "qrsOnSample": 116,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
         "rPeakSamples": [],
-        "qrsOffSample": 124,
-        "tOffSample": 120,
-        "jPointSample": 128
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
       }
     },
     {
@@ -3037,12 +3037,12 @@
         "qtMs": 0,
         "qtcMs": 0,
         "stMv": 0.0,
-        "pOnSample": 120,
-        "qrsOnSample": 116,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
         "rPeakSamples": [],
-        "qrsOffSample": 124,
-        "tOffSample": 120,
-        "jPointSample": 128
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
       }
     },
     {
@@ -3065,12 +3065,12 @@
         "qtMs": 0,
         "qtcMs": 0,
         "stMv": 0.0,
-        "pOnSample": 120,
-        "qrsOnSample": 116,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
         "rPeakSamples": [],
-        "qrsOffSample": 124,
-        "tOffSample": 120,
-        "jPointSample": 128
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
       }
     },
     {
@@ -3093,12 +3093,12 @@
         "qtMs": 0,
         "qtcMs": 0,
         "stMv": 0.0,
-        "pOnSample": 120,
-        "qrsOnSample": 116,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
         "rPeakSamples": [],
-        "qrsOffSample": 124,
-        "tOffSample": 120,
-        "jPointSample": 128
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
       }
     },
     {
@@ -3121,12 +3121,12 @@
         "qtMs": 0,
         "qtcMs": 0,
         "stMv": 0.0,
-        "pOnSample": 120,
-        "qrsOnSample": 116,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
         "rPeakSamples": [],
-        "qrsOffSample": 124,
-        "tOffSample": 120,
-        "jPointSample": 128
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
       }
     },
     {
@@ -3149,12 +3149,12 @@
         "qtMs": 0,
         "qtcMs": 0,
         "stMv": 0.0,
-        "pOnSample": 120,
-        "qrsOnSample": 116,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
         "rPeakSamples": [],
-        "qrsOffSample": 124,
-        "tOffSample": 120,
-        "jPointSample": 128
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
       }
     },
     {
@@ -3177,12 +3177,12 @@
         "qtMs": 0,
         "qtcMs": 0,
         "stMv": 0.0,
-        "pOnSample": 120,
-        "qrsOnSample": 116,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
         "rPeakSamples": [],
-        "qrsOffSample": 124,
-        "tOffSample": 120,
-        "jPointSample": 128
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
       }
     },
     {
@@ -3205,12 +3205,12 @@
         "qtMs": 0,
         "qtcMs": 0,
         "stMv": 0.0,
-        "pOnSample": 120,
-        "qrsOnSample": 116,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
         "rPeakSamples": [],
-        "qrsOffSample": 124,
-        "tOffSample": 120,
-        "jPointSample": 128
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
       }
     },
     {
@@ -3233,12 +3233,12 @@
         "qtMs": 0,
         "qtcMs": 0,
         "stMv": 0.0,
-        "pOnSample": 120,
-        "qrsOnSample": 116,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
         "rPeakSamples": [],
-        "qrsOffSample": 124,
-        "tOffSample": 120,
-        "jPointSample": 128
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
       }
     },
     {
@@ -3261,12 +3261,12 @@
         "qtMs": 0,
         "qtcMs": 0,
         "stMv": 0.0,
-        "pOnSample": 120,
-        "qrsOnSample": 116,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
         "rPeakSamples": [],
-        "qrsOffSample": 124,
-        "tOffSample": 120,
-        "jPointSample": 128
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
       }
     },
     {
@@ -3289,12 +3289,12 @@
         "qtMs": 0,
         "qtcMs": 0,
         "stMv": 0.0,
-        "pOnSample": 120,
-        "qrsOnSample": 116,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
         "rPeakSamples": [],
-        "qrsOffSample": 124,
-        "tOffSample": 120,
-        "jPointSample": 128
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
       }
     },
     {
@@ -3317,12 +3317,12 @@
         "qtMs": 0,
         "qtcMs": 0,
         "stMv": 0.0,
-        "pOnSample": 120,
-        "qrsOnSample": 116,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
         "rPeakSamples": [],
-        "qrsOffSample": 124,
-        "tOffSample": 120,
-        "jPointSample": 128
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
       }
     },
     {
@@ -3345,12 +3345,12 @@
         "qtMs": 0,
         "qtcMs": 0,
         "stMv": 0.0,
-        "pOnSample": 120,
-        "qrsOnSample": 116,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
         "rPeakSamples": [],
-        "qrsOffSample": 124,
-        "tOffSample": 120,
-        "jPointSample": 128
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
       }
     },
     {
@@ -3373,12 +3373,12 @@
         "qtMs": 0,
         "qtcMs": 0,
         "stMv": 0.0,
-        "pOnSample": 120,
-        "qrsOnSample": 116,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
         "rPeakSamples": [],
-        "qrsOffSample": 124,
-        "tOffSample": 120,
-        "jPointSample": 128
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
       }
     },
     {
@@ -3401,12 +3401,12 @@
         "qtMs": 0,
         "qtcMs": 0,
         "stMv": 0.0,
-        "pOnSample": 120,
-        "qrsOnSample": 116,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
         "rPeakSamples": [],
-        "qrsOffSample": 124,
-        "tOffSample": 120,
-        "jPointSample": 128
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
       }
     },
     {
@@ -3429,12 +3429,12 @@
         "qtMs": 0,
         "qtcMs": 0,
         "stMv": 0.0,
-        "pOnSample": 120,
-        "qrsOnSample": 116,
+        "pOnSample": 135,
+        "qrsOnSample": 135,
         "rPeakSamples": [],
-        "qrsOffSample": 124,
-        "tOffSample": 120,
-        "jPointSample": 128
+        "qrsOffSample": 135,
+        "tOffSample": 135,
+        "jPointSample": 135
       }
     },
     {
@@ -3452,20 +3452,20 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 48,
-        "prMs": 2260,
-        "qrsMs": 116,
-        "qtMs": 420,
-        "qtcMs": 376,
+        "prMs": 180,
+        "qrsMs": 120,
+        "qtMs": 426,
+        "qtcMs": 381,
         "stMv": -0.08,
-        "pOnSample": 0,
-        "qrsOnSample": 91,
+        "pOnSample": 15,
+        "qrsOnSample": 105,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 149,
-        "tOffSample": 301,
-        "jPointSample": 153
+        "qrsOffSample": 165,
+        "tOffSample": 318,
+        "jPointSample": 165
       }
     },
     {
@@ -3483,20 +3483,20 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 48,
-        "prMs": 2282,
+        "prMs": 182,
         "qrsMs": 112,
         "qtMs": 414,
         "qtcMs": 370,
         "stMv": -0.08,
-        "pOnSample": 0,
-        "qrsOnSample": 92,
+        "pOnSample": 16,
+        "qrsOnSample": 107,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 148,
-        "tOffSample": 299,
-        "jPointSample": 152
+        "qrsOffSample": 163,
+        "tOffSample": 314,
+        "jPointSample": 163
       }
     },
     {
@@ -3514,20 +3514,20 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 48,
-        "prMs": 2304,
-        "qrsMs": 120,
-        "qtMs": 426,
-        "qtcMs": 381,
+        "prMs": 184,
+        "qrsMs": 116,
+        "qtMs": 420,
+        "qtcMs": 376,
         "stMv": -0.08,
-        "pOnSample": 0,
-        "qrsOnSample": 90,
+        "pOnSample": 14,
+        "qrsOnSample": 106,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 150,
-        "tOffSample": 303,
-        "jPointSample": 154
+        "qrsOffSample": 164,
+        "tOffSample": 316,
+        "jPointSample": 164
       }
     },
     {
@@ -3545,20 +3545,20 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 48,
-        "prMs": 2326,
-        "qrsMs": 116,
-        "qtMs": 420,
-        "qtcMs": 376,
+        "prMs": 186,
+        "qrsMs": 120,
+        "qtMs": 426,
+        "qtcMs": 381,
         "stMv": -0.08,
-        "pOnSample": 0,
-        "qrsOnSample": 91,
+        "pOnSample": 12,
+        "qrsOnSample": 105,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 149,
-        "tOffSample": 301,
-        "jPointSample": 153
+        "qrsOffSample": 165,
+        "tOffSample": 318,
+        "jPointSample": 165
       }
     },
     {
@@ -3576,20 +3576,20 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 48,
-        "prMs": 2348,
+        "prMs": 188,
         "qrsMs": 112,
         "qtMs": 414,
         "qtcMs": 370,
         "stMv": -0.08,
-        "pOnSample": 0,
-        "qrsOnSample": 92,
+        "pOnSample": 13,
+        "qrsOnSample": 107,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 148,
-        "tOffSample": 299,
-        "jPointSample": 152
+        "qrsOffSample": 163,
+        "tOffSample": 314,
+        "jPointSample": 163
       }
     },
     {
@@ -3607,20 +3607,20 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 48,
-        "prMs": 2370,
-        "qrsMs": 120,
-        "qtMs": 426,
-        "qtcMs": 381,
+        "prMs": 190,
+        "qrsMs": 116,
+        "qtMs": 420,
+        "qtcMs": 376,
         "stMv": -0.08,
-        "pOnSample": 0,
-        "qrsOnSample": 90,
+        "pOnSample": 11,
+        "qrsOnSample": 106,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 150,
-        "tOffSample": 303,
-        "jPointSample": 154
+        "qrsOffSample": 164,
+        "tOffSample": 316,
+        "jPointSample": 164
       }
     },
     {
@@ -3638,20 +3638,20 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 48,
-        "prMs": 2392,
-        "qrsMs": 116,
-        "qtMs": 420,
-        "qtcMs": 376,
+        "prMs": 192,
+        "qrsMs": 120,
+        "qtMs": 426,
+        "qtcMs": 381,
         "stMv": -0.08,
-        "pOnSample": 0,
-        "qrsOnSample": 91,
+        "pOnSample": 9,
+        "qrsOnSample": 105,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 149,
-        "tOffSample": 301,
-        "jPointSample": 153
+        "qrsOffSample": 165,
+        "tOffSample": 318,
+        "jPointSample": 165
       }
     },
     {
@@ -3669,20 +3669,20 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 48,
-        "prMs": 2414,
+        "prMs": 194,
         "qrsMs": 112,
         "qtMs": 414,
         "qtcMs": 370,
         "stMv": -0.08,
-        "pOnSample": 0,
-        "qrsOnSample": 92,
+        "pOnSample": 10,
+        "qrsOnSample": 107,
         "rPeakSamples": [
-          120,
-          745
+          135,
+          760
         ],
-        "qrsOffSample": 148,
-        "tOffSample": 299,
-        "jPointSample": 152
+        "qrsOffSample": 163,
+        "tOffSample": 314,
+        "jPointSample": 163
       }
     },
     {
@@ -3700,22 +3700,22 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 96,
-        "prMs": 2400,
-        "qrsMs": 92,
-        "qtMs": 354,
-        "qtcMs": 448,
-        "stMv": 0.3,
-        "pOnSample": 0,
-        "qrsOnSample": 97,
+        "prMs": 160,
+        "qrsMs": 100,
+        "qtMs": 366,
+        "qtcMs": 463,
+        "stMv": 0.34,
+        "pOnSample": 30,
+        "qrsOnSample": 110,
         "rPeakSamples": [
-          120,
-          432,
-          745,
-          1058
+          135,
+          448,
+          760,
+          1072
         ],
-        "qrsOffSample": 143,
-        "tOffSample": 274,
-        "jPointSample": 147
+        "qrsOffSample": 160,
+        "tOffSample": 293,
+        "jPointSample": 160
       }
     },
     {
@@ -3733,22 +3733,22 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 96,
-        "prMs": 2422,
-        "qrsMs": 100,
-        "qtMs": 366,
-        "qtcMs": 463,
-        "stMv": 0.34,
-        "pOnSample": 0,
-        "qrsOnSample": 95,
+        "prMs": 162,
+        "qrsMs": 92,
+        "qtMs": 354,
+        "qtcMs": 448,
+        "stMv": 0.3,
+        "pOnSample": 31,
+        "qrsOnSample": 112,
         "rPeakSamples": [
-          120,
-          432,
-          745,
-          1058
+          135,
+          448,
+          760,
+          1072
         ],
-        "qrsOffSample": 145,
-        "tOffSample": 278,
-        "jPointSample": 149
+        "qrsOffSample": 158,
+        "tOffSample": 289,
+        "jPointSample": 158
       }
     },
     {
@@ -3766,22 +3766,22 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 96,
-        "prMs": 2444,
+        "prMs": 164,
         "qrsMs": 96,
         "qtMs": 360,
         "qtcMs": 455,
         "stMv": 0.32,
-        "pOnSample": 0,
-        "qrsOnSample": 96,
+        "pOnSample": 29,
+        "qrsOnSample": 111,
         "rPeakSamples": [
-          120,
-          432,
-          745,
-          1058
+          135,
+          448,
+          760,
+          1072
         ],
-        "qrsOffSample": 144,
-        "tOffSample": 276,
-        "jPointSample": 148
+        "qrsOffSample": 159,
+        "tOffSample": 291,
+        "jPointSample": 159
       }
     },
     {
@@ -3799,22 +3799,22 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 96,
-        "prMs": 2466,
-        "qrsMs": 92,
-        "qtMs": 354,
-        "qtcMs": 448,
-        "stMv": 0.3,
-        "pOnSample": 0,
-        "qrsOnSample": 97,
+        "prMs": 166,
+        "qrsMs": 100,
+        "qtMs": 366,
+        "qtcMs": 463,
+        "stMv": 0.34,
+        "pOnSample": 27,
+        "qrsOnSample": 110,
         "rPeakSamples": [
-          120,
-          432,
-          745,
-          1058
+          135,
+          448,
+          760,
+          1072
         ],
-        "qrsOffSample": 143,
-        "tOffSample": 274,
-        "jPointSample": 147
+        "qrsOffSample": 160,
+        "tOffSample": 293,
+        "jPointSample": 160
       }
     },
     {
@@ -3832,22 +3832,22 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 96,
-        "prMs": 2488,
-        "qrsMs": 100,
-        "qtMs": 366,
-        "qtcMs": 463,
-        "stMv": 0.34,
-        "pOnSample": 0,
-        "qrsOnSample": 95,
+        "prMs": 168,
+        "qrsMs": 92,
+        "qtMs": 354,
+        "qtcMs": 448,
+        "stMv": 0.3,
+        "pOnSample": 28,
+        "qrsOnSample": 112,
         "rPeakSamples": [
-          120,
-          432,
-          745,
-          1058
+          135,
+          448,
+          760,
+          1072
         ],
-        "qrsOffSample": 145,
-        "tOffSample": 278,
-        "jPointSample": 149
+        "qrsOffSample": 158,
+        "tOffSample": 289,
+        "jPointSample": 158
       }
     },
     {
@@ -3865,22 +3865,22 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 96,
-        "prMs": 2510,
+        "prMs": 170,
         "qrsMs": 96,
         "qtMs": 360,
         "qtcMs": 455,
         "stMv": 0.32,
-        "pOnSample": 0,
-        "qrsOnSample": 96,
+        "pOnSample": 26,
+        "qrsOnSample": 111,
         "rPeakSamples": [
-          120,
-          432,
-          745,
-          1058
+          135,
+          448,
+          760,
+          1072
         ],
-        "qrsOffSample": 144,
-        "tOffSample": 276,
-        "jPointSample": 148
+        "qrsOffSample": 159,
+        "tOffSample": 291,
+        "jPointSample": 159
       }
     },
     {
@@ -3898,22 +3898,22 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 96,
-        "prMs": 2532,
-        "qrsMs": 92,
-        "qtMs": 354,
-        "qtcMs": 448,
-        "stMv": 0.3,
-        "pOnSample": 0,
-        "qrsOnSample": 97,
+        "prMs": 172,
+        "qrsMs": 100,
+        "qtMs": 366,
+        "qtcMs": 463,
+        "stMv": 0.34,
+        "pOnSample": 24,
+        "qrsOnSample": 110,
         "rPeakSamples": [
-          120,
-          432,
-          745,
-          1058
+          135,
+          448,
+          760,
+          1072
         ],
-        "qrsOffSample": 143,
-        "tOffSample": 274,
-        "jPointSample": 147
+        "qrsOffSample": 160,
+        "tOffSample": 293,
+        "jPointSample": 160
       }
     },
     {
@@ -3931,22 +3931,22 @@
       "freeStarter": false,
       "fiducials": {
         "hrBpm": 96,
-        "prMs": 2554,
-        "qrsMs": 100,
-        "qtMs": 366,
-        "qtcMs": 463,
-        "stMv": 0.34,
-        "pOnSample": 0,
-        "qrsOnSample": 95,
+        "prMs": 174,
+        "qrsMs": 92,
+        "qtMs": 354,
+        "qtcMs": 448,
+        "stMv": 0.3,
+        "pOnSample": 25,
+        "qrsOnSample": 112,
         "rPeakSamples": [
-          120,
-          432,
-          745,
-          1058
+          135,
+          448,
+          760,
+          1072
         ],
-        "qrsOffSample": 145,
-        "tOffSample": 278,
-        "jPointSample": 149
+        "qrsOffSample": 158,
+        "tOffSample": 289,
+        "jPointSample": 158
       }
     }
   ]

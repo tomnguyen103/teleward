@@ -223,8 +223,14 @@ interface OdeVector {
   rr: number;
 }
 
-function computeDerivatives(state: OdeVector, rhythm: RhythmClass, elapsedUnrescuedSec: number): OdeVector {
+function computeDerivatives(
+  state: OdeVector,
+  rhythm: RhythmClass,
+  elapsedUnrescuedSec: number,
+  paced = false
+): OdeVector {
   const target = RHYTHM_PROFILES[rhythm];
+  const targetHr = paced ? 70 : target.hr;
   // Progressive ischemic decay if an unstable non-NSR rhythm remains unrescued
   const ischemicPenalty =
     rhythm !== 'NSR' && !target.pulseless && elapsedUnrescuedSec > 18
@@ -237,7 +243,7 @@ function computeDerivatives(state: OdeVector, rhythm: RhythmClass, elapsedUnresc
   const targetSpo2 = Math.max(0, target.spo2 - ischemicPenalty * 0.25);
 
   return {
-    hr: (target.hr - state.hr) / 2.0,
+    hr: (targetHr - state.hr) / 2.0,
     sbp: (targetSbp - state.sbp) / target.tauBpSec,
     dbp: (targetDbp - state.dbp) / target.tauBpSec,
     spo2: (targetSpo2 - state.spo2) / target.tauGasSec,
@@ -265,12 +271,13 @@ export function stepHemodynamicsRk4(
   rhythm: RhythmClass,
   dtSec: number,
   elapsedUnrescuedSec: number,
-  jitterFn: () => number
+  jitterFn: () => number,
+  paced = false
 ): OdeVector {
-  const k1 = computeDerivatives(current, rhythm, elapsedUnrescuedSec);
-  const k2 = computeDerivatives(addScaled(current, k1, dtSec * 0.5), rhythm, elapsedUnrescuedSec + dtSec * 0.5);
-  const k3 = computeDerivatives(addScaled(current, k2, dtSec * 0.5), rhythm, elapsedUnrescuedSec + dtSec * 0.5);
-  const k4 = computeDerivatives(addScaled(current, k3, dtSec), rhythm, elapsedUnrescuedSec + dtSec);
+  const k1 = computeDerivatives(current, rhythm, elapsedUnrescuedSec, paced);
+  const k2 = computeDerivatives(addScaled(current, k1, dtSec * 0.5), rhythm, elapsedUnrescuedSec + dtSec * 0.5, paced);
+  const k3 = computeDerivatives(addScaled(current, k2, dtSec * 0.5), rhythm, elapsedUnrescuedSec + dtSec * 0.5, paced);
+  const k4 = computeDerivatives(addScaled(current, k3, dtSec), rhythm, elapsedUnrescuedSec + dtSec, paced);
 
   const jitter = (jitterFn() - 0.5) * 0.12;
   return {
@@ -295,26 +302,39 @@ export interface RealtimeWaveformSample {
  */
 export function synthesizeRealtimeSample(vitals: VitalState, timeSec: number): RealtimeWaveformSample {
   const { rhythm, hr, sbp, dbp, etco2, rr } = vitals;
+  const t = Math.max(0, timeSec);
+  const afibMod =
+    rhythm === 'AFIB' ? 0.14 * Math.sin(t * 2.3) + 0.09 * Math.cos(t * 3.7) : 0;
 
   let ecgMv = 0;
   if (rhythm === 'ASYSTOLE') {
-    ecgMv = 0.012 * Math.sin(2 * Math.PI * 0.4 * timeSec);
+    ecgMv = 0.012 * Math.sin(2 * Math.PI * 0.4 * t);
   } else if (rhythm === 'VFIB') {
     ecgMv =
-      0.38 * Math.sin(2 * Math.PI * 4.4 * timeSec) +
-      0.24 * Math.sin(2 * Math.PI * 6.8 * timeSec + 0.9) +
-      0.16 * Math.cos(2 * Math.PI * 9.2 * timeSec);
+      0.38 * Math.sin(2 * Math.PI * 4.4 * t) +
+      0.24 * Math.sin(2 * Math.PI * 6.8 * t + 0.9) +
+      0.16 * Math.cos(2 * Math.PI * 9.2 * t);
   } else if (rhythm === 'TORSADES') {
-    const spindle = 0.35 + 0.65 * Math.sin(2 * Math.PI * 0.8 * timeSec);
-    ecgMv = 1.15 * spindle * Math.sin(2 * Math.PI * 3.6 * timeSec);
+    const freqHz = Math.max(0.5, (hr || 224) / 60);
+    const spindle = 0.35 + 0.65 * Math.sin(2 * Math.PI * 0.8 * t);
+    ecgMv = 1.15 * spindle * Math.sin(2 * Math.PI * freqHz * t);
   } else if (rhythm === 'VT_MONO') {
-    ecgMv = 1.1 * Math.sin(2 * Math.PI * 2.8 * timeSec) - 0.28 * Math.sin(4 * Math.PI * 2.8 * timeSec + 0.4);
+    const freqHz = Math.max(0.5, (hr || 172) / 60);
+    ecgMv =
+      1.1 * Math.sin(2 * Math.PI * freqHz * t) -
+      0.28 * Math.sin(4 * Math.PI * freqHz * t + 0.4);
   } else {
-    const effectiveHr = Math.max(30, hr || 60);
+    const effectiveHr = Math.max(30, vitals.paced ? 70 : hr || 60);
     const beatPeriod = 60 / effectiveHr;
-    const phase = (timeSec % beatPeriod) / beatPeriod;
+    const phase = (((t % beatPeriod) / beatPeriod + afibMod) % 1 + 1) % 1;
     const gauss = (center: number, width: number) => Math.exp(-0.5 * ((phase - center) / width) ** 2);
-    const pWave = rhythm === 'AFIB' || rhythm === 'AFLT' || rhythm === 'SVT' ? 0 : 0.14 * gauss(0.16, 0.025);
+    const atrialPhase = (((t * (78 / 60)) % 1) + 1) % 1;
+    const pWave =
+      rhythm === 'AFIB' || rhythm === 'AFLT' || rhythm === 'SVT'
+        ? 0
+        : rhythm === 'AVB3' && !vitals.paced
+          ? 0.14 * Math.exp(-0.5 * ((atrialPhase - 0.16) / 0.025) ** 2)
+          : 0.14 * gauss(0.16, 0.025);
     const qWave = -0.11 * gauss(0.32, 0.01);
     const rWave = 1.18 * gauss(0.35, 0.014);
     const sWave = -0.22 * gauss(0.38, 0.012);
@@ -328,14 +348,15 @@ export function synthesizeRealtimeSample(vitals: VitalState, timeSec: number): R
   let abpMmHg = dbp;
   let spo2Wave = 0;
   if (sbp > 15 && hr > 0 && rhythm !== 'VFIB' && rhythm !== 'ASYSTOLE' && rhythm !== 'PEA') {
-    const beatPeriod = 60 / Math.max(30, hr);
-    const pulsePhase = ((timeSec - 0.12 + beatPeriod) % beatPeriod) / beatPeriod;
+    const effectivePulseHr = Math.max(30, vitals.paced ? 70 : hr);
+    const beatPeriod = 60 / effectivePulseHr;
+    const pulsePhase = ((((t - 0.12 + beatPeriod) % beatPeriod) / beatPeriod + afibMod) % 1 + 1) % 1;
     const upstroke = Math.exp(-0.5 * ((pulsePhase - 0.18) / 0.07) ** 2);
     const dicrotic = 0.36 * Math.exp(-0.5 * ((pulsePhase - 0.42) / 0.11) ** 2);
     const shape = Math.min(1, (upstroke + dicrotic) / 1.08);
     abpMmHg = dbp + (sbp - dbp) * shape;
 
-    const plethPhase = ((timeSec - 0.22 + beatPeriod) % beatPeriod) / beatPeriod;
+    const plethPhase = ((((t - 0.22 + beatPeriod) % beatPeriod) / beatPeriod + afibMod) % 1 + 1) % 1;
     spo2Wave =
       Math.exp(-0.5 * ((plethPhase - 0.22) / 0.08) ** 2) +
       0.3 * Math.exp(-0.5 * ((plethPhase - 0.46) / 0.12) ** 2);

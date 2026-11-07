@@ -18,7 +18,20 @@ export interface DailyChallengeViewProps {
 
 export function DailyChallengeView(props: DailyChallengeViewProps) {
   const utcDateKey = getUtcDateKey();
-  const [dailyReceipt, setDailyReceipt] = useState<string | null>(null);
+  const [dailyReceipt, setDailyReceipt] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = window.localStorage?.getItem('teleward_daily_v1');
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as { date?: string; receiptCode?: string };
+      if (parsed.date === utcDateKey && typeof parsed.receiptCode === 'string') {
+        return parsed.receiptCode;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  });
   const [storageWarning, setStorageWarning] = useState<string | null>(null);
 
   const handleFinishDaily = () => {

@@ -1,12 +1,37 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { loadPtbxlBinary } from '../data/ptbxlLoader.ts';
 import {
   TelewardCliValidationError,
   runSimulation,
 } from '../engine/aclsEngine.ts';
 import type { Rfc7807Error } from '../types/teleward.ts';
+
+function resolveCompilerScriptPath(): string {
+  try {
+    const fromModule = fileURLToPath(new URL('../../compiler/compile_ptbxl.py', import.meta.url));
+    if (existsSync(fromModule)) {
+      return fromModule;
+    }
+  } catch {
+    // Fallback to process.cwd()
+  }
+  return resolve(process.cwd(), 'compiler/compile_ptbxl.py');
+}
+
+function runPythonCompiler(args: string[]): string {
+  try {
+    return execFileSync('python', args, { encoding: 'utf-8' });
+  } catch (err: unknown) {
+    const code = (err as { code?: string })?.code;
+    if (code === 'ENOENT') {
+      return execFileSync('python3', args, { encoding: 'utf-8' });
+    }
+    throw err;
+  }
+}
 
 function parseArgMap(argv: string[]): Map<string, string | boolean> {
   const map = new Map<string, string | boolean>();
@@ -34,11 +59,13 @@ export function executeCli(argv: string[]): number {
     if (subcommand === 'compile') {
       const outDir = typeof flags.get('out-dir') === 'string' ? String(flags.get('out-dir')) : 'public/data';
       const seedStr = typeof flags.get('seed') === 'string' ? String(flags.get('seed')) : '42';
-      const out = execFileSync(
-        'python',
-        [resolve(process.cwd(), 'compiler/compile_ptbxl.py'), '--out-dir', outDir, '--seed', seedStr],
-        { encoding: 'utf-8' }
-      );
+      const out = runPythonCompiler([
+        resolveCompilerScriptPath(),
+        '--out-dir',
+        outDir,
+        '--seed',
+        seedStr,
+      ]);
       process.stdout.write(out);
       return 0;
     }
@@ -69,6 +96,16 @@ export function executeCli(argv: string[]): number {
       const durationRaw = flags.get('duration');
       const seedRaw = flags.get('seed');
 
+      if (
+        interventionRaw === true ||
+        (typeof interventionRaw === 'string' && interventionRaw.trim() === '')
+      ) {
+        throw new TelewardCliValidationError(
+          'Flag --intervention requires a valid ACLS intervention name.',
+          'INVALID_INTERVENTION'
+        );
+      }
+
       const seedNum =
         seedRaw === undefined
           ? 42
@@ -78,7 +115,7 @@ export function executeCli(argv: string[]): number {
 
       const atSec =
         atRaw === undefined
-          ? 10
+          ? undefined
           : typeof atRaw === 'string' && atRaw.trim() !== ''
             ? Number(atRaw.trim())
             : Number.NaN;

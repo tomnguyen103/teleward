@@ -1,5 +1,6 @@
 import {
   LEAD_NAMES,
+  RHYTHM_CLASSES,
   type LeadName,
   type PtbxlCaseRecord,
   type PtbxlIndexManifest,
@@ -41,11 +42,13 @@ export function computeCrc32(bytes: Uint8Array): number {
   return (crc ^ 0xffffffff) >>> 0;
 }
 
+export type TelewardBinaryErrorCode = 'BINARY_CORRUPT' | 'CASE_NOT_FOUND' | 'MANIFEST_MISMATCH';
+
 export class TelewardBinaryError extends Error {
-  public readonly code: 'BINARY_CORRUPT' | 'CASE_NOT_FOUND';
+  public readonly code: TelewardBinaryErrorCode;
   public readonly problem: Rfc7807Error;
 
-  constructor(code: 'BINARY_CORRUPT' | 'CASE_NOT_FOUND', detail: string) {
+  constructor(code: TelewardBinaryErrorCode, detail: string) {
     super(detail);
     this.name = 'TelewardBinaryError';
     this.code = code;
@@ -54,13 +57,17 @@ export class TelewardBinaryError extends Error {
       title:
         code === 'BINARY_CORRUPT'
           ? 'Corrupted TWEC Binary Waveform Chunk'
-          : 'PTB-XL Case Record Not Found',
-      status: code === 'BINARY_CORRUPT' ? 422 : 404,
+          : code === 'MANIFEST_MISMATCH'
+            ? 'PTB-XL Index Manifest Mismatch'
+            : 'PTB-XL Case Record Not Found',
+      status: code === 'CASE_NOT_FOUND' ? 404 : 422,
       detail,
       code,
     };
   }
 }
+
+export const PTBXLLoaderError = TelewardBinaryError;
 
 export interface ValidatedHeader {
   magic: 'TWEC';
@@ -177,16 +184,25 @@ export function loadPtbxlBinary(
 
   const payloadFloats = new Float32Array(buffer, HEADER_BYTE_LENGTH, EXPECTED_PAYLOAD_FLOATS);
   const recordsById = new Map<string, PtbxlCaseRecord>();
-  for (let idx = 0; idx < manifest.records.length; idx++) {
-    const rec = manifest.records[idx]!;
+  for (let i = 0; i < manifest.records.length; i++) {
+    const rec = manifest.records[i]!;
+    const expectedCaseId = `ptbxl-${String(i + 1).padStart(3, '0')}`;
     if (
-      rec.recordIndex !== idx ||
+      !rec ||
+      typeof rec !== 'object' ||
+      rec.recordIndex !== i ||
+      rec.caseId !== expectedCaseId ||
       !CASE_ID_REGEX.test(rec.caseId) ||
+      typeof rec.rhythmClass !== 'string' ||
+      !RHYTHM_CLASSES.includes(rec.rhythmClass) ||
+      typeof rec.clinicalSummary !== 'string' ||
+      !rec.fiducials ||
+      typeof rec.fiducials !== 'object' ||
       recordsById.has(rec.caseId)
     ) {
-      throw new TelewardBinaryError(
-        'BINARY_CORRUPT',
-        `Manifest record index/caseId mismatch at position ${idx}: recordIndex=${String(rec.recordIndex)}, caseId=${String(rec.caseId)}.`
+      throw new PTBXLLoaderError(
+        'MANIFEST_MISMATCH',
+        `Manifest record index/caseId/schema mismatch at position ${i}: expected ${expectedCaseId}, got recordIndex=${String(rec?.recordIndex)}, caseId=${String(rec?.caseId)}.`
       );
     }
     recordsById.set(rec.caseId, rec);

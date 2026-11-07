@@ -69,18 +69,28 @@ export function CaliperView(props: CaliperViewProps) {
   useEffect(() => {
     isDraggingRef.current = false;
     setCaliper({ t1Ms: 240, t2Ms: 1040, v1Mv: 0.0, v2Mv: 0.25 });
+    setPrInput('');
+    setQrsInput('');
+    setQtcInput('');
+    setStInput('');
     setFormError(null);
     setGradeReport(null);
     setRhythmInput('NSR');
     onGradeUpdate?.(null, isUnlocked ? resolvedRecord : null);
   }, [caseId, isUnlocked]);
 
+  const parsedQtCandidate = Number(qtcInput);
+  const measuredQtInputMs =
+    qtcInput.trim() !== '' && Number.isFinite(parsedQtCandidate) && parsedQtCandidate > 0
+      ? parsedQtCandidate
+      : Math.max(1, Math.abs(caliper.t2Ms - caliper.t1Ms));
+
   const metrics = computeCaliperMetrics(
     caliper.t1Ms,
     caliper.t2Ms,
     caliper.v1Mv,
     caliper.v2Mv,
-    isUnlocked && resolvedRecord ? resolvedRecord.fiducials.qtMs : 380
+    measuredQtInputMs
   );
 
   useEffect(() => {
@@ -184,8 +194,11 @@ export function CaliperView(props: CaliperViewProps) {
         activeHandle === 't1' ? { ...prev, t1Ms: snappedMs } : { ...prev, t2Ms: snappedMs }
       );
     } else {
-      const relY = Math.max(0, Math.min(1, (clientY - rect.top) / effHeight));
-      const rawMv = (0.5 - relY) * 5.0;
+      const yPx = clientY - rect.top;
+      const rhythmStripTop = effHeight * 0.75;
+      const rhythmMidY = rhythmStripTop + (effHeight - rhythmStripTop) * 0.5;
+      const mvScale = Math.max(1, (effHeight - rhythmStripTop) * 0.34);
+      const rawMv = (rhythmMidY - yPx) / mvScale;
       const clampedMv = Number(Math.max(-5.0, Math.min(5.0, rawMv)).toFixed(2));
       setCaliper((prev) =>
         activeHandle === 'v1' ? { ...prev, v1Mv: clampedMv } : { ...prev, v2Mv: clampedMv }
@@ -195,6 +208,11 @@ export function CaliperView(props: CaliperViewProps) {
 
   const handlePointerDown = (e: PointerEvent) => {
     isDraggingRef.current = true;
+    try {
+      (e.currentTarget as HTMLCanvasElement | null)?.setPointerCapture?.(e.pointerId);
+    } catch {
+      // Ignore synthetic events without active pointerId
+    }
     applyPointerCoordinate(e.clientX, e.clientY);
   };
 
@@ -203,8 +221,13 @@ export function CaliperView(props: CaliperViewProps) {
     applyPointerCoordinate(e.clientX, e.clientY);
   };
 
-  const handlePointerUpOrCancel = () => {
+  const handlePointerUpOrCancel = (e: PointerEvent) => {
     isDraggingRef.current = false;
+    try {
+      (e.currentTarget as HTMLCanvasElement | null)?.releasePointerCapture?.(e.pointerId);
+    } catch {
+      // Ignore synthetic events
+    }
   };
 
   const handlePointerPlotClick = (e: MouseEvent) => {
@@ -349,7 +372,7 @@ export function CaliperView(props: CaliperViewProps) {
           width={960}
           height={420}
           class="w-full rounded border cursor-crosshair"
-          style={{ borderColor: 'var(--border)' }}
+          style={{ borderColor: 'var(--border)', touchAction: 'none' }}
           aria-label={`12-lead ECG strip for ${resolvedRecord.caseId}. Use Arrow keys to nudge caliper handles by 2 ms or 0.05 mV, Shift+Arrow for 20 ms.`}
         />
       </section>
@@ -358,14 +381,36 @@ export function CaliperView(props: CaliperViewProps) {
       <section class="tw-surface p-4">
         <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b" style={{ borderColor: 'var(--border)' }}>
           <h2 class="m-0">Grade 12-Lead Interval Measurements Against PTB-XL Fiducials</h2>
-          <button
-            type="button"
-            data-testid="autofill-caliper-fiducials-btn"
-            onClick={handleAutofillFromFiducials}
-            class="tw-btn-secondary text-sm"
-          >
-            Load Caliper Readings into Form
-          </button>
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setPrInput(String(Math.round(metrics.deltaMs)));
+                setFormError(null);
+              }}
+              class="tw-btn-secondary text-sm"
+            >
+              Use Δt → PR
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setQrsInput(String(Math.round(metrics.deltaMs)));
+                setFormError(null);
+              }}
+              class="tw-btn-secondary text-sm"
+            >
+              Use Δt → QRS
+            </button>
+            <button
+              type="button"
+              data-testid="autofill-caliper-fiducials-btn"
+              onClick={handleAutofillFromFiducials}
+              class="tw-btn-secondary text-sm"
+            >
+              Load Caliper Δt / ΔV
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmitGrade} class="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">

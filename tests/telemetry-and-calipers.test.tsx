@@ -210,6 +210,18 @@ describe('US-03 & US-04: 60fps 2D Canvas 4-Bed ICU Telemetry, IEC 60601-1-8 Alar
     expect(exactBoundaryGrade.stPass).toBe(true);
     expect(exactBoundaryGrade.rhythmPass).toBe(true);
     expect(exactBoundaryGrade.overallPass).toBe(true);
+
+    // Unrounded out-of-tolerance (+20.4 ms PR) or non-positive QRS/QTc must fail
+    const outOfTolGrade = gradeCaliperSubmission(case001, {
+      prMs: f.prMs + 20.4,
+      qrsMs: 0,
+      qtcMs: -10,
+      stMv: f.stMv,
+      rhythmClass: case001.rhythmClass,
+    });
+    expect(outOfTolGrade.prPass).toBe(false);
+    expect(outOfTolGrade.qrsPass).toBe(false);
+    expect(outOfTolGrade.qtcPass).toBe(false);
   });
 
   it('US-04.3 & US-04.4: renders recovery state on /caliper/invalid-case-999, validates empty form submission inline, and resets handles cleanly on case switch', () => {
@@ -271,6 +283,7 @@ describe('US-03 & US-04: 60fps 2D Canvas 4-Bed ICU Telemetry, IEC 60601-1-8 Alar
 
     fireEvent.change(caseSelect, { target: { value: 'ptbxl-003' } });
     expect(getByTestId('active-caliper-case-id').textContent).toContain('ptbxl-003');
+    expect(prField.value).toBe('');
     const rhythmSelect = container.querySelector('#select-rhythm-class') as HTMLSelectElement;
     expect(rhythmSelect.value).toBe('NSR');
     expect(getByTestId('causal-timeline-inspector').textContent).not.toContain(

@@ -85,16 +85,17 @@ def synthesize_12lead_record(rhythm: str, rec_offset: int, seed: int) -> tuple[l
     else:
         cycles = 0
 
+    within_idx = rec_offset % 10
     hr_bpm = int(round((cycles / 2.5) * 60)) if cycles > 0 else 0
-    if cycles > 0 and rec_offset % 3 == 1 and rhythm == "NSR":
+    if cycles > 0 and within_idx % 3 == 1 and rhythm == "NSR":
         hr_bpm = 72
 
-    pr_ms = int(base_pr + (rec_offset - 4) * 2) if base_pr > 0 else 0
-    qrs_ms = int(base_qrs + (rec_offset % 3 - 1) * 4) if base_qrs > 0 else 0
-    qt_ms = int(base_qt + (rec_offset % 3 - 1) * 6) if base_qt > 0 else 0
+    pr_ms = int(base_pr + (within_idx - 4) * 2) if base_pr > 0 else 0
+    qrs_ms = int(base_qrs + (within_idx % 3 - 1) * 4) if base_qrs > 0 else 0
+    qt_ms = int(base_qt + (within_idx % 3 - 1) * 6) if base_qt > 0 else 0
     rr_sec = (60.0 / hr_bpm) if hr_bpm > 0 else 1.0
     qtc_ms = int(round(qt_ms / math.sqrt(rr_sec))) if qt_ms > 0 and hr_bpm > 0 else 0
-    st_mv = round(base_st + (rec_offset % 3 - 1) * 0.02, 3) if rhythm == "STEMI_ANT" else round(base_st, 3)
+    st_mv = round(base_st + (within_idx % 3 - 1) * 0.02, 3) if rhythm == "STEMI_ANT" else round(base_st, 3)
 
     lead_I = [0.0] * SAMPLES_PER_TILE
     lead_II = [0.0] * SAMPLES_PER_TILE
@@ -109,19 +110,21 @@ def synthesize_12lead_record(rhythm: str, rec_offset: int, seed: int) -> tuple[l
                 jitter = int((rng() - 0.5) * 35)
                 if c == 0 or c == cycles - 1:
                     jitter = 0
-            r_peaks.append(int(round(c * period_samples + 120 + jitter)) % SAMPLES_PER_TILE)
+            r_peaks.append(int(round(c * period_samples + 135 + jitter)) % SAMPLES_PER_TILE)
         r_peaks.sort()
 
-    first_r = r_peaks[0] if r_peaks else 120
+    first_r = r_peaks[0] if r_peaks else 135
     pr_samples = int(round(pr_ms * 0.5))
-    qrs_half = max(4, int(round(qrs_ms * 0.25)))
+    qrs_samples = int(round(qrs_ms * 0.5))
     qt_samples = int(round(qt_ms * 0.5))
+    qrs_pre = qrs_samples // 2
+    qrs_post = qrs_samples - qrs_pre
 
-    p_on = max(0, first_r - pr_samples) if pr_ms > 0 else first_r
-    qrs_on = max(0, first_r - qrs_half)
-    qrs_off = min(SAMPLES_PER_TILE - 1, first_r + qrs_half)
-    j_point = min(SAMPLES_PER_TILE - 1, qrs_off + 4)
-    t_off = min(SAMPLES_PER_TILE - 1, qrs_on + qt_samples) if qt_ms > 0 else first_r
+    qrs_on = first_r - qrs_pre if qrs_ms > 0 else first_r
+    qrs_off = qrs_on + qrs_samples if qrs_ms > 0 else first_r
+    p_on = qrs_on - pr_samples if pr_ms > 0 else qrs_on
+    j_point = qrs_off
+    t_off = qrs_on + qt_samples if qt_ms > 0 else qrs_on
 
     phase_seed = rng() * 2.0 * math.pi
     amp_scale = 0.92 + 0.14 * rng()
@@ -189,11 +192,23 @@ def synthesize_12lead_record(rhythm: str, rec_offset: int, seed: int) -> tuple[l
             saw = -0.18 * (((12.0 * s / SAMPLES_PER_TILE) % 1.0) - 0.5)
             v_II += saw
             v_I += saw * 0.35
+        elif rhythm == "AVB3":
+            atrial_period = 60.0 / 75.0
+            atrial_period_samples = SAMPLE_RATE_HZ * atrial_period
+            for a_idx in range(3):
+                a_center = 60.0 + a_idx * atrial_period_samples
+                a_wave = 0.14 * periodic_gauss(s, a_center, 8.5, SAMPLES_PER_TILE)
+                v_II += a_wave
+                v_I += a_wave * 0.72
+                for v_idx in range(6):
+                    v_prec[v_idx] += a_wave * (0.4 + 0.08 * v_idx)
 
         for rp in r_peaks:
+            rp_qrs_on = rp - qrs_pre
+            rp_qrs_off = rp_qrs_on + qrs_samples
             # P wave
             if pr_ms > 0 and rhythm not in ("AFIB", "AFLT", "SVT"):
-                p_center = rp - pr_samples * 0.65
+                p_center = (rp_qrs_on - pr_samples) + 17.0
                 p_wave = 0.14 * periodic_gauss(s, p_center, 8.5, SAMPLES_PER_TILE)
                 v_II += p_wave
                 v_I += p_wave * 0.72
@@ -201,19 +216,19 @@ def synthesize_12lead_record(rhythm: str, rec_offset: int, seed: int) -> tuple[l
                     v_prec[v_idx] += p_wave * (0.4 + 0.08 * v_idx)
 
             # Q, R, S complex
-            q_wave = -0.12 * periodic_gauss(s, rp - qrs_half * 0.55, max(2.5, qrs_half * 0.25), SAMPLES_PER_TILE)
-            r_wave = 1.18 * amp_scale * periodic_gauss(s, rp, max(3.0, qrs_half * 0.38), SAMPLES_PER_TILE)
-            s_wave = -0.24 * periodic_gauss(s, rp + qrs_half * 0.60, max(2.8, qrs_half * 0.30), SAMPLES_PER_TILE)
+            q_wave = -0.12 * periodic_gauss(s, rp - max(2.0, qrs_pre * 0.55), max(1.8, qrs_pre * 0.22), SAMPLES_PER_TILE)
+            r_wave = 1.18 * amp_scale * periodic_gauss(s, rp, max(2.2, qrs_samples * 0.14), SAMPLES_PER_TILE)
+            s_wave = -0.24 * periodic_gauss(s, rp + max(2.0, qrs_post * 0.52), max(1.8, qrs_post * 0.18), SAMPLES_PER_TILE)
 
             v_II += q_wave + r_wave + s_wave
             v_I += 0.68 * (q_wave + r_wave + s_wave)
 
             # ST segment & T wave
-            t_center = rp + qt_samples * 0.62
-            t_wave = 0.28 * periodic_gauss(s, t_center, 18.0, SAMPLES_PER_TILE)
-            st_bridge = st_mv * periodic_gauss(s, rp + qrs_half + 14.0, 22.0, SAMPLES_PER_TILE)
+            t_center = rp_qrs_on + qt_samples * 0.62
+            t_wave = 0.28 * periodic_gauss(s, t_center, max(6.0, qt_samples * 0.14), SAMPLES_PER_TILE)
+            st_bridge = st_mv * periodic_gauss(s, rp_qrs_off + 6.0, 24.0, SAMPLES_PER_TILE)
 
-            v_II += st_bridge * 0.45 + t_wave
+            v_II += st_bridge + t_wave
             v_I += st_bridge * 0.65 + t_wave * 0.70
 
             # Precordial R-wave progression V1 (rS) -> V6 (qRs) + anterior STEMI elevation in V1..V4
@@ -227,6 +242,12 @@ def synthesize_12lead_record(rhythm: str, rec_offset: int, seed: int) -> tuple[l
         lead_II[s] = max(-4.5, min(4.5, v_II))
         for v_idx in range(6):
             precordials[v_idx][s] = max(-4.5, min(4.5, v_prec[v_idx]))
+
+    j_err = st_mv - lead_II[qrs_off]
+    if abs(j_err) > 1e-4:
+        for s in range(SAMPLES_PER_TILE):
+            adj = j_err * periodic_gauss(s, qrs_off, 4.0, SAMPLES_PER_TILE)
+            lead_II[s] = max(-4.5, min(4.5, lead_II[s] + adj))
 
     # Quantize I and II to float32 first, then derive III, aVR, aVL, aVF to satisfy Einthoven & Goldberger identities
     f32_I = list(struct.unpack(f"<{SAMPLES_PER_TILE}f", struct.pack(f"<{SAMPLES_PER_TILE}f", *lead_I)))

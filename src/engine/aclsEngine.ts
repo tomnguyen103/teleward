@@ -141,7 +141,8 @@ export function validateSimulationOptions(opts: SimulationOptions): ValidatedSim
     );
   }
 
-  const atSec = opts.atSec ?? 10;
+  const defaultAtSec = normalizedIntervention === null ? Math.min(10, durationSec) : 10;
+  const atSec = opts.atSec ?? defaultAtSec;
   if (!Number.isFinite(atSec) || atSec < 0 || atSec > durationSec) {
     throw new TelewardCliValidationError(
       `Invalid --at "${String(opts.atSec)}". Must be between 0 and duration (${durationSec}s).`,
@@ -199,7 +200,7 @@ export function applyTransitionToContinuousState(
   if (decision.converted) {
     const nsrProfile = RHYTHM_PROFILES.NSR;
     return {
-      hr: nsrProfile.hr,
+      hr: decision.paced ? 70 : nsrProfile.hr,
       sbp: Math.max(106, state.sbp),
       dbp: Math.max(68, state.dbp),
       spo2: Math.max(96, state.spo2),
@@ -236,6 +237,7 @@ export function evaluateAclsTransition(
       currentRhythm === 'SVT' ||
       currentRhythm === 'AFIB' ||
       currentRhythm === 'AFLT' ||
+      currentRhythm === 'AVB3' ||
       currentRhythm === 'STEMI_ANT')
   ) {
     return {
@@ -551,8 +553,8 @@ export function runSimulation(rawOptions: SimulationOptions): SimulationResult {
         paced,
       });
       causalTimeline.push({
-        timeSec,
-        tick: step,
+        timeSec: cfg.atSec === 0 ? 0 : timeSec,
+        tick: cfg.atSec === 0 ? 0 : step,
         action: cfg.intervention,
         preVitals,
         postVitals,
@@ -571,7 +573,8 @@ export function runSimulation(rawOptions: SimulationOptions): SimulationResult {
       activeRhythm,
       DT_SEC,
       unrescuedSec,
-      rng
+      rng,
+      paced
     );
 
     // Emit 1 Hz trajectory snapshots (plus the final tick) to keep JSON concise while integrating at 20 Hz
@@ -666,6 +669,7 @@ export class ShiftController {
   private readonly beds: BedState[];
   private elapsedSec = 0;
   private tickCount = 0;
+  private fractionalSec = 0;
 
   constructor(seed: number) {
     this.seed = seed >>> 0;
@@ -745,7 +749,9 @@ export class ShiftController {
 
   public stepSeconds(deltaSec: number): void {
     const clampedSec = Math.max(0, Math.min(10, deltaSec));
-    const steps = Math.max(1, Math.round(clampedSec / DT_SEC));
+    this.fractionalSec += clampedSec;
+    const steps = Math.floor((this.fractionalSec + 1e-9) / DT_SEC);
+    this.fractionalSec = Math.max(0, this.fractionalSec - steps * DT_SEC);
     for (let s = 0; s < steps; s++) {
       this.tickCount += 1;
       this.elapsedSec = Number((this.tickCount * DT_SEC).toFixed(2));
@@ -759,30 +765,37 @@ export class ShiftController {
           bed.vitals.rhythm,
           DT_SEC,
           bed.stabilized ? 0 : this.elapsedSec,
-          rng
+          rng,
+          bed.vitals.paced
         );
         this.continuousStates[i] = nextState;
 
         let expiredThisTick = false;
         const preArrestVitals = { ...bed.vitals };
+        let nextRhythm = bed.vitals.rhythm;
+        let nextPaced = bed.vitals.paced;
 
         if (!bed.stabilized && !bed.arrested) {
           bed.countdownSec = Math.max(0, Number((60 - this.elapsedSec).toFixed(1)));
           if (bed.countdownSec <= 0) {
             bed.arrested = true;
-            bed.vitals.rhythm = 'ASYSTOLE';
-            bed.vitals.paced = false;
+            bed.stabilized = false;
+            nextRhythm = 'ASYSTOLE';
+            nextPaced = false;
             bed.caseId = getCaseIdForRhythm('ASYSTOLE', bed.bedIndex);
             expiredThisTick = true;
           }
         }
 
         bed.vitals = clampPhysiology({
-          rhythm: bed.vitals.rhythm,
+          rhythm: nextRhythm,
           ...nextState,
           map: 0,
-          paced: bed.vitals.paced,
+          paced: nextPaced,
         });
+        if (bed.vitals.sbp < 40 || bed.arrested) {
+          bed.stabilized = false;
+        }
         bed.alarmPriority =
           bed.ahaViolations.length > 0
             ? 'CRISIS'
@@ -822,9 +835,9 @@ export class ShiftController {
 
     const preVitals = { ...bed.vitals };
     const decision = evaluateAclsTransition(bed.vitals.rhythm, action, bed.vitals.sbp);
-    bed.vitals.rhythm = decision.nextRhythm;
-    bed.vitals.paced = decision.paced;
-    bed.caseId = getCaseIdForRhythm(bed.vitals.rhythm, bed.bedIndex);
+    const nextRhythm = decision.nextRhythm;
+    const nextPaced = decision.paced;
+    bed.caseId = getCaseIdForRhythm(nextRhythm, bed.bedIndex);
     this.continuousStates[bedIndex] = applyTransitionToContinuousState(
       this.continuousStates[bedIndex]!,
       decision
@@ -844,11 +857,14 @@ export class ShiftController {
     }
 
     bed.vitals = clampPhysiology({
-      rhythm: bed.vitals.rhythm,
+      rhythm: nextRhythm,
       ...this.continuousStates[bedIndex]!,
       map: 0,
-      paced: bed.vitals.paced,
+      paced: nextPaced,
     });
+    if (bed.vitals.sbp < 40 || bed.arrested) {
+      bed.stabilized = false;
+    }
     bed.alarmPriority =
       bed.ahaViolations.length > 0
         ? 'CRISIS'

@@ -45,6 +45,7 @@ export function App(props: AppProps) {
     props.preloadedDataset ?? null
   );
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const [darkTheme, setDarkTheme] = useState(true);
   const [selectedBedIndex, setSelectedBedIndex] = useState(0);
   const [activeRhythmFilter, setActiveRhythmFilter] = useState<RhythmClass | 'ALL'>('ALL');
@@ -85,9 +86,10 @@ export function App(props: AppProps) {
         : 'shift';
 
   const shiftSeed =
-    props.initialSeed ??
-    (parsedCohort.valid && parsedCohort.numericSeed !== null ? parsedCohort.numericSeed : 42);
-  const dailySeed = props.initialSeed ?? getDailySeed();
+    (props.initialSeed ??
+      (parsedCohort.valid && parsedCohort.numericSeed !== null ? parsedCohort.numericSeed : 42)) >>>
+    0;
+  const dailySeed = (props.initialSeed ?? getDailySeed()) >>> 0;
 
   const shiftRef = useRef<ShiftController | null>(null);
   if (!shiftRef.current || shiftRef.current.getSeed() !== shiftSeed) {
@@ -155,6 +157,7 @@ export function App(props: AppProps) {
     let cancelled = false;
     async function fetchBinaryAndManifest() {
       try {
+        setLoadError(null);
         const [binRes, idxRes] = await Promise.all([
           fetch('/data/ptbxl_120.bin'),
           fetch('/data/ptbxl_index.json'),
@@ -181,7 +184,7 @@ export function App(props: AppProps) {
     return () => {
       cancelled = true;
     };
-  }, [dataset]);
+  }, [dataset, retryCount]);
 
   useEffect(() => {
     if (typeof document !== 'undefined') {
@@ -409,8 +412,21 @@ export function App(props: AppProps) {
       inspectorContent={inspectorContent}
     >
       {loadError ? (
-        <div class="tw-surface p-4 text-sm" role="alert">
-          {loadError}
+        <div class="tw-surface p-4 text-sm flex flex-wrap items-center justify-between gap-3" role="alert">
+          <span>{loadError}</span>
+          <button
+            type="button"
+            onClick={() => setRetryCount((c) => c + 1)}
+            class="tw-btn-secondary text-sm"
+          >
+            Retry Dataset Load
+          </button>
+        </div>
+      ) : null}
+
+      {activeArea === 'caliper' && !dataset && !loadError ? (
+        <div class="tw-surface p-4 text-sm" role="status">
+          Loading 120-record PhysioNet PTB-XL 500 Hz waveform dataset…
         </div>
       ) : null}
 

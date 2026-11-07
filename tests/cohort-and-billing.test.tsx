@@ -88,7 +88,7 @@ describe('US-04.6 & US-05: Stripe Checkout Pro Exam Pass ($19) & Stateless ?coho
     fireEvent.input(verifierInput, { target: { value: receipt } });
     fireEvent.click(getByTestId('verify-cohort-receipt-btn'));
 
-    expect(getByTestId('cohort-receipt-verdict').textContent).toContain('VALID');
+    expect(getByTestId('cohort-receipt-verdict').textContent).toContain('VALID RECEIPT');
   });
 
   it('US-05.2: supports cohort seed lengths 1..64 and score boundaries 0% (0/4 beds) to 100% (4/4 beds)', () => {
@@ -113,8 +113,12 @@ describe('US-04.6 & US-05: Stripe Checkout Pro Exam Pass ($19) & Stateless ?coho
       violations: 0,
     });
 
-    expect(verifyCohortReceipt(rZero).valid).toBe(true);
+    const vZero = verifyCohortReceipt(rZero);
+    expect(vZero.valid).toBe(true);
+    expect(vZero.bedsStabilized).toBe(0);
+    expect(vZero.violations).toBe(4);
     expect(verifyCohortReceipt(rHundred).valid).toBe(true);
+    expect(() => generateCohortReceipt({ cohort: minCohort, scorePct: Number.NaN })).toThrow();
   });
 
   it('US-05.3: rejects XSS or >64-char cohort query params and rejects tampered receipts with CRC16_MISMATCH', () => {
