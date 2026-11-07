@@ -1,10 +1,17 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import {
+  activateEntitlement,
+  canAccessCaseWithEntitlement,
+  parseCohortSeed,
+  readEntitlementFromStorage,
+  type EntitlementTier,
+} from './billing/cohortAndEntitlement.ts';
+import {
   loadPtbxlBinary,
   type LoadedPtbxlDataset,
 } from './data/ptbxlLoader.ts';
 import { ShiftController } from './engine/aclsEngine.ts';
-import { fnv1a32, getDailySeed } from './engine/prng.ts';
+import { getDailySeed } from './engine/prng.ts';
 import type {
   AclsInterventionId,
   PtbxlCaseRecord,
@@ -15,6 +22,7 @@ import { AppShell, type ActiveRouteArea } from './ui/AppShell.tsx';
 import { Iec60601AlarmSynthesizer } from './ui/audio/iec60601Alarms.ts';
 import type { CaliperGradeReport } from './ui/canvas/TelemetryCanvas.ts';
 import { CaliperView } from './ui/views/CaliperView.tsx';
+import { CohortProView } from './ui/views/CohortProView.tsx';
 import { DailyChallengeView } from './ui/views/DailyChallengeView.tsx';
 import { ShiftStationView } from './ui/views/ShiftStationView.tsx';
 
@@ -42,6 +50,10 @@ export function App(props: AppProps) {
   const [activeRhythmFilter, setActiveRhythmFilter] = useState<RhythmClass | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [renderTick, setRenderTick] = useState(0);
+  const [entitlementTier, setEntitlementTier] = useState<EntitlementTier>(
+    () => readEntitlementFromStorage().tier
+  );
+  const [checkoutNotice, setCheckoutNotice] = useState<string | null>(null);
   const [lastCaliperGrade, setLastCaliperGrade] = useState<{
     report: CaliperGradeReport | null;
     record: PtbxlCaseRecord | null;
@@ -54,13 +66,14 @@ export function App(props: AppProps) {
   const [audioArmed, setAudioArmed] = useState(false);
   const [audioMuted, setAudioMuted] = useState(false);
 
-  // Parse path and optional ?cohort= query
+  // Parse path and optional ?cohort= or ?checkout= query parameters
   const [pathnamePart, searchPart = ''] = currentPath.split('?');
   const pathname = pathnamePart || '/shift';
   const urlParams = new URLSearchParams(searchPart);
   const rawCohortParam = urlParams.get('cohort');
-  const validCohortSeed =
-    rawCohortParam && /^[a-zA-Z0-9_-]{1,64}$/.test(rawCohortParam) ? rawCohortParam : null;
+  const parsedCohort = parseCohortSeed(rawCohortParam);
+  const validCohortSeed = parsedCohort.valid ? parsedCohort.cohort : null;
+  const checkoutParam = urlParams.get('checkout');
 
   const activeArea: ActiveRouteArea = pathname.startsWith('/daily')
     ? 'daily'
@@ -74,14 +87,30 @@ export function App(props: AppProps) {
     props.initialSeed ??
     (activeArea === 'daily'
       ? getDailySeed()
-      : validCohortSeed
-        ? fnv1a32(validCohortSeed)
+      : parsedCohort.valid && parsedCohort.numericSeed !== null
+        ? parsedCohort.numericSeed
         : 42);
 
   const shiftRef = useRef<ShiftController | null>(null);
   if (!shiftRef.current || shiftRef.current.getSeed() !== effectiveSeed) {
     shiftRef.current = new ShiftController(effectiveSeed);
   }
+
+  useEffect(() => {
+    if (checkoutParam === 'cancelled') {
+      setCheckoutNotice(
+        'Checkout cancelled — your free starter tier (24 PTB-XL records) remains active with zero charges.'
+      );
+    } else if (checkoutParam === 'success') {
+      const tierParam = urlParams.get('tier');
+      const tokenParam = urlParams.get('token') ?? undefined;
+      if (tierParam === 'exam_pass' || tierParam === 'instructor_cohort') {
+        const res = activateEntitlement(tierParam, tokenParam);
+        setEntitlementTier(res.tier);
+        setCheckoutNotice(`Stripe Checkout verified — ${res.tier} unlocked.`);
+      }
+    }
+  }, [checkoutParam, searchPart]);
 
   useEffect(() => {
     if (dataset) return;
@@ -162,10 +191,16 @@ export function App(props: AppProps) {
     }
   };
 
+  const handleActivateTier = (tier: 'exam_pass' | 'instructor_cohort') => {
+    const activated = activateEntitlement(tier);
+    setEntitlementTier(activated.tier);
+    setCheckoutNotice(
+      `Sandbox Checkout completed: ${activated.tier} entitlement signed and persisted to localStorage.`
+    );
+  };
+
   const canAccessCase = (record: PtbxlCaseRecord): boolean => {
-    if (record.freeStarter) return true;
-    if (validCohortSeed) return true;
-    return false;
+    return canAccessCaseWithEntitlement(record, entitlementTier, validCohortSeed);
   };
 
   const filteredRecords = (dataset?.records ?? []).filter((r) => {
@@ -183,7 +218,6 @@ export function App(props: AppProps) {
     return true;
   });
 
-  // Inspector Content: Causal Timeline & Hemodynamic Receipt on /shift & /daily, or Fiducial Ledger on /caliper
   const inspectorContent = (
     <div class="flex flex-col gap-4" data-tick={renderTick}>
       <div>
@@ -239,6 +273,12 @@ export function App(props: AppProps) {
     ? pathname.slice('/caliper/'.length) || 'ptbxl-001'
     : 'ptbxl-001';
 
+  const cohortBanner = validCohortSeed
+    ? `Cohort Mode Active: ${validCohortSeed}`
+    : rawCohortParam !== null && !parsedCohort.valid
+      ? 'Invalid ?cohort= parameter ignored; running default shift'
+      : null;
+
   return (
     <AppShell
       activeArea={activeArea}
@@ -257,7 +297,7 @@ export function App(props: AppProps) {
       onToggleAudioArmOrMute={handleToggleAudio}
       darkTheme={darkTheme}
       onToggleTheme={() => setDarkTheme((d) => !d)}
-      cohortBannerText={validCohortSeed ? `Cohort Mode Active: ${validCohortSeed}` : null}
+      cohortBannerText={cohortBanner}
       inspectorContent={inspectorContent}
     >
       {loadError ? (
@@ -303,6 +343,17 @@ export function App(props: AppProps) {
           onNavigateCohortUnlock={() => navigate('/cohort')}
           darkTheme={darkTheme}
           onGradeUpdate={(report, record) => setLastCaliperGrade({ report, record })}
+        />
+      ) : null}
+
+      {activeArea === 'cohort' ? (
+        <CohortProView
+          entitlementTier={entitlementTier}
+          activeCohortSeed={validCohortSeed}
+          checkoutNotice={checkoutNotice}
+          scoreSummary={scoreSummary}
+          onActivateTier={handleActivateTier}
+          onLaunchCohortShift={(seed) => navigate(`/shift?cohort=${seed}`)}
         />
       ) : null}
     </AppShell>
