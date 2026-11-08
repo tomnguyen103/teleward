@@ -1,5 +1,5 @@
 import { computeCrc32 } from '../data/ptbxlLoader.ts';
-import { fnv1a32 } from '../engine/prng.ts';
+import { fnv1a32, mulberry32 } from '../engine/prng.ts';
 import type { PtbxlCaseRecord } from '../types/teleward.ts';
 
 export type EntitlementTier = 'free' | 'exam_pass' | 'instructor_cohort';
@@ -8,6 +8,18 @@ export const COHORT_SEED_REGEX = /^[a-zA-Z0-9_-]{1,64}$/;
 export const ENTITLEMENT_STORAGE_KEY = 'teleward_entitlement_v1';
 const ENTITLEMENT_SALT = 'TELEWARD_CRC32_V1_2026';
 const COHORT_CRC_SALT = 'TELEWARD_COHORT_CRC16_V1';
+
+const RESERVED_PROTOTYPE_KEYS = new Set([
+  '__PROTO__',
+  'CONSTRUCTOR',
+  'PROTOTYPE',
+  'TOSTRING',
+  'VALUEOF',
+  'HASOWNPROPERTY',
+  'ISPROTOTYPEOF',
+  'PROPERTYISENUMERABLE',
+  'TOLOCALESTRING',
+]);
 
 export interface ParsedCohortSeed {
   valid: boolean;
@@ -20,7 +32,8 @@ export function parseCohortSeed(raw: string | null | undefined): ParsedCohortSee
   if (!raw || typeof raw !== 'string') {
     return { valid: false, cohort: null, numericSeed: null, reason: 'EMPTY_COHORT' };
   }
-  if (!COHORT_SEED_REGEX.test(raw)) {
+  const trimmed = raw.trim().toUpperCase();
+  if (!COHORT_SEED_REGEX.test(trimmed) || RESERVED_PROTOTYPE_KEYS.has(trimmed)) {
     return {
       valid: false,
       cohort: null,
@@ -30,8 +43,8 @@ export function parseCohortSeed(raw: string | null | undefined): ParsedCohortSee
   }
   return {
     valid: true,
-    cohort: raw,
-    numericSeed: fnv1a32(raw),
+    cohort: trimmed,
+    numericSeed: fnv1a32(trimmed),
   };
 }
 
@@ -332,4 +345,107 @@ export function canAccessCaseWithEntitlement(
   if (tier === 'exam_pass' || tier === 'instructor_cohort') return true;
   if (cohortSeed && parseCohortSeed(cohortSeed).valid) return true;
   return false;
+}
+
+export interface CohortSubmissionRecord {
+  id: string;
+  cohortSeed: string;
+  studentAlias: string;
+  score: number;
+  stabilizedBeds: number;
+  violations: number;
+  receipt: string;
+  submittedAt: string;
+  verified: boolean;
+}
+
+export interface CohortSummaryMetrics {
+  totalSubmissions: number;
+  meanScore: number;
+  fullStabilizationRate: number;
+}
+
+export interface DailyLeaderboardEntry {
+  rank?: number;
+  clinicianAlias: string;
+  dateKey: string;
+  scorePct: number;
+  bedsStabilized: number;
+  violations: number;
+  receipt: string;
+  submittedAt: string;
+}
+
+export function formatDailyReceipt(
+  dateKey: string,
+  scorePct: number,
+  bedsStabilized: number
+): string {
+  return `TW-DAILY-${dateKey}-${Math.round(scorePct)}-${Math.round(bedsStabilized)}B`;
+}
+
+export function buildBaselineCohortEntries(cohortSeed: string): CohortSubmissionRecord[] {
+  const parsed = parseCohortSeed(cohortSeed);
+  const safeSeed = parsed.valid && parsed.cohort ? parsed.cohort : 'NURS402-FALL26';
+  const rng = mulberry32(fnv1a32(`BASELINE:${safeSeed}`));
+  const aliases = ['R. Patel, BSN RN', 'J. Kim, EM-R2', 'A. Morales, NRP'];
+  const templates = [
+    { beds: 4, violations: 0, score: 100 },
+    { beds: 4, violations: 1, score: 92 },
+    { beds: 3, violations: 0, score: 75 },
+  ];
+  return aliases.map((alias, idx) => {
+    const tpl = templates[idx]!;
+    const jitterMin = Math.floor(rng() * 25) + 5;
+    const receipt = generateCohortReceipt({
+      cohort: safeSeed,
+      scorePct: tpl.score,
+      bedsStabilized: tpl.beds,
+      violations: tpl.violations,
+    });
+    return {
+      id: `ref-${safeSeed}-${idx + 1}`,
+      cohortSeed: safeSeed,
+      studentAlias: alias,
+      score: tpl.score,
+      stabilizedBeds: tpl.beds,
+      violations: tpl.violations,
+      receipt,
+      submittedAt: new Date(Date.UTC(2026, 2, 15, 14, jitterMin, 0)).toISOString(),
+      verified: true,
+    };
+  });
+}
+
+export function buildBaselineDailyEntries(dateKey: string): DailyLeaderboardEntry[] {
+  const templates = [
+    { alias: 'Dr. M. Al-Mansoor (ICU)', scorePct: 100, beds: 4, violations: 0 },
+    { alias: 'C. Lindholm, CCRN', scorePct: 92, beds: 4, violations: 1 },
+    { alias: 'T. Nguyen, Flight Paramedic', scorePct: 84, beds: 4, violations: 2 },
+  ];
+  return templates.map((t, idx) => ({
+    rank: idx + 1,
+    clinicianAlias: t.alias,
+    dateKey,
+    scorePct: t.scorePct,
+    bedsStabilized: t.beds,
+    violations: t.violations,
+    receipt: formatDailyReceipt(dateKey, t.scorePct, t.beds),
+    submittedAt: `${dateKey}T08:${String(12 + idx * 9).padStart(2, '0')}:00.000Z`,
+  }));
+}
+
+export function computeCohortSummary(
+  roster: readonly CohortSubmissionRecord[]
+): CohortSummaryMetrics {
+  if (roster.length === 0) {
+    return { totalSubmissions: 0, meanScore: 0, fullStabilizationRate: 0 };
+  }
+  const totalScore = roster.reduce((acc, r) => acc + r.score, 0);
+  const fullStabCount = roster.filter((r) => r.stabilizedBeds === 4).length;
+  return {
+    totalSubmissions: roster.length,
+    meanScore: Math.round(totalScore / roster.length),
+    fullStabilizationRate: Math.round((fullStabCount / roster.length) * 100),
+  };
 }

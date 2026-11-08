@@ -7,6 +7,7 @@ import {
   TelewardCliValidationError,
   runSimulation,
 } from '../engine/aclsEngine.ts';
+import { startTelewardServer } from '../server/apiServer.ts';
 import type { Rfc7807Error } from '../types/teleward.ts';
 
 function resolveCompilerScriptPath(): string {
@@ -59,20 +60,19 @@ export function executeCli(argv: string[]): number {
     if (subcommand === 'compile') {
       const outDir = typeof flags.get('out-dir') === 'string' ? String(flags.get('out-dir')) : 'public/data';
       const seedStr = typeof flags.get('seed') === 'string' ? String(flags.get('seed')) : '42';
-      const out = runPythonCompiler([
-        resolveCompilerScriptPath(),
-        '--out-dir',
-        outDir,
-        '--seed',
-        seedStr,
-      ]);
+      const compilerArgs = [resolveCompilerScriptPath(), '--out-dir', outDir, '--seed', seedStr];
+      if (typeof flags.get('ptbxl-dir') === 'string') {
+        compilerArgs.push('--ptbxl-dir', String(flags.get('ptbxl-dir')));
+      }
+      const out = runPythonCompiler(compilerArgs);
       process.stdout.write(out);
       return 0;
     }
 
     if (subcommand === 'verify') {
-      const binPath = resolve(process.cwd(), 'public/data/ptbxl_120.bin');
-      const idxPath = resolve(process.cwd(), 'public/data/ptbxl_index.json');
+      const outDir = typeof flags.get('out-dir') === 'string' ? String(flags.get('out-dir')) : 'public/data';
+      const binPath = resolve(process.cwd(), outDir, 'ptbxl_120.bin');
+      const idxPath = resolve(process.cwd(), outDir, 'ptbxl_index.json');
       const binBuf = readFileSync(binPath);
       const manifest = JSON.parse(readFileSync(idxPath, 'utf-8'));
       const dataset = loadPtbxlBinary(
@@ -144,11 +144,56 @@ export function executeCli(argv: string[]): number {
       return 0;
     }
 
+    if (subcommand === 'serve') {
+      const portRaw = flags.get('port');
+      const port =
+        portRaw === undefined
+          ? 4173
+          : typeof portRaw === 'string' && /^\d+$/.test(portRaw.trim())
+            ? Number(portRaw.trim())
+            : Number.NaN;
+
+      if (!Number.isInteger(port) || port < 0 || port > 65535) {
+        throw new TelewardCliValidationError(
+          `Invalid --port "${String(portRaw)}". Must be an integer between 0 and 65535.`,
+          'INVALID_PORT'
+        );
+      }
+
+      void startTelewardServer(port)
+        .then((started) => {
+          process.stdout.write(
+            JSON.stringify({
+              status: 'listening',
+              service: 'teleward-api',
+              port: started.port,
+              url: `http://127.0.0.1:${started.port}`,
+            }) + '\n'
+          );
+          if (flags.get('once')) {
+            void started.close();
+          }
+        })
+        .catch((err: unknown) => {
+          const detail = err instanceof Error ? err.message : String(err);
+          process.stderr.write(
+            JSON.stringify({
+              type: 'https://teleward.clinic/errors/server-start-error',
+              title: 'TeleWard Server Start Error',
+              status: 500,
+              detail,
+            }) + '\n'
+          );
+          process.exitCode = 1;
+        });
+      return 0;
+    }
+
     const unknownProblem: Rfc7807Error = {
       type: 'https://teleward.clinic/errors/unknown_subcommand',
       title: 'Unknown TeleWard CLI Subcommand',
       status: 422,
-      detail: `Unsupported subcommand "${subcommand}". Use "sim", "compile", or "verify".`,
+      detail: `Unsupported subcommand "${subcommand}". Use "sim", "compile", "verify", or "serve".`,
       code: 'UNKNOWN_SUBCOMMAND',
     };
     process.stdout.write(JSON.stringify(unknownProblem) + '\n');

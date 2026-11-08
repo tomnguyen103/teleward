@@ -19,6 +19,7 @@ import type {
   RhythmClass,
 } from './types/teleward.ts';
 import type { CaliperGradeReport } from './engine/caliperGrading.ts';
+import { requestEntitlementCheckout } from './ui/apiClient.ts';
 import { AppShell, type ActiveRouteArea } from './ui/AppShell.tsx';
 import { Iec60601AlarmSynthesizer } from './ui/audio/iec60601Alarms.ts';
 import { CaliperView } from './ui/views/CaliperView.tsx';
@@ -46,7 +47,12 @@ export function App(props: AppProps) {
   );
   const [loadError, setLoadError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  const [darkTheme, setDarkTheme] = useState(true);
+  const [darkTheme, setDarkTheme] = useState(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+    return true;
+  });
   const [selectedBedIndex, setSelectedBedIndex] = useState(0);
   const [activeRhythmFilter, setActiveRhythmFilter] = useState<RhythmClass | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -67,6 +73,7 @@ export function App(props: AppProps) {
   }
   const [audioArmed, setAudioArmed] = useState(false);
   const [audioMuted, setAudioMuted] = useState(false);
+  const checkoutSeqRef = useRef(0);
 
   // Parse path and optional ?cohort= or ?checkout= query parameters
   const [pathnamePart, searchPart = ''] = currentPath.split('?');
@@ -264,29 +271,53 @@ export function App(props: AppProps) {
   };
 
   const handleActivateTier = (tier: 'exam_pass' | 'instructor_cohort') => {
-    const envObj = (import.meta as unknown as { env?: Record<string, string | undefined> }).env;
+    const envObj = (import.meta as unknown as { env?: Record<string, unknown> }).env;
     const stripeUrl =
       tier === 'exam_pass'
-        ? envObj?.VITE_STRIPE_EXAM_PASS_URL
-        : envObj?.VITE_STRIPE_INSTRUCTOR_URL;
+        ? (envObj?.VITE_STRIPE_EXAM_PASS_URL as string | undefined)
+        : (envObj?.VITE_STRIPE_INSTRUCTOR_URL as string | undefined);
 
     if (typeof stripeUrl === 'string' && /^https?:\/\//i.test(stripeUrl.trim())) {
       window.location.assign(stripeUrl.trim());
       return;
     }
 
-    const activated = activateEntitlement(tier, undefined, { allowSandboxMint: true });
-    setEntitlementTier(activated.tier);
-    setCheckoutNotice(
-      `Sandbox Checkout completed: ${activated.tier} entitlement signed and persisted to localStorage.`
-    );
+    const allowSandboxMint = Boolean(envObj?.DEV || envObj?.MODE === 'test');
+    const seq = ++checkoutSeqRef.current;
+    const activated = activateEntitlement(tier, undefined, { allowSandboxMint });
+    if (activated.valid) {
+      setEntitlementTier(activated.tier);
+      setCheckoutNotice(
+        `Sandbox Checkout complete: ${activated.tier} token signed and stored.`
+      );
+    } else {
+      setCheckoutNotice('Checkout verification in progress.');
+    }
+    void requestEntitlementCheckout(tier, undefined, { allowSandboxMint }).then((remote) => {
+      if (checkoutSeqRef.current !== seq) return;
+      if (remote.valid && remote.token && (remote.online || allowSandboxMint)) {
+        const synced = activateEntitlement(tier, remote.token, { allowSandboxMint });
+        if (synced.valid) {
+          setEntitlementTier(synced.tier);
+          setCheckoutNotice(
+            `Checkout complete: ${synced.tier} token signed and stored.`
+          );
+          return;
+        }
+      }
+      if (!activated.valid) {
+        setCheckoutNotice('Checkout requires verified Stripe payment.');
+      }
+    });
   };
 
   const canAccessCase = (record: PtbxlCaseRecord): boolean => {
     return canAccessCaseWithEntitlement(record, entitlementTier, validCohortSeed);
   };
 
-  const filteredRecords = (dataset?.records ?? []).filter((r) => {
+  const allRecords = dataset?.records ?? [];
+
+  const filteredRecords = allRecords.filter((r) => {
     const unlocked = canAccessCaseWithEntitlement(r, entitlementTier, validCohortSeed);
     if (activeRhythmFilter !== 'ALL') {
       if (!unlocked || r.rhythmClass !== activeRhythmFilter) {
@@ -311,35 +342,33 @@ export function App(props: AppProps) {
 
   const inspectorContent = (
     <div class="flex flex-col gap-4" data-tick={renderTick}>
-      <div>
-        <h2>ACLS Causal Timeline &amp; Hemodynamic Receipt</h2>
-        <p class="text-sm m-0" style={{ color: 'var(--text-muted)' }}>
-          {activeBed.bedLabel} ({activeBed.patientName}) · Active Rhythm:{' '}
-          <strong class="tw-mono-vital">{activeBed.vitals.rhythm}</strong>
-        </p>
+      <div class="flex items-center justify-between gap-2">
+        <h2 class="m-0">ACLS Causal Timeline &amp; Hemodynamic Receipt</h2>
+        <span class="tw-mono-vital text-xs px-2 py-0.5 rounded tw-chip-muted">
+          {activeBed.bedLabel} · {activeBed.vitals.rhythm}
+        </span>
       </div>
 
-      <div class="border-t pt-3 flex flex-col gap-2.5" style={{ borderColor: 'var(--border)' }}>
+      <div class="border-t pt-3 flex flex-col gap-2.5 tw-border">
         {activeBed.causalTimeline.map((ev, i) => (
           <div
             key={`${ev.tick}-${i}`}
-            class="pb-2.5 border-b text-sm"
-            style={{ borderColor: 'var(--border)' }}
+            class="pb-2.5 border-b text-sm tw-border"
           >
             <div class="flex items-center justify-between font-semibold">
               <span class="tw-mono-vital">t={ev.timeSec.toFixed(1)}s</span>
               <span class="tw-mono-vital">{ev.action}</span>
             </div>
-            <div class="tw-mono-vital text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+            <div class="tw-mono-vital text-sm mt-1 tw-text-muted">
               {ev.preVitals.rhythm} ({ev.preVitals.sbp}/{ev.preVitals.dbp} mmHg) →{' '}
               {ev.postVitals.rhythm} ({ev.postVitals.sbp}/{ev.postVitals.dbp} mmHg)
             </div>
             {ev.ahaViolationCode ? (
-              <div class="mt-1 font-semibold" style={{ color: 'var(--trace-abp)' }}>
+              <div class="mt-1 font-semibold tw-text-abp">
                 Violation: <span class="tw-mono-vital">{ev.ahaViolationCode}</span>
               </div>
             ) : null}
-            <p class="m-0 mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
+            <p class="m-0 mt-1 text-sm tw-text-muted">
               {ev.rationale}
             </p>
           </div>
@@ -353,14 +382,14 @@ export function App(props: AppProps) {
         entitlementTier,
         validCohortSeed
       ) ? (
-        <div class="border-t pt-3 text-sm" style={{ borderColor: 'var(--border)' }}>
-          <h3>PTB-XL Cardiologist Fiducial Ground Truth</h3>
-          <p class="m-0 tw-mono-vital" style={{ color: 'var(--text-muted)' }}>
+        <div class="border-t pt-3 text-sm tw-border">
+          <h3 class="m-0 mb-1">PTB-XL Cardiologist Fiducial Ground Truth</h3>
+          <div class="tw-mono-vital tw-text-muted">
             {lastCaliperGrade.record.caseId} · PR {lastCaliperGrade.record.fiducials.prMs} ms · QRS{' '}
             {lastCaliperGrade.record.fiducials.qrsMs} ms · QTc{' '}
             {lastCaliperGrade.record.fiducials.qtcMs} ms · ST{' '}
             {lastCaliperGrade.record.fiducials.stMv} mV
-          </p>
+          </div>
         </div>
       ) : lastCaliperGrade.record &&
         canAccessCaseWithEntitlement(
@@ -368,9 +397,9 @@ export function App(props: AppProps) {
           entitlementTier,
           validCohortSeed
         ) ? (
-        <div class="border-t pt-3 text-sm" style={{ borderColor: 'var(--border)' }}>
-          <p class="m-0" style={{ color: 'var(--text-muted)' }}>
-            Position T1/T2 and V1/V2 calipers and click Grade 12-Lead Strip to reveal PTB-XL cardiologist fiducial ground truth.
+        <div class="border-t pt-3 text-sm tw-border">
+          <p class="m-0 tw-text-muted">
+            Place T1, T2, V1, and V2 calipers and grade the strip to reveal PTB-XL ground truth.
           </p>
         </div>
       ) : null}
@@ -386,7 +415,7 @@ export function App(props: AppProps) {
   const cohortBanner = validCohortSeed
     ? `Cohort Mode Active: ${validCohortSeed}`
     : rawCohortParam !== null && !parsedCohort.valid
-      ? 'Invalid ?cohort= parameter ignored; running default shift'
+      ? 'Invalid cohort parameter ignored. Default shift is active.'
       : null;
 
   return (
@@ -397,7 +426,7 @@ export function App(props: AppProps) {
       beds={beds}
       selectedBedIndex={selectedBedIndex}
       onSelectBed={setSelectedBedIndex}
-      records={filteredRecords}
+      records={allRecords}
       canAccessCase={canAccessCase}
       activeRhythmFilter={activeRhythmFilter}
       onSelectRhythmFilter={setActiveRhythmFilter}
@@ -419,21 +448,20 @@ export function App(props: AppProps) {
             onClick={() => setRetryCount((c) => c + 1)}
             class="tw-btn-secondary text-sm"
           >
-            Retry Dataset Load
+            Retry Load
           </button>
         </div>
       ) : null}
 
       {activeArea === 'caliper' && !dataset && !loadError ? (
         <div class="tw-surface p-4 text-sm" role="status">
-          Loading 120-record PhysioNet PTB-XL 500 Hz waveform dataset…
+          TeleWard loads 120 PTB-XL 500 Hz ECG records.
         </div>
       ) : null}
 
       {activeArea === 'shift' ? (
         <ShiftStationView
-          stationTitle="ICU Central Telemetry Station · 4-Bed ACLS Shift"
-          stationSubtitle="Scan 4 live 500 Hz bedside monitors, select any unstable bed, and deploy ACLS resuscitation before arrest."
+          stationTitle="Central Telemetry Shift"
           beds={beds}
           selectedBedIndex={selectedBedIndex}
           onSelectBed={setSelectedBedIndex}
@@ -463,6 +491,7 @@ export function App(props: AppProps) {
       {activeArea === 'caliper' && dataset ? (
         <CaliperView
           dataset={dataset}
+          filteredRecords={filteredRecords}
           caseId={caseIdFromRoute}
           onSelectCaseId={(cid) => navigate(`/caliper/${cid}`)}
           canAccessCase={canAccessCase}

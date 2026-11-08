@@ -141,7 +141,7 @@ export function validateSimulationOptions(opts: SimulationOptions): ValidatedSim
     );
   }
 
-  const defaultAtSec = normalizedIntervention === null ? Math.min(10, durationSec) : 10;
+  const defaultAtSec = Math.min(10, durationSec);
   const atSec = opts.atSec ?? defaultAtSec;
   if (!Number.isFinite(atSec) || atSec < 0 || atSec > durationSec) {
     throw new TelewardCliValidationError(
@@ -261,7 +261,7 @@ export function evaluateAclsTransition(
       converted: false,
       ahaViolationCode: 'AHA_SHOCK_NON_SHOCKABLE',
       rationale:
-        'Asystole and PEA are non-shockable arrest rhythms; shocking delays CPR and epinephrine while stunning residual myocardium.',
+        'Asystole and PEA are non-shockable arrest rhythms. Electrical shock delays CPR and Epinephrine delivery.',
     };
   }
 
@@ -275,7 +275,7 @@ export function evaluateAclsTransition(
         ahaViolationCode: null,
         rationale:
           action === 'magnesium_2g'
-            ? 'Magnesium Sulfate 2 g IV suppresses early afterdepolarizations (EADs) and terminates polymorphic Torsades de Pointes.'
+            ? 'Magnesium Sulfate 2 g IV suppresses early afterdepolarizations and terminates polymorphic Torsades de Pointes.'
             : 'Unsynchronized biphasic defibrillation depolarizes chaotic polymorphic re-entry and restores sinus capture.',
       };
     }
@@ -286,7 +286,7 @@ export function evaluateAclsTransition(
         converted: false,
         ahaViolationCode: 'AHA_TORSADES_AMIODARONE_CONTRAINDICATED',
         rationale:
-          'Class III potassium-channel blockade (Amiodarone) further prolongs the QTc interval in Torsades de Pointes and degenerates into coarse VF.',
+          'Class III potassium-channel blockade with Amiodarone prolongs the QTc interval in Torsades de Pointes and causes coarse VF.',
       };
     }
     if (action === 'adenosine_6mg') {
@@ -320,7 +320,7 @@ export function evaluateAclsTransition(
         converted: false,
         ahaViolationCode: 'AHA_AVB3_ATROPINE_INEFFECTIVE',
         rationale:
-          'Atropine acts at the AV node and is ineffective in infranodal 3rd-degree complete heart block; initiate Transcutaneous Pacing immediately.',
+          'Atropine acts at the AV node and fails in infranodal complete heart block. Start Transcutaneous Pacer immediately.',
       };
     }
   }
@@ -349,7 +349,7 @@ export function evaluateAclsTransition(
       rationale:
         action === 'atropine_1mg'
           ? 'Atropine 1 mg IV antagonizes vagal muscarinic tone at the SA node and restores sinus rate.'
-          : 'Transcutaneous pacing captures bradycardic myocardium at 70 bpm.',
+          : 'Transcutaneous pacer captures bradycardic myocardium at 70 bpm.',
     };
   }
 
@@ -364,7 +364,7 @@ export function evaluateAclsTransition(
       converted: true,
       ahaViolationCode: null,
       rationale:
-        'Rhythm/rate control restores organized atrioventricular synchrony and normalizes diastolic filling time.',
+        'Rhythm and rate control restore organized atrioventricular synchrony and normalize diastolic ventricular fill time.',
     };
   }
 
@@ -786,6 +786,9 @@ export class ShiftController {
             bed.stabilized = false;
             nextRhythm = 'ASYSTOLE';
             nextPaced = false;
+            nextState.hr = 0;
+            nextState.rr = 0;
+            this.continuousStates[i] = nextState;
             bed.caseId = getCaseIdForRhythm('ASYSTOLE', bed.bedIndex);
             expiredThisTick = true;
           }
@@ -812,7 +815,10 @@ export class ShiftController {
             postVitals: { ...bed.vitals },
             converted: false,
             ahaViolationCode: null,
-            rationale: `${bed.bedLabel} countdown expired without rescuing ACLS intervention; progressed to terminal ischemic Asystole.`,
+            rationale:
+              preArrestVitals.rhythm === 'ASYSTOLE'
+                ? `${bed.bedLabel} 60-second resuscitation window expired without Epinephrine rescue. Terminal Asystole persists.`
+                : `${bed.bedLabel} 60-second window expired without ACLS rescue. Rhythm degraded to terminal Asystole.`,
           });
         }
       }
