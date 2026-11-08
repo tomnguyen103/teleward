@@ -1,6 +1,6 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
-import { RHYTHM_CLASSES, type PtbxlCaseRecord, type RhythmClass } from '../types/teleward.ts';
+import { RHYTHM_CLASSES, type AlarmPriority, type PtbxlCaseRecord, type RhythmClass } from '../types/teleward.ts';
 import type { BedState } from '../engine/aclsEngine.ts';
 
 export type ActiveRouteArea = 'shift' | 'daily' | 'caliper' | 'cohort';
@@ -62,6 +62,7 @@ export function AppShell(props: AppShellProps) {
     }
   });
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [silenceRemainingSec, setSilenceRemainingSec] = useState(0);
 
   const toggleSidebar = () => {
     setSidebarCollapsed((prev) => {
@@ -90,6 +91,52 @@ export function AppShell(props: AppShellProps) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
+  useEffect(() => {
+    if (silenceRemainingSec <= 0) return;
+    const timer = setInterval(() => {
+      setSilenceRemainingSec((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [silenceRemainingSec]);
+
+  let highestPriority: AlarmPriority = 'NORMAL';
+  for (const b of beds) {
+    if (b.alarmPriority === 'CRISIS') {
+      highestPriority = 'CRISIS';
+      break;
+    }
+    if (b.alarmPriority === 'WARNING') {
+      highestPriority = 'WARNING';
+    }
+  }
+
+  const beaconBg =
+    highestPriority === 'CRISIS'
+      ? 'var(--alarm-crisis-bg)'
+      : highestPriority === 'WARNING'
+        ? 'var(--alarm-warn-bg)'
+        : 'var(--alarm-normal-bg)';
+  const beaconText =
+    highestPriority === 'CRISIS'
+      ? 'var(--alarm-crisis-text)'
+      : highestPriority === 'WARNING'
+        ? 'var(--alarm-warn-text)'
+        : 'var(--alarm-normal-text)';
+
+  const handleToggleSilence120s = () => {
+    if (silenceRemainingSec > 0) {
+      setSilenceRemainingSec(0);
+      if (audioMuted) {
+        onToggleAudioArmOrMute();
+      }
+    } else {
+      setSilenceRemainingSec(120);
+      if (audioArmed && !audioMuted) {
+        onToggleAudioArmOrMute();
+      }
+    }
+  };
+
   const navItems: Array<{ area: ActiveRouteArea; label: string; href: string }> = [
     { area: 'shift', label: '4-Bed ICU Shift', href: '/shift' },
     { area: 'daily', label: 'Daily Code', href: '/daily' },
@@ -103,37 +150,9 @@ export function AppShell(props: AppShellProps) {
 
   return (
     <div class="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--bg)', color: 'var(--text)' }}>
-      {/* Top Status Strip (36px max) for IEC 60601-1-8 Audio Arming & Cohort Seed */}
-      <div
-        data-testid="audio-arm-banner"
-        class="h-9 px-4 flex items-center justify-between text-sm border-b"
-        style={{ backgroundColor: 'var(--surface-muted)', borderColor: 'var(--border)' }}
-      >
-        <div class="flex items-center gap-3">
-          <span>
-            {audioArmed && !audioMuted
-              ? 'IEC 60601-1-8 Harmonic Alarm Synthesizer Armed'
-              : 'Audio Paused — Click to Arm IEC 60601-1-8 Alarms'}
-          </span>
-          {cohortBannerText ? (
-            <span class="px-2 py-0.5 rounded text-sm" style={{ backgroundColor: 'var(--surface)', color: 'var(--text)' }}>
-              {cohortBannerText}
-            </span>
-          ) : null}
-        </div>
-        <button
-          type="button"
-          onClick={onToggleAudioArmOrMute}
-          class="min-h-9 px-3 inline-flex items-center relative before:absolute before:-inset-1 text-sm font-medium underline"
-          style={{ color: 'var(--primary)' }}
-        >
-          {audioArmed && !audioMuted ? 'Mute Audio' : 'Arm Audio'}
-        </button>
-      </div>
-
-      {/* Single 64px Sticky Top Bar */}
+      {/* Unified Single 64px Sticky Top Bar (Zero Double-Stacked Banners) */}
       <header
-        class="sticky top-0 z-30 h-16 px-4 border-b grid grid-cols-[1fr_minmax(0,360px)_1fr] items-center gap-4"
+        class="sticky top-0 z-30 h-16 px-4 border-b flex items-center justify-between gap-3"
         style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
       >
         <div class="flex items-center gap-3 min-w-0">
@@ -162,13 +181,16 @@ export function AppShell(props: AppShellProps) {
             class="h-10 flex items-center gap-2 font-semibold text-base no-underline shrink-0"
             style={{ color: 'var(--text)' }}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style={{ color: 'var(--primary)' }}>
               <path d="M2 12h4l3-8 4 16 3-8h6" />
             </svg>
             <span>TeleWard</span>
+            <span class="hidden 2xl:inline tw-mono-vital text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--surface-muted)', color: 'var(--text-muted)' }}>
+              ICU-4A // 500Hz
+            </span>
           </a>
 
-          <nav aria-label="Primary Workspace Navigation" class="hidden md:flex items-center gap-1 h-16">
+          <nav aria-label="Primary Workspace Navigation" class="hidden lg:flex items-center gap-1 h-16">
             {navItems.map((item) => {
               const isActive = activeArea === item.area;
               return (
@@ -180,7 +202,7 @@ export function AppShell(props: AppShellProps) {
                     onNavigate(item.href);
                   }}
                   aria-current={isActive ? 'page' : undefined}
-                  class="h-16 px-3 inline-flex items-center text-sm font-medium no-underline transition-colors"
+                  class="h-16 px-3 inline-flex items-center text-sm font-medium no-underline transition-colors whitespace-nowrap"
                   style={{
                     color: isActive ? 'var(--primary)' : 'var(--text-muted)',
                     borderBottom: isActive ? '2px solid var(--primary)' : '2px solid transparent',
@@ -193,35 +215,87 @@ export function AppShell(props: AppShellProps) {
           </nav>
         </div>
 
-        {/* Center Quick Case & Rhythm Filter */}
-        <div class="w-full">
-          <label htmlFor="tw-global-search" class="sr-only">
-            Filter PTB-XL cases or rhythm class
-          </label>
+        {/* Center Instrument Strip: Quick Strip Search + Embedded IEC 60601-1-8 Alarm Beacon & Silence Countdown */}
+        <div class="flex items-center gap-2.5 min-w-0 flex-1 max-w-2xl justify-center">
+          <div class="w-full max-w-xs hidden sm:block">
+            <label htmlFor="tw-global-search" class="sr-only">
+              Filter PTB-XL cases or rhythm class
+            </label>
+            <div
+              class="flex items-center px-3 h-10 rounded-md border"
+              style={{ backgroundColor: 'var(--surface-muted)', borderColor: 'var(--border)' }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" class="mr-2 shrink-0">
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
+              </svg>
+              <input
+                id="tw-global-search"
+                name="globalSearch"
+                type="search"
+                autocomplete="off"
+                value={searchQuery}
+                onInput={(e) => onSearchQueryChange((e.target as HTMLInputElement).value)}
+                placeholder="Filter 120 strips (Ctrl+K)"
+                class="w-full h-10 bg-transparent border-0 text-sm focus:outline-none"
+                style={{ color: 'var(--text)' }}
+              />
+            </div>
+          </div>
+
           <div
-            class="flex items-center px-3 h-10 rounded-md border"
+            data-testid="audio-arm-banner"
+            class="h-10 px-2.5 rounded-md border flex items-center gap-2 text-sm shrink-0"
             style={{ backgroundColor: 'var(--surface-muted)', borderColor: 'var(--border)' }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" class="mr-2 shrink-0">
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.3-4.3" />
-            </svg>
-            <input
-              id="tw-global-search"
-              name="globalSearch"
-              type="search"
-              autocomplete="off"
-              value={searchQuery}
-              onInput={(e) => onSearchQueryChange((e.target as HTMLInputElement).value)}
-              placeholder="Filter 120 PTB-XL cases or rhythm (Ctrl+K)"
-              class="w-full h-10 bg-transparent border-0 text-sm focus:outline-none"
-              style={{ color: 'var(--text)' }}
-            />
+            <span
+              class="tw-mono-vital px-2 py-0.5 rounded text-xs font-semibold"
+              style={{ backgroundColor: beaconBg, color: beaconText }}
+            >
+              IEC 60601-1-8 · {highestPriority}
+            </span>
+
+            <button
+              type="button"
+              onClick={onToggleAudioArmOrMute}
+              class="min-h-8 px-2 inline-flex items-center text-xs font-semibold rounded border"
+              style={{
+                backgroundColor: 'var(--surface)',
+                borderColor: 'var(--border)',
+                color: audioArmed && !audioMuted ? 'var(--primary)' : 'var(--text)',
+              }}
+            >
+              {audioArmed && !audioMuted ? 'Audio Armed' : 'Arm Audio'}
+            </button>
+
+            <button
+              type="button"
+              data-testid="alarm-silence-120s-btn"
+              onClick={handleToggleSilence120s}
+              class="min-h-8 px-2 inline-flex items-center tw-mono-vital text-xs font-semibold rounded border"
+              style={{
+                backgroundColor: silenceRemainingSec > 0 ? 'var(--alarm-warn-bg)' : 'var(--surface)',
+                borderColor: 'var(--border)',
+                color: silenceRemainingSec > 0 ? 'var(--alarm-warn-text)' : 'var(--text-muted)',
+              }}
+              title="Silence IEC 60601-1-8 audible alarms for 120 seconds"
+            >
+              {silenceRemainingSec > 0 ? `SILENCED ${silenceRemainingSec}s` : 'Silence 120s'}
+            </button>
+
+            {cohortBannerText ? (
+              <span
+                class="hidden xl:inline-flex px-2 py-0.5 rounded text-xs tw-mono-vital"
+                style={{ backgroundColor: 'var(--surface)', color: 'var(--text)' }}
+              >
+                {cohortBannerText}
+              </span>
+            ) : null}
           </div>
         </div>
 
         {/* Right Contiguous Action Cluster (40x40 square icon buttons, 8px gap, zero text between icons) */}
-        <div class="justify-self-end flex items-center gap-2" role="toolbar" aria-label="Station Controls">
+        <div class="flex items-center gap-2 shrink-0" role="toolbar" aria-label="Station Controls">
           <button
             type="button"
             onClick={onToggleAudioArmOrMute}
@@ -292,6 +366,18 @@ export function AppShell(props: AppShellProps) {
             <ul class="list-none p-0 m-0 flex flex-col gap-1">
               {beds.map((bed) => {
                 const isSelected = bed.bedIndex === selectedBedIndex;
+                const badgeBg =
+                  bed.alarmPriority === 'CRISIS'
+                    ? 'var(--alarm-crisis-bg)'
+                    : bed.alarmPriority === 'WARNING'
+                      ? 'var(--alarm-warn-bg)'
+                      : 'var(--alarm-normal-bg)';
+                const badgeText =
+                  bed.alarmPriority === 'CRISIS'
+                    ? 'var(--alarm-crisis-text)'
+                    : bed.alarmPriority === 'WARNING'
+                      ? 'var(--alarm-warn-text)'
+                      : 'var(--alarm-normal-text)';
                 return (
                   <li key={bed.bedIndex}>
                     <button
@@ -303,16 +389,24 @@ export function AppShell(props: AppShellProps) {
                           onNavigate('/shift');
                         }
                       }}
-                      class={`w-full min-h-10 text-left ${sidebarCollapsed ? 'px-1 justify-center' : 'px-3 justify-between'} py-2 rounded-md flex items-center text-sm`}
+                      class={`w-full min-h-10 text-left ${sidebarCollapsed ? 'px-1 justify-center' : 'px-2.5 justify-between'} py-2 rounded-md flex items-center text-sm`}
                       style={{
                         backgroundColor: isSelected ? 'var(--sidebar-active-bg)' : 'transparent',
                         color: 'var(--sidebar-text)',
                       }}
                     >
-                      <span>{sidebarCollapsed ? `B${bed.bedIndex + 1}` : bed.bedLabel}</span>
+                      <span class="font-medium">{sidebarCollapsed ? `B${bed.bedIndex + 1}` : bed.bedLabel}</span>
                       {!sidebarCollapsed ? (
-                        <span class="tw-mono-vital text-sm" style={{ color: 'var(--sidebar-muted)' }}>
-                          {bed.vitals.rhythm} · {bed.vitals.hr}
+                        <span class="flex items-center gap-1.5">
+                          <span
+                            class="tw-mono-vital px-1.5 py-0.5 rounded text-xs font-semibold"
+                            style={{ backgroundColor: badgeBg, color: badgeText }}
+                          >
+                            {bed.vitals.rhythm}
+                          </span>
+                          <span class="tw-mono-vital text-xs" style={{ color: 'var(--sidebar-muted)' }}>
+                            {bed.vitals.hr}
+                          </span>
                         </span>
                       ) : null}
                     </button>

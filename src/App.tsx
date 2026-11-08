@@ -46,7 +46,12 @@ export function App(props: AppProps) {
   );
   const [loadError, setLoadError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  const [darkTheme, setDarkTheme] = useState(true);
+  const [darkTheme, setDarkTheme] = useState(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+    return true;
+  });
   const [selectedBedIndex, setSelectedBedIndex] = useState(0);
   const [activeRhythmFilter, setActiveRhythmFilter] = useState<RhythmClass | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');

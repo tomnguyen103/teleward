@@ -1,6 +1,6 @@
 # TeleWard (`teleward`)
 
-TeleWard is a real-time ICU central telemetry station, 12-lead ECG caliper workbench, and deterministic AHA ACLS cardiopulmonary simulation engine built on curated PhysioNet PTB-XL records.
+TeleWard is a real-time ICU central telemetry station, 12-lead ECG caliper workbench, deterministic AHA ACLS cardiopulmonary simulation engine, and classroom cohort verification service built on curated PhysioNet PTB-XL records.
 
 ## Language
 
@@ -19,7 +19,7 @@ The cardiologist-validated onset, peak, and offset markers (`P_on`, `QRS_on`, `R
 _Avoid_: Approximate guess, pixel offset
 
 **Digital Calipers**:
-A two-point interactive measurement tool with vertical time hairlines (`T1`, `T2` in `ms`), marching R-R spikes, and horizontal amplitude hairlines (`V1`, `V2` in `mV`) calibrated to standard ECG paper (`25 mm/s`, `10 mm/mV`).
+A two-point interactive measurement tool with direct pointer hit-testing on vertical time hairlines (`T1`, `T2` in `ms`), marching R-R spikes, and horizontal amplitude hairlines (`V1`, `V2` in `mV`) calibrated to standard ECG paper (`25 mm/s` or `50 mm/s`, `5 / 10 / 20 mm/mV`).
 _Avoid_: Ruler, cursor box
 
 ### Cardiopulmonary Physiology & ACLS
@@ -33,7 +33,7 @@ The continuous physiological vector (`HR`, arterial `SBP`/`DBP`/`MAP`, `SpO2`, `
 _Avoid_: Static vitals, random numbers
 
 **ACLS Intervention**:
-One of the eight clinical resuscitation actions (`adenosine_6mg`, `amiodarone_300mg`, `epinephrine_1mg`, `atropine_1mg`, `magnesium_2g`, `sync_cardioversion`, `defibrillation`, `transcutaneous_pacing`) applied to a patient bed.
+One of the eight clinical resuscitation actions grouped into the **Electrical Therapy Bay** (`sync_cardioversion`, `defibrillation`, `transcutaneous_pacing`) and the **ISO-26825 IV Pharmacology Bolus Rack** (`adenosine_6mg`, `amiodarone_300mg`, `epinephrine_1mg`, `atropine_1mg`, `magnesium_2g`) applied to a patient bed.
 _Avoid_: Power-up, spell, button click
 
 **AHA Rule Violation**:
@@ -44,10 +44,10 @@ _Avoid_: Game penalty, syntax error
 The post-intervention audit log recording timestamped interventions, pre- and post-treatment Coupled Hemodynamic States, rhythm conversions, and any AHA Rule Violations.
 _Avoid_: Score popup, chat log
 
-### Telemetry Station & Cohort Mode
+### Telemetry Station, Cohort Mode & REST API
 
 **Phosphor-Sweep Ring Buffer**:
-A fixed-length `Float32Array` circular buffer rendered at 60fps on HTML5 2D Canvas with a moving write cursor and a `180 ms` blanking erase bar ahead of the active trace head.
+A fixed-length `Float32Array` circular buffer with continuous cardiac phase integration rendered at 60fps on HiDPI (`devicePixelRatio`) HTML5 2D Canvas with a moving write cursor, a `1 mV` calibration step pulse, and a `180 ms` blanking erase bar ahead of the active trace head.
 _Avoid_: Scrolling chart, SVG polyline
 
 **IEC 60601-1-8 Alarm Burst**:
@@ -55,9 +55,13 @@ A WebAudio-synthesized medical alarm sequence conforming to IEC 60601-1-8 priori
 _Avoid_: Sound effect, alert chime
 
 **Cohort Seed (`?cohort=<seed>`)**:
-A stateless alphanumeric classroom identifier hashed via `fnv1a32` to synchronize 4-bed deterioration sequences and caliper cases across all students in an instructor's session.
+An alphanumeric classroom identifier hashed via `fnv1a32` to synchronize 4-bed deterioration sequences, caliper cases, and server-persisted cohort rosters across all students in an instructor's session.
 _Avoid_: Room ID, database session
 
 **Cohort Verification Receipt (`TW-<COHORT>-<SCORE>-<CRC16>`)**:
-A tamper-evident completion code signed with CRC16 over the Cohort Seed, score, stabilized bed count, and AHA Rule Violations so instructors can verify student results without a backend server.
+A tamper-evident completion code signed with CRC16 over the Cohort Seed, score, stabilized bed count, and AHA Rule Violations, verifiable both offline and via `POST /api/receipts/verify`.
 _Avoid_: Unverified screenshot, leaderboard row
+
+**Cohort Roster Ledger**:
+The server-persisted classroom submission table (`/api/cohorts/:seed/submissions`, backed by `.teleward-data/store.json`) recording student alias, score, stabilized bed count, AHA Rule Violations, and verified `TW-...` receipt code.
+_Avoid_: Chat room, unverified form

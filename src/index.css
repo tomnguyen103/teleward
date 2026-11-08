@@ -1,57 +1,59 @@
 @import "tailwindcss";
 
 :root,
-[data-theme="light"] {
+[data-theme="dark"] {
   --font-sans: 'Instrument Sans', 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
-  --bg: #F8FAFC;
-  --surface: #FFFFFF;
-  --surface-muted: #F1F5F9;
-  --canvas-well: #0B0F17;
-  --caliper-paper: #FFFDF9;
-  --border: #E2E8F0;
-  --text: #0F172A;
-  --text-muted: #3F4C63;
-  --primary: #4338CA;
-  --on-primary: #FFFFFF;
-  --sidebar-bg: #0F172A;
+  --bg: #070A0E;
+  --surface: #0C1117;
+  --surface-muted: #121922;
+  --canvas-well: #04070A;
+  --caliper-paper: #0A0F16;
+  --border: #1E2936;
+  --text: #ECF2F8;
+  --text-muted: #94A6B8;
+  --primary: #10B981;
+  --on-primary: #04130D;
+  --accent-cyan: #0EA5E9;
+  --sidebar-bg: #05080C;
   --sidebar-text: #E2E8F0;
-  --sidebar-muted: #A8B4C7;
-  --sidebar-active-bg: #1E293B;
-  --sidebar-active-edge: #818CF8;
+  --sidebar-muted: #8CA0B5;
+  --sidebar-active-bg: #111A24;
+  --sidebar-active-edge: #10B981;
 
-  --trace-ecg: #22C55E;
-  --trace-abp: #F87171;
-  --trace-spo2: #38BDF8;
-  --trace-etco2: #FBBF24;
+  --trace-ecg: #00E676;
+  --trace-abp: #FF5252;
+  --trace-spo2: #00E5FF;
+  --trace-etco2: #FFD740;
   --ecg-grid-minor: rgba(225, 29, 72, 0.14);
   --ecg-grid-major: rgba(225, 29, 72, 0.32);
 
-  --alarm-crisis-bg: #450A0A;
-  --alarm-crisis-text: #FECACA;
-  --alarm-warn-bg: #451A03;
+  --alarm-crisis-bg: #3B0A11;
+  --alarm-crisis-text: #FECDD3;
+  --alarm-warn-bg: #3B2106;
   --alarm-warn-text: #FDE68A;
-  --alarm-normal-bg: #052E16;
-  --alarm-normal-text: #BBF7D0;
+  --alarm-normal-bg: #052E1C;
+  --alarm-normal-text: #A7F3D0;
 }
 
-[data-theme="dark"] {
-  --bg: #060A12;
-  --surface: #0F172A;
-  --surface-muted: #1E293B;
-  --canvas-well: #0B0F17;
-  --caliper-paper: #111827;
-  --border: #334155;
-  --text: #F1F5F9;
-  --text-muted: #CBD5E1;
-  --primary: #818CF8;
-  --on-primary: #060A12;
-  --sidebar-bg: #090D16;
+[data-theme="light"] {
+  --bg: #F4F3EF;
+  --surface: #FCFBF9;
+  --surface-muted: #EBE9E2;
+  --canvas-well: #060A0F;
+  --caliper-paper: #FFFDF9;
+  --border: #D5D1C8;
+  --text: #111820;
+  --text-muted: #4A5562;
+  --primary: #0F766E;
+  --on-primary: #FFFFFF;
+  --accent-cyan: #0369A1;
+  --sidebar-bg: #0B1017;
   --sidebar-text: #E2E8F0;
   --sidebar-muted: #94A3B8;
-  --sidebar-active-bg: #1E293B;
-  --sidebar-active-edge: #818CF8;
+  --sidebar-active-bg: #16202C;
+  --sidebar-active-edge: #10B981;
 }
 
 * {
