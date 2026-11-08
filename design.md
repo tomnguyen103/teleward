@@ -1,7 +1,7 @@
 ---
 name: TeleWard Obsidian Clinical Telemetry & Caliper System
 stitch-project: "5346407181046115572"
-stitch-screen: "projects/5346407181046115572/screens/3402876ccf204bfa94055cc3e08960b7"
+stitch-screen: "projects/5346407181046115572/screens/a239acb4a4c440c6bfad057d829ad3ab"
 stitch-design-system: "assets/0a2888c1d93b47d98f90481e79637393"
 archetype:
   shift: monitoring
@@ -15,25 +15,27 @@ default-theme: dark
 # TeleWard (`teleward`) — Design System (`design.md`)
 
 ## 1. Visual Direction & Domain Scene
-TeleWard is a high-density ICU Central Telemetry Station and 12-lead ECG Caliper Workbench built for nursing students, paramedics, emergency medicine residents, and ACLS instructors. Modeled after Philips IntelliVue MX800, GE CARESCAPE B850, and Nihon Kohden bedside hardware, the workstation defaults to the **Obsidian ICU Cockpit (`[data-theme="dark"]`)** (`--bg: #070A0E`, `--surface: #0C1117`, `--surface-muted: #121922`, `--canvas-well: #04070A`, `--border: #1E2936`, `--primary: #10B981` clinical emerald, `--accent-cyan: #0EA5E9` diagnostic cyan) to preserve dark-adaptation across 12-hour ICU shifts. A warm archival ECG paper daylight theme (`[data-theme="light"]`, `--bg: #F4F3EF`, `--surface: #FCFBF9`, `--caliper-paper: #FFFDF9`, `--primary: #0F766E`) is available via the top-bar theme toggle. Generic SaaS indigo (`#4338CA`, `#818CF8`) is strictly prohibited across all surfaces.
+TeleWard is a high-density ICU Central Telemetry Station and 12-lead ECG Caliper Workbench built for nursing students, paramedics, emergency medicine residents, and ACLS instructors. Modeled after Philips IntelliVue MX800, GE CARESCAPE B850, and Nihon Kohden bedside hardware with Notion's calm 2-region structural discipline, the workstation defaults to the **Obsidian ICU Cockpit (`[data-theme="dark"]`)** (`--bg: #070A0E`, `--surface: #0C1117`, `--surface-muted: #121922`, `--canvas-well: #04070A`, `--border: #1E2936`, `--primary: #10B981` clinical emerald, `--accent-cyan: #0EA5E9` diagnostic cyan) to preserve dark-adaptation across 12-hour ICU shifts. A warm archival ECG paper daylight theme (`[data-theme="light"]`, `--bg: #F4F3EF`, `--surface: #FCFBF9`, `--caliper-paper: #FFFDF9`, `--primary: #0F766E`) is available via the top-bar theme toggle. Generic SaaS indigo (`#4338CA`, `#818CF8`) is strictly prohibited across all surfaces.
 
-## 2. Archetype & Pane Mapping (`app-ui-shell`)
-- **Top-Level Functional Areas (4 routes -> Horizontal Nav in Single 64px Sticky Top Bar)**:
-  1. `/shift` — **4-Bed ICU Shift** (`monitoring`)
-  2. `/daily` — **Daily Code** (`monitoring`)
-  3. `/caliper/:caseId` — **12-Lead Calipers** (`editor`)
-  4. `/cohort` — **Cohort & Exam Pass** (`settings-admin`)
+## 2. Archetype & Calm 2-Region Shell Mapping (`app-ui-shell` & `30-ui.md`)
+- **Top-Level Functional Areas (4 routes in Top Bar and Left Rail)**:
+  1. `/shift` — **Shift Ward** (`monitoring`)
+  2. `/daily` — **Daily Seed** (`monitoring`)
+  3. `/caliper/:caseId` — **Calipers** (`editor`)
+  4. `/cohort` — **Cohort Pro** (`settings-admin`)
 - **Unified Single 64px Sticky Top Bar (Zero Double-Stacked Top Banners)**:
-  - **Left**: Brand mark (`TeleWard`) + station unit tag (`ICU-4A // 500Hz`) + horizontal route navigation (active item carries color shift and `2px` bottom emerald/cyan indicator).
+  - **Left**: Rail collapse/drawer toggle + brand mark (`TeleWard`) + station unit tag (`ICU-4A // 500Hz`) + horizontal route navigation (`Shift Ward`, `Daily Seed`, `Calipers`, `Cohort Pro`).
   - **Center**: Quick Case & Rhythm Filter (`Ctrl+K` / `/`) + inline IEC 60601-1-8 priority beacon & audio module (`data-testid="audio-arm-banner"`) + `120s` alarm silence countdown toggle + active `?cohort=` seed pill.
-  - **Right Contiguous Action Cluster (`>= 40px` square icon buttons, `8px` gap, zero text/chips between icons)**: `[Audio/IEC Alarm Mute Toggle]` `[Theme Toggle]` `[Operator Avatar Dropdown]`.
-- **Scope Sidebar (`240px` at `xl+`, `56px` rail at `md/lg`, off-canvas drawer `<768px`, dark `#05080C`)**:
-  - Holds active ICU Bed telemetry channels (`Bed 01`..`Bed 04` with live HR, rhythm code, and IEC alarm priority badge) and the `PTB-XL` 12-rhythm diagnostic filter scopes (`NSR`, `SB`, `SVT`, `AFIB`, `AFLT`, `AVB3`, `VT_MONO`, `TORSADES`, `VFIB`, `ASYSTOLE`, `PEA`, `STEMI_ANT`).
-- **Main Pane (`w-full flex-1`, fluid ceiling)**:
-  - `/shift` & `/daily`: Station command bar (scenario selector, elapsed clock, 4-bed stabilization telemetry, shift reset) + 2×2 HiDPI (`devicePixelRatio`) 2D Canvas ICU Bed Matrix (each bed pairs a 4-channel oscilloscope viewport with a right-hand tabular vital readout column) + bottom **2-Bay ACLS Crash Cart Dock** (**Electrical Therapy Bay** + **ISO-26825 IV Pharmacology Bolus Rack** with acting-as target bed guard and hotkeys `1`–`8`).
-  - `/caliper/:caseId`: Archival 12-lead ECG calibrated millimeter grid (`25 mm/s` or `50 mm/s`, `5 / 10 / 20 mm/mV`, `1 mV` calibration step pulse per row) with direct canvas pointer hit-testing for `T1`/`T2` (`ms`) and `V1`/`V2` (`mV`) hairlines, marching R-R spikes, and diagnostic interval grading workbench.
-- **Docked Inspector (`360px` at `2xl`, `320px` at `xl`, drawer `<1280px`)**:
-  - Holds the **ACLS Causal Timeline & Hemodynamic Receipt** (beat-by-beat vital trajectory, pre/post intervention delta, AHA rule violation rationale) on `/shift` & `/daily`, and the **PTB-XL Cardiologist Fiducial Ground Truth & Bazett QTc Grading Ledger** on `/caliper/:caseId`.
+  - **Right Contiguous Action Cluster (`>= 40px` square icon buttons, `8px` gap, zero text/chips between icons)**: `[Audio/IEC Alarm Mute Toggle]` `[Theme Toggle]` `[Causal Log Drawer Toggle]` `[Cohort Settings]`.
+- **Calm 2-Region Default Shell (`Left Rail` + `Main Canvas` at rest)**:
+  - **Region 1 — Left Scope Rail (`240px` expanded, `56px` collapsed on desktop, full `240px` slide-over drawer `<768px`, dark `#05080C`)**: Holds the 4 Workbench route tabs (reachable at every viewport), active Ward Beds (`Bed 01`..`Bed 04` with live HR and rhythm badge), and the `PTB-XL` 12-rhythm bank (`NSR`..`STEMI_ANT` with full 120-record dataset counts).
+  - **Region 2 — Focused Main Canvas (`1fr`, fluid ceiling, `<= 3` component groups per tab)**:
+    - `/shift`: Header strip (`<h1>Central Telemetry Shift</h1>`), 2×2 HiDPI (`devicePixelRatio`) 2D Canvas ICU Bed Matrix, and segmented **2-Bay ACLS Crash Cart Dock** (**Electrical Therapy Bay** + **ISO-26825 IV Pharmacology Bolus Rack**, hotkeys `1`–`8`).
+    - `/daily`: Header strip (`<h1>Daily Telemetry Challenge</h1>`) with segmented switch (`Live Ward` | `Standings`), single-heading embedded ward station, and 4-column leaderboard.
+    - `/caliper/:caseId`: Header strip (`<h1>Diagnostic Strip Calipers</h1>`) with `25/50 mm/s` speed and `5/10/20 mm/mV` gain selectors, 500 Hz 12-lead ECG millimeter grid with direct pointer hit-testing on `T1/T2/V1/V2`, and compact interval grading bar.
+    - `/cohort`: Header strip (`<h1>Cohort Roster and Access</h1>`) with 3-way segmented control (`Cohort Roster` | `Receipt Verifier` | `Pro Access`).
+- **On-Demand Causal Peek Drawer (`360px` slide-over sheet, `data-testid="causal-timeline-inspector"`)**:
+  - Stays mounted in the DOM for instant inspection and test accessibility while sliding over on demand when toggled via the top-bar `Causal Log` button. Holds the **ACLS Causal Timeline & Hemodynamic Receipt** and **PTB-XL Cardiologist Fiducial Ground Truth**.
 
 ## 3. Typography (`30-ui.md` & `impeccable` Craft Floor)
 - **Display & UI Sans (`--font-sans`)**: `'Instrument Sans', 'Segoe UI', system-ui, sans-serif` (banned default hero faces like Inter, Roboto, Space Grotesk, Plus Jakarta Sans, Geist are excluded).

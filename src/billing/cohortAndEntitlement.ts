@@ -32,8 +32,8 @@ export function parseCohortSeed(raw: string | null | undefined): ParsedCohortSee
   if (!raw || typeof raw !== 'string') {
     return { valid: false, cohort: null, numericSeed: null, reason: 'EMPTY_COHORT' };
   }
-  const trimmed = raw.trim();
-  if (!COHORT_SEED_REGEX.test(trimmed) || RESERVED_PROTOTYPE_KEYS.has(trimmed.toUpperCase())) {
+  const trimmed = raw.trim().toUpperCase();
+  if (!COHORT_SEED_REGEX.test(trimmed) || RESERVED_PROTOTYPE_KEYS.has(trimmed)) {
     return {
       valid: false,
       cohort: null,

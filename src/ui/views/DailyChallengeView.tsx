@@ -25,6 +25,7 @@ export interface DailyChallengeViewProps {
 
 export function DailyChallengeView(props: DailyChallengeViewProps) {
   const utcDateKey = getUtcDateKey();
+  const [activeSubView, setActiveSubView] = useState<'ward' | 'standings'>('ward');
   const [clinicianAlias, setClinicianAlias] = useState('ICU Operator');
   const [dailyReceipt, setDailyReceipt] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
@@ -78,9 +79,7 @@ export function DailyChallengeView(props: DailyChallengeViewProps) {
       setStorageWarning(null);
     } catch {
       // Graceful fallback when localStorage throws QuotaExceededError (US-03.5)
-      setStorageWarning(
-        'Browser storage quota reached; daily receipt remains available in memory for copying.'
-      );
+      setStorageWarning('Browser storage is full. Copy your daily receipt below.');
     }
 
     const seq = ++dailyReqSeqRef.current;
@@ -98,12 +97,35 @@ export function DailyChallengeView(props: DailyChallengeViewProps) {
 
   return (
     <div class="flex flex-col gap-4">
-      <section class="tw-surface p-4 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1>Daily UTC 60-Second Code Challenge ({utcDateKey})</h1>
-          <p class="text-sm m-0" style={{ color: 'var(--text-muted)' }}>
-            Every clinician worldwide receives the identical UTC-seeded 4-bed ICU dysrhythmia sequence today.
-          </p>
+      {/* Group 1: Header Strip & Segmented Switch */}
+      <section class="tw-surface px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex flex-wrap items-center gap-3">
+          <h1 class="m-0">Daily Telemetry Challenge</h1>
+          <span class="tw-mono-vital text-xs px-2 py-0.5 rounded border tw-chip-muted">
+            UTC {utcDateKey}
+          </span>
+          <div class="tw-seg-group" role="tablist" aria-label="Daily Challenge Sub-View">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeSubView === 'ward'}
+              data-active={activeSubView === 'ward' ? 'true' : 'false'}
+              onClick={() => setActiveSubView('ward')}
+              class="tw-seg-btn"
+            >
+              Live Ward
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeSubView === 'standings'}
+              data-active={activeSubView === 'standings' ? 'true' : 'false'}
+              onClick={() => setActiveSubView('standings')}
+              class="tw-seg-btn"
+            >
+              Standings
+            </button>
+          </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-3">
@@ -120,18 +142,13 @@ export function DailyChallengeView(props: DailyChallengeViewProps) {
               value={clinicianAlias}
               onInput={(e) => setClinicianAlias((e.target as HTMLInputElement).value)}
               placeholder="Callsign (e.g. R. Patel, RN)"
-              class="h-10 px-3 rounded border text-sm"
-              style={{
-                backgroundColor: 'var(--surface-muted)',
-                borderColor: 'var(--border)',
-                color: 'var(--text)',
-              }}
+              class="h-10 px-3 rounded text-sm tw-input"
             />
           </div>
 
           {dailyReceipt ? (
-            <div class="px-3 py-2 rounded border text-sm" style={{ borderColor: 'var(--border)' }}>
-              <span>Shareable Receipt: </span>
+            <div class="px-3 py-2 rounded border text-sm tw-border">
+              <span>Receipt: </span>
               <strong class="tw-mono-vital">{dailyReceipt}</strong>
             </div>
           ) : null}
@@ -142,7 +159,7 @@ export function DailyChallengeView(props: DailyChallengeViewProps) {
             onClick={handleFinishDaily}
             class="tw-btn-primary"
           >
-            Generate Daily Score Receipt
+            Submit Score
           </button>
         </div>
       </section>
@@ -153,18 +170,21 @@ export function DailyChallengeView(props: DailyChallengeViewProps) {
         </div>
       ) : null}
 
-      <ShiftStationView
-        stationTitle={`UTC Daily Telemetry Shift · ${utcDateKey}`}
-        stationSubtitle="Stabilize all 4 ICU beds with zero AHA rule violations to earn a 100% daily verification code."
-        {...props}
-      />
+      {/* Group 2A: Live Ward Sub-Panel (Single H1 preserved via hideStationHeader) */}
+      <div class={activeSubView === 'ward' ? 'block' : 'hidden'}>
+        <ShiftStationView
+          stationTitle="Daily Telemetry Challenge"
+          hideStationHeader={true}
+          {...props}
+        />
+      </div>
 
-      {/* Live Daily Challenge Leaderboard */}
-      <section class="tw-surface p-4 flex flex-col gap-3">
-        <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b" style={{ borderColor: 'var(--border)' }}>
-          <h2 class="m-0">UTC Daily Resuscitation Leaderboard ({utcDateKey})</h2>
-          <span class="tw-mono-vital text-xs" style={{ color: 'var(--text-muted)' }}>
-            {leaderboard.length} Verified Runs
+      {/* Group 2B: Standings Sub-Panel (4-column ceiling, kept mounted in DOM) */}
+      <section class={`${activeSubView === 'standings' ? 'flex' : 'hidden'} tw-surface p-4 flex-col gap-3`}>
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b tw-border">
+          <h2 class="m-0">Daily Standings</h2>
+          <span class="tw-mono-vital text-xs tw-text-muted">
+            {leaderboard.length} Verified Runs ({utcDateKey})
           </span>
         </div>
 
@@ -174,26 +194,22 @@ export function DailyChallengeView(props: DailyChallengeViewProps) {
             class="w-full text-left border-collapse text-sm"
           >
             <thead>
-              <tr class="border-b" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+              <tr class="border-b tw-border tw-text-muted">
                 <th class="py-2 pr-3 font-medium">Rank</th>
                 <th class="py-2 pr-3 font-medium">Clinician Callsign</th>
                 <th class="py-2 pr-3 font-medium">Score</th>
-                <th class="py-2 pr-3 font-medium">Stabilized Beds</th>
-                <th class="py-2 pr-3 font-medium">AHA Violations</th>
                 <th class="py-2 font-medium">Daily Receipt</th>
               </tr>
             </thead>
-            <tbody class="divide-y" style={{ borderColor: 'var(--border)' }}>
+            <tbody class="divide-y tw-border">
               {leaderboard.map((row, idx) => (
                 <tr key={`${row.receipt}-${idx}`}>
                   <td class="py-2 pr-3 tw-mono-vital">#{row.rank ?? idx + 1}</td>
                   <td class="py-2 pr-3 font-medium">{row.clinicianAlias}</td>
-                  <td class="py-2 pr-3 tw-mono-vital font-semibold" style={{ color: 'var(--trace-ecg)' }}>
-                    {row.scorePct}%
+                  <td class="py-2 pr-3 tw-mono-vital font-semibold tw-text-ecg">
+                    {row.scorePct}% ({row.bedsStabilized}/4)
                   </td>
-                  <td class="py-2 pr-3 tw-mono-vital">{row.bedsStabilized} / 4</td>
-                  <td class="py-2 pr-3 tw-mono-vital">{row.violations}</td>
-                  <td class="py-2 tw-mono-vital text-xs" style={{ color: 'var(--text-muted)' }}>
+                  <td class="py-2 tw-mono-vital text-xs tw-text-muted">
                     {row.receipt}
                   </td>
                 </tr>

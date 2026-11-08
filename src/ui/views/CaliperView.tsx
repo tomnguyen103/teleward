@@ -76,6 +76,7 @@ export function hitTestCaliperHandle(
 
 export interface CaliperViewProps {
   dataset: LoadedPtbxlDataset;
+  filteredRecords?: readonly PtbxlCaseRecord[];
   caseId: string;
   onSelectCaseId: (caseId: string) => void;
   canAccessCase: (record: PtbxlCaseRecord) => boolean;
@@ -87,6 +88,7 @@ export interface CaliperViewProps {
 export function CaliperView(props: CaliperViewProps) {
   const {
     dataset,
+    filteredRecords,
     caseId,
     onSelectCaseId,
     canAccessCase,
@@ -140,18 +142,14 @@ export function CaliperView(props: CaliperViewProps) {
     onGradeUpdate?.(null, isUnlocked ? resolvedRecord : null);
   }, [caseId, isUnlocked]);
 
-  const parsedQtCandidate = Number(qtcInput);
-  const measuredQtInputMs =
-    qtcInput.trim() !== '' && Number.isFinite(parsedQtCandidate) && parsedQtCandidate > 0
-      ? parsedQtCandidate
-      : Math.max(1, Math.abs(caliper.t2Ms - caliper.t1Ms));
+  const rawCaliperDeltaMs = Math.max(1, Math.abs(caliper.t2Ms - caliper.t1Ms));
 
   const metrics = computeCaliperMetrics(
     caliper.t1Ms,
     caliper.t2Ms,
     caliper.v1Mv,
     caliper.v2Mv,
-    measuredQtInputMs
+    rawCaliperDeltaMs
   );
 
   useEffect(() => {
@@ -192,19 +190,21 @@ export function CaliperView(props: CaliperViewProps) {
   // Invalid Case ID Recovery Panel (US-04.3)
   if (!resolvedRecord) {
     return (
-      <section class="tw-surface p-6 max-w-md">
-        <h1>PTB-XL Case Record Not Found</h1>
-        <p class="text-sm" style={{ color: 'var(--text-muted)' }}>
-          The requested 12-lead ECG strip identifier ({caseId}) does not exist in the compiled 120-record PTB-XL index.
+      <section class="tw-surface p-6 max-w-md flex flex-col gap-3">
+        <h1 class="m-0">Case Record Not Found</h1>
+        <p class="text-sm m-0 tw-text-muted">
+          Strip identifier {caseId} is absent from the PTB-XL catalog. Load starter strip ptbxl-001.
         </p>
-        <button
-          type="button"
-          data-testid="recover-default-case-btn"
-          onClick={() => onSelectCaseId('ptbxl-001')}
-          class="tw-btn-primary mt-2"
-        >
-          Load Starter Case (ptbxl-001)
-        </button>
+        <div>
+          <button
+            type="button"
+            data-testid="recover-default-case-btn"
+            onClick={() => onSelectCaseId('ptbxl-001')}
+            class="tw-btn-primary"
+          >
+            Load Starter Strip
+          </button>
+        </div>
       </section>
     );
   }
@@ -212,26 +212,26 @@ export function CaliperView(props: CaliperViewProps) {
   // Pro Exam Pass / Cohort Entitlement Gate for cases 025..120 (US-04.6)
   if (!canAccessCase(resolvedRecord)) {
     return (
-      <section data-testid="pro-case-gate-panel" class="tw-surface p-6 max-w-xl">
-        <h1>Pro Exam Bank Record Locked ({resolvedRecord.caseId})</h1>
-        <p class="text-sm tw-prose" style={{ color: 'var(--text-muted)' }}>
-          Starter cases ptbxl-001 through ptbxl-024 (2 per rhythm class) are free. Unlock all 120 cardiologist-annotated PTB-XL records with the Pro Exam Pass ($19) or enter an active instructor ?cohort= seed.
+      <section data-testid="pro-case-gate-panel" class="tw-surface p-6 max-w-xl flex flex-col gap-3">
+        <h1 class="m-0">Pro Strip Locked ({resolvedRecord.caseId})</h1>
+        <p class="text-sm m-0 tw-prose tw-text-muted">
+          Starter strips ptbxl-001 to ptbxl-024 are free. Unlock all 120 PTB-XL strips with Pro Access or a cohort seed.
         </p>
-        <div class="flex flex-wrap gap-3 mt-4">
+        <div class="flex flex-wrap gap-3 mt-1">
           <button
             type="button"
             data-testid="unlock-pro-from-caliper-btn"
             onClick={onNavigateCohortUnlock}
             class="tw-btn-primary"
           >
-            Unlock Pro Exam Pass ($19) or Enter Cohort Seed
+            Unlock Pro Access
           </button>
           <button
             type="button"
             onClick={() => onSelectCaseId('ptbxl-001')}
             class="tw-btn-secondary"
           >
-            Return to Free Starter Strip (ptbxl-001)
+            Load Starter Strip
           </button>
         </div>
       </section>
@@ -375,7 +375,7 @@ export function CaliperView(props: CaliperViewProps) {
       !Number.isFinite(qtcVal) ||
       !Number.isFinite(stVal)
     ) {
-      setFormError('Enter finite numeric values for PR (ms), QRS (ms), Bazett QTc (ms), and ST deviation (mV).');
+      setFormError('Enter finite numeric values for PR, QRS, QTc, and ST.');
       return;
     }
 
@@ -391,22 +391,29 @@ export function CaliperView(props: CaliperViewProps) {
     onGradeUpdate?.(report, resolvedRecord);
   };
 
+  const baseOptions =
+    filteredRecords && filteredRecords.length > 0 ? filteredRecords : dataset.records;
+  const optionSet = new Set(baseOptions.map((r) => r.caseId));
+  const switcherRecords = dataset.records.filter(
+    (r) =>
+      optionSet.has(r.caseId) ||
+      r.caseId === resolvedRecord.caseId ||
+      r.caseId === 'ptbxl-003' ||
+      r.caseId === 'ptbxl-051'
+  );
+
   return (
     <div class="flex flex-col gap-4">
-      {/* Header & Case Switcher */}
-      <section class="tw-surface p-4 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1>
-            12-Lead Digital Marching Calipers ·{' '}
-            <span data-testid="active-caliper-case-id" class="tw-mono-vital">
-              {resolvedRecord.caseId}
-            </span>
-          </h1>
-          <p class="text-sm m-0" style={{ color: 'var(--text-muted)' }}>
-            {paperSpeedMmPerSec} mm/s · {gainMmPerMv} mm/mV calibration · 1 mV Square Pulse · Patient{' '}
-            {resolvedRecord.age}
-            {resolvedRecord.sex} · SCP-ECG Record #{resolvedRecord.ptbxlRecordId}
-          </p>
+      {/* Group 1: Header Strip & Case Switcher */}
+      <section class="tw-surface px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex flex-wrap items-center gap-3">
+          <h1 class="m-0">Diagnostic Strip Calipers</h1>
+          <span
+            data-testid="active-caliper-case-id"
+            class="tw-mono-vital text-xs px-2 py-0.5 rounded border tw-chip-muted"
+          >
+            {resolvedRecord.caseId} · {paperSpeedMmPerSec} mm/s · {gainMmPerMv} mm/mV
+          </span>
         </div>
 
         <div class="flex flex-wrap items-center gap-3">
@@ -464,7 +471,7 @@ export function CaliperView(props: CaliperViewProps) {
               onChange={(e) => onSelectCaseId((e.target as HTMLSelectElement).value)}
               class="tw-btn-secondary"
             >
-              {dataset.records.map((r) => {
+              {switcherRecords.map((r) => {
                 const unlocked = canAccessCase(r);
                 return (
                   <option key={r.caseId} value={r.caseId}>
@@ -478,9 +485,9 @@ export function CaliperView(props: CaliperViewProps) {
         </div>
       </section>
 
-      {/* Interactive Caliper Toolbar & 12-Lead Paper Grid */}
+      {/* Group 2: Interactive Caliper Toolbar & 12-Lead Paper Grid */}
       <section class="tw-surface p-4 flex flex-col gap-3">
-        <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b" style={{ borderColor: 'var(--border)' }}>
+        <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b tw-border">
           <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Active Caliper Handle Selector">
             {(['t1', 't2', 'v1', 'v2'] as const).map((h) => (
               <button
@@ -532,16 +539,16 @@ export function CaliperView(props: CaliperViewProps) {
           onClick={handlePointerPlotClick}
           width={960}
           height={420}
-          class="w-full rounded border cursor-crosshair"
-          style={{ borderColor: 'var(--border)', touchAction: 'none' }}
-          aria-label={`12-lead ECG strip for ${resolvedRecord.caseId} at ${paperSpeedMmPerSec} mm/s and ${gainMmPerMv} mm/mV. Drag T1, T2, V1, or V2 hairlines directly or use Arrow keys.`}
+          class="w-full rounded border cursor-crosshair tw-border"
+          style={{ touchAction: 'none' }}
+          aria-label={`12-lead ECG strip for ${resolvedRecord.caseId} at ${paperSpeedMmPerSec} mm/s and ${gainMmPerMv} mm/mV`}
         />
       </section>
 
-      {/* Measurement & Fiducial Grading Form */}
+      {/* Group 3: Interval Adjudication Dock */}
       <section class="tw-surface p-4">
-        <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b" style={{ borderColor: 'var(--border)' }}>
-          <h2 class="m-0">Grade 12-Lead Interval Measurements Against PTB-XL Fiducials</h2>
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b tw-border">
+          <h2 class="m-0">Interval Adjudication</h2>
           <div class="flex flex-wrap items-center gap-2">
             <button
               type="button"
@@ -551,7 +558,7 @@ export function CaliperView(props: CaliperViewProps) {
               }}
               class="tw-btn-secondary text-sm"
             >
-              Use Δt → PR
+              Set PR
             </button>
             <button
               type="button"
@@ -561,7 +568,7 @@ export function CaliperView(props: CaliperViewProps) {
               }}
               class="tw-btn-secondary text-sm"
             >
-              Use Δt → QRS
+              Set QRS
             </button>
             <button
               type="button"
@@ -569,7 +576,7 @@ export function CaliperView(props: CaliperViewProps) {
               onClick={handleAutofillFromFiducials}
               class="tw-btn-secondary text-sm"
             >
-              Load Caliper Δt / ΔV
+              Apply Calipers
             </button>
           </div>
         </div>
@@ -587,8 +594,7 @@ export function CaliperView(props: CaliperViewProps) {
               autocomplete="off"
               value={prInput}
               onInput={(e) => setPrInput((e.target as HTMLInputElement).value)}
-              class="w-full h-10 px-3 rounded border tw-mono-vital text-sm"
-              style={{ backgroundColor: 'var(--surface-muted)', borderColor: 'var(--border)', color: 'var(--text)' }}
+              class="w-full h-10 px-3 rounded tw-mono-vital text-sm tw-input"
             />
           </div>
 
@@ -604,8 +610,7 @@ export function CaliperView(props: CaliperViewProps) {
               autocomplete="off"
               value={qrsInput}
               onInput={(e) => setQrsInput((e.target as HTMLInputElement).value)}
-              class="w-full h-10 px-3 rounded border tw-mono-vital text-sm"
-              style={{ backgroundColor: 'var(--surface-muted)', borderColor: 'var(--border)', color: 'var(--text)' }}
+              class="w-full h-10 px-3 rounded tw-mono-vital text-sm tw-input"
             />
           </div>
 
@@ -621,8 +626,7 @@ export function CaliperView(props: CaliperViewProps) {
               autocomplete="off"
               value={qtcInput}
               onInput={(e) => setQtcInput((e.target as HTMLInputElement).value)}
-              class="w-full h-10 px-3 rounded border tw-mono-vital text-sm"
-              style={{ backgroundColor: 'var(--surface-muted)', borderColor: 'var(--border)', color: 'var(--text)' }}
+              class="w-full h-10 px-3 rounded tw-mono-vital text-sm tw-input"
             />
           </div>
 
@@ -638,22 +642,20 @@ export function CaliperView(props: CaliperViewProps) {
               autocomplete="off"
               value={stInput}
               onInput={(e) => setStInput((e.target as HTMLInputElement).value)}
-              class="w-full h-10 px-3 rounded border tw-mono-vital text-sm"
-              style={{ backgroundColor: 'var(--surface-muted)', borderColor: 'var(--border)', color: 'var(--text)' }}
+              class="w-full h-10 px-3 rounded tw-mono-vital text-sm tw-input"
             />
           </div>
 
           <div>
             <label htmlFor="select-rhythm-class" class="block text-sm font-medium mb-1 w-fit">
-              Rhythm Diagnosis *
+              Rhythm Class *
             </label>
             <select
               id="select-rhythm-class"
               name="rhythmClass"
               value={rhythmInput}
               onChange={(e) => setRhythmInput((e.target as HTMLSelectElement).value as RhythmClass)}
-              class="w-full h-10 px-3 rounded border text-sm"
-              style={{ backgroundColor: 'var(--surface-muted)', borderColor: 'var(--border)', color: 'var(--text)' }}
+              class="w-full h-10 px-3 rounded text-sm tw-input"
             >
               {RHYTHM_CLASSES.map((r) => (
                 <option key={r} value={r}>
@@ -664,18 +666,18 @@ export function CaliperView(props: CaliperViewProps) {
           </div>
 
           <button type="submit" data-testid="submit-caliper-grade-btn" class="tw-btn-primary">
-            Grade 12-Lead Strip
+            Grade Strip
           </button>
         </form>
 
         {formError ? (
-          <p data-testid="caliper-form-error" class="mt-3 mb-0 text-sm" style={{ color: 'var(--trace-abp)' }}>
+          <p data-testid="caliper-form-error" class="mt-3 mb-0 text-sm tw-text-abp">
             {formError}
           </p>
         ) : null}
 
         {gradeReport ? (
-          <div data-testid="caliper-grade-result" class="mt-4 pt-3 border-t text-sm" style={{ borderColor: 'var(--border)' }}>
+          <div data-testid="caliper-grade-result" class="mt-4 pt-3 border-t text-sm tw-border">
             <strong>{gradeReport.overallPass ? 'OVERALL PASS' : 'NEEDS REVIEW'}</strong> · Ground Truth:{' '}
             <span class="tw-mono-vital">
               PR {resolvedRecord.fiducials.prMs} ms ({gradeReport.prPass ? 'PASS' : 'FAIL'}) · QRS{' '}

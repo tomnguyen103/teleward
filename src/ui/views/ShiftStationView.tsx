@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import {
   ACLS_INTERVENTION_METADATA,
   type BedState,
@@ -16,7 +16,8 @@ import {
 
 export interface ShiftStationViewProps {
   stationTitle: string;
-  stationSubtitle: string;
+  stationSubtitle?: string;
+  hideStationHeader?: boolean;
   beds: readonly BedState[];
   selectedBedIndex: number;
   onSelectBed: (index: number) => void;
@@ -126,7 +127,7 @@ function getMetadataById(id: AclsInterventionId): InterventionMetadata {
 export function ShiftStationView(props: ShiftStationViewProps) {
   const {
     stationTitle,
-    stationSubtitle,
+    hideStationHeader = false,
     beds,
     selectedBedIndex,
     onSelectBed,
@@ -138,6 +139,7 @@ export function ShiftStationView(props: ShiftStationViewProps) {
     shiftResetKey,
   } = props;
 
+  const [activeDockBay, setActiveDockBay] = useState<'all' | 'electrical' | 'pharmacology'>('all');
   const canvasRefs = useRef<Array<HTMLCanvasElement | null>>([null, null, null, null]);
   const ringBuffersRef = useRef<TelemetryRingBuffer[] | null>(null);
   const lastResetKeyRef = useRef<string | undefined>(undefined);
@@ -224,84 +226,72 @@ export function ShiftStationView(props: ShiftStationViewProps) {
 
   return (
     <div class="flex flex-col gap-3">
-      {/* Station Command Bar */}
-      <section class="tw-surface px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1>{stationTitle}</h1>
-          <p class="text-sm m-0" style={{ color: 'var(--text-muted)' }}>
-            {stationSubtitle}
-          </p>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-4">
-          <div class="hidden xl:flex items-center gap-2.5 text-xs tw-mono-vital px-2.5 py-1 rounded border" style={{ backgroundColor: 'var(--surface-muted)', borderColor: 'var(--border)' }}>
-            <span style={{ color: 'var(--trace-ecg)' }}>II 1.0mV</span>
-            <span style={{ color: 'var(--trace-abp)' }}>ART mmHg</span>
-            <span style={{ color: 'var(--trace-spo2)' }}>PLETH</span>
-            <span style={{ color: 'var(--trace-etco2)' }}>CO2 mmHg</span>
-            <span style={{ color: 'var(--text-muted)' }}>25 mm/s</span>
+      {/* Group 1: Station Command Bar */}
+      {!hideStationHeader ? (
+        <section class="tw-surface px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 class="m-0">{stationTitle}</h1>
           </div>
 
-          <div class="text-right">
-            <div class="text-sm" style={{ color: 'var(--text-muted)' }}>
-              Stabilized Beds
+          <div class="flex flex-wrap items-center gap-4">
+            <div class="hidden xl:flex items-center gap-2.5 text-xs tw-mono-vital px-2.5 py-1 rounded border tw-chip-muted">
+              <span class="tw-text-ecg">II 1.0mV</span>
+              <span class="tw-text-abp">ART mmHg</span>
+              <span class="tw-text-spo2">PLETH</span>
+              <span class="tw-text-etco2">CO2 mmHg</span>
+              <span class="tw-text-muted">25 mm/s</span>
             </div>
-            <div class="tw-mono-vital text-lg font-semibold">
-              {scoreSummary.bedsStabilized} / 4 ({scoreSummary.scorePct}%)
+
+            <div class="text-right">
+              <div class="text-xs tw-text-muted">Stabilized Beds</div>
+              <div class="tw-mono-vital text-base font-semibold">
+                {scoreSummary.bedsStabilized} / 4 ({scoreSummary.scorePct}%)
+              </div>
             </div>
+
+            <button type="button" onClick={onResetShift} class="tw-btn-secondary">
+              Reset Shift
+            </button>
           </div>
+        </section>
+      ) : null}
 
-          <button type="button" onClick={onResetShift} class="tw-btn-secondary">
-            Reset 4-Bed Shift
-          </button>
-        </div>
-      </section>
-
-      {/* 2x2 HiDPI 60fps 2D Canvas ICU Bedside Monitor Matrix */}
+      {/* Group 2: 2x2 HiDPI 60fps 2D Canvas ICU Bedside Monitor Matrix */}
       <section aria-label="4-Bed ICU Telemetry Monitors" class="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {beds.map((bed, idx) => {
           const isSelected = idx === selectedBedIndex;
-          const alarmBg =
+          const alarmBadgeClass =
             bed.alarmPriority === 'CRISIS'
-              ? 'var(--alarm-crisis-bg)'
+              ? 'tw-beacon-crisis'
               : bed.alarmPriority === 'WARNING'
-                ? 'var(--alarm-warn-bg)'
-                : 'var(--alarm-normal-bg)';
-          const alarmText =
-            bed.alarmPriority === 'CRISIS'
-              ? 'var(--alarm-crisis-text)'
-              : bed.alarmPriority === 'WARNING'
-                ? 'var(--alarm-warn-text)'
-                : 'var(--alarm-normal-text)';
+                ? 'tw-beacon-warning'
+                : 'tw-beacon-normal';
 
           return (
             <div
               key={bed.bedIndex}
               data-testid={`bed-card-${idx}`}
               onClick={() => onSelectBed(idx)}
-              class="tw-well p-2.5 flex flex-col gap-2 cursor-pointer"
-              style={{
-                borderColor: isSelected ? 'var(--primary)' : 'var(--border)',
-                outline: isSelected ? '2px solid var(--primary)' : 'none',
-              }}
+              class={`tw-well p-2.5 flex flex-col gap-2 cursor-pointer ${
+                isSelected ? 'ring-2 ring-emerald-500' : ''
+              }`}
             >
               {/* Bed Header Row */}
-              <div class="flex items-center justify-between gap-2 pb-1.5 border-b" style={{ borderColor: 'var(--border)' }}>
+              <div class="flex items-center justify-between gap-2 pb-1.5 border-b tw-border">
                 <div class="flex items-center gap-2">
-                  <h2 class="m-0 text-base font-semibold" style={{ color: '#ECF2F8' }}>
+                  <h2 class="m-0 text-base font-semibold">
                     {bed.bedLabel} · {bed.patientName}
                   </h2>
                   <span
                     data-testid={`bed-rhythm-${idx}`}
-                    class="tw-mono-vital px-2 py-0.5 rounded text-sm font-semibold"
-                    style={{ backgroundColor: alarmBg, color: alarmText }}
+                    class={`tw-mono-vital px-2 py-0.5 rounded text-sm font-semibold ${alarmBadgeClass}`}
                   >
                     {bed.vitals.rhythm}
                   </span>
                 </div>
 
                 <div class="flex items-center gap-2 shrink-0">
-                  <span class="tw-mono-vital text-sm font-semibold whitespace-nowrap" style={{ color: '#94A6B8' }}>
+                  <span class="tw-mono-vital text-sm font-semibold whitespace-nowrap tw-text-muted">
                     {bed.stabilized
                       ? 'ROSC / STABLE'
                       : bed.arrested
@@ -316,7 +306,7 @@ export function ShiftStationView(props: ShiftStationViewProps) {
                     }}
                     class="tw-btn-secondary text-xs py-1 px-2 whitespace-nowrap"
                   >
-                    12-Lead <span class="hidden 2xl:inline">({bed.caseId})</span>
+                    Calipers <span class="hidden 2xl:inline">({bed.caseId})</span>
                   </button>
                 </div>
               </div>
@@ -335,43 +325,33 @@ export function ShiftStationView(props: ShiftStationViewProps) {
 
                 <dl class="m-0 grid grid-cols-1 gap-1 text-right">
                   <div>
-                    <dt class="text-xs" style={{ color: '#94A6B8' }}>
-                      HR (bpm)
-                    </dt>
-                    <dd class="m-0 tw-mono-vital text-2xl font-semibold" style={{ color: 'var(--trace-ecg)' }}>
+                    <dt class="text-xs tw-text-muted">HR (bpm)</dt>
+                    <dd class="m-0 tw-mono-vital text-2xl font-semibold tw-text-ecg">
                       {bed.vitals.hr}
                     </dd>
                   </div>
                   <div>
-                    <dt class="text-xs" style={{ color: '#94A6B8' }}>
-                      ABP (mmHg)
-                    </dt>
-                    <dd class="m-0 tw-mono-vital text-sm font-semibold" style={{ color: 'var(--trace-abp)' }}>
+                    <dt class="text-xs tw-text-muted">ABP (mmHg)</dt>
+                    <dd class="m-0 tw-mono-vital text-sm font-semibold tw-text-abp">
                       {bed.vitals.sbp}/{bed.vitals.dbp} ({bed.vitals.map})
                     </dd>
                   </div>
                   <div class="flex justify-between gap-2">
                     <div>
-                      <dt class="text-xs" style={{ color: '#94A6B8' }}>
-                        SpO2
-                      </dt>
-                      <dd class="m-0 tw-mono-vital text-sm font-semibold" style={{ color: 'var(--trace-spo2)' }}>
+                      <dt class="text-xs tw-text-muted">SpO2</dt>
+                      <dd class="m-0 tw-mono-vital text-sm font-semibold tw-text-spo2">
                         {bed.vitals.spo2}%
                       </dd>
                     </div>
                     <div>
-                      <dt class="text-xs" style={{ color: '#94A6B8' }}>
-                        EtCO2
-                      </dt>
-                      <dd class="m-0 tw-mono-vital text-sm font-semibold" style={{ color: 'var(--trace-etco2)' }}>
+                      <dt class="text-xs tw-text-muted">EtCO2</dt>
+                      <dd class="m-0 tw-mono-vital text-sm font-semibold tw-text-etco2">
                         {bed.vitals.etco2}
                       </dd>
                     </div>
                     <div>
-                      <dt class="text-xs" style={{ color: '#94A6B8' }}>
-                        RR
-                      </dt>
-                      <dd class="m-0 tw-mono-vital text-sm font-semibold" style={{ color: '#ECF2F8' }}>
+                      <dt class="text-xs tw-text-muted">RR</dt>
+                      <dd class="m-0 tw-mono-vital text-sm font-semibold">
                         {bed.vitals.rr}
                       </dd>
                     </div>
@@ -383,32 +363,54 @@ export function ShiftStationView(props: ShiftStationViewProps) {
         })}
       </section>
 
-      {/* 2-Bay ACLS Crash Cart Dock (Electrical Therapy Bay + ISO-26825 IV Pharmacology Bolus Rack) */}
-      <section aria-label="ACLS Crash Cart Interventions" class="tw-surface divide-y" style={{ borderColor: 'var(--border)' }}>
+      {/* Group 3: Segmented 2-Bay ACLS Crash Cart Dock */}
+      <section aria-label="ACLS Crash Cart Interventions" class="tw-surface divide-y tw-border">
         <div class="px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
-          <div class="flex flex-wrap items-baseline gap-3">
-            <h2 class="m-0">ACLS Crash Cart Resuscitation Dock</h2>
-            <p class="m-0 text-sm" style={{ color: 'var(--text-muted)' }}>
-              Deploy Electrical Therapy (keys 1–3) or ISO-26825 IV Bolus Pharmacology (keys 4–8) to the active bedside monitor.
-            </p>
+          <div class="flex flex-wrap items-center gap-3">
+            <h2 class="m-0">ACLS Crash Cart</h2>
+            <div class="tw-seg-group" role="group" aria-label="Crash Cart Bay Filter">
+              <button
+                type="button"
+                onClick={() => setActiveDockBay('all')}
+                class={activeDockBay === 'all' ? 'tw-seg-btn-active' : 'tw-seg-btn'}
+              >
+                All Bays
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveDockBay('electrical')}
+                class={activeDockBay === 'electrical' ? 'tw-seg-btn-active' : 'tw-seg-btn'}
+              >
+                Electrical Therapy
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveDockBay('pharmacology')}
+                class={activeDockBay === 'pharmacology' ? 'tw-seg-btn-active' : 'tw-seg-btn'}
+              >
+                IV Bolus Rack
+              </button>
+            </div>
           </div>
+
           <span
             data-testid="acting-as-bed-guard"
-            class="px-3 py-1 rounded text-sm font-semibold"
-            style={{ backgroundColor: 'var(--surface-muted)', color: 'var(--text)' }}
+            class="px-3 py-1 rounded text-sm font-semibold tw-chip-muted"
           >
-            Administer to {activeBed.bedLabel} ({activeBed.vitals.rhythm} — {RHYTHM_PROFILES[activeBed.vitals.rhythm].label})
+            Target: {activeBed.bedLabel} ({activeBed.vitals.rhythm} · {RHYTHM_PROFILES[activeBed.vitals.rhythm].label})
           </span>
         </div>
 
-        <div class="grid grid-cols-1 2xl:grid-cols-12 divide-y 2xl:divide-y-0 2xl:divide-x" style={{ borderColor: 'var(--border)' }}>
+        <div class="grid grid-cols-1 2xl:grid-cols-12 divide-y 2xl:divide-y-0 2xl:divide-x tw-border">
           {/* Bay 1: Electrical Therapy Bay */}
-          <div class="2xl:col-span-5 p-3 flex flex-col gap-2">
+          <div
+            class={`${
+              activeDockBay === 'pharmacology' ? 'hidden' : 'flex'
+            } ${activeDockBay === 'electrical' ? '2xl:col-span-12' : '2xl:col-span-5'} p-3 flex-col gap-2`}
+          >
             <div class="flex items-center justify-between">
               <h3 class="m-0 text-sm font-semibold">Electrical Therapy Bay (Biphasic Defibrillator / Pacer)</h3>
-              <span class="tw-mono-vital text-xs" style={{ color: 'var(--text-muted)' }}>
-                Hotkeys 1–3
-              </span>
+              <span class="tw-mono-vital text-xs tw-text-muted">Hotkeys 1–3</span>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {ELECTRICAL_BAY_IDS.map((id) => {
@@ -432,10 +434,8 @@ export function ShiftStationView(props: ShiftStationViewProps) {
                       </span>
                     </div>
                     <div class="w-full flex items-end justify-between gap-1.5">
-                      <span class="text-xs leading-snug" style={{ color: 'var(--text-muted)' }}>
-                        {badge.briefHint}
-                      </span>
-                      <kbd class="tw-mono-vital text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>
+                      <span class="text-xs leading-snug tw-text-muted">{badge.briefHint}</span>
+                      <kbd class="tw-mono-vital text-xs shrink-0 tw-text-muted">
                         [{badge.hotkey}]
                       </kbd>
                     </div>
@@ -446,12 +446,14 @@ export function ShiftStationView(props: ShiftStationViewProps) {
           </div>
 
           {/* Bay 2: ISO-26825 IV Pharmacology Bolus Rack */}
-          <div class="2xl:col-span-7 p-3 flex flex-col gap-2">
+          <div
+            class={`${
+              activeDockBay === 'electrical' ? 'hidden' : 'flex'
+            } ${activeDockBay === 'pharmacology' ? '2xl:col-span-12' : '2xl:col-span-7'} p-3 flex-col gap-2`}
+          >
             <div class="flex items-center justify-between">
               <h3 class="m-0 text-sm font-semibold">ISO-26825 IV Pharmacology Bolus Rack</h3>
-              <span class="tw-mono-vital text-xs" style={{ color: 'var(--text-muted)' }}>
-                Hotkeys 4–8
-              </span>
+              <span class="tw-mono-vital text-xs tw-text-muted">Hotkeys 4–8</span>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
               {PHARMACOLOGY_RACK_IDS.map((id) => {
@@ -475,10 +477,8 @@ export function ShiftStationView(props: ShiftStationViewProps) {
                       </span>
                     </div>
                     <div class="w-full flex items-end justify-between gap-1.5">
-                      <span class="text-xs leading-snug" style={{ color: 'var(--text-muted)' }}>
-                        {badge.briefHint}
-                      </span>
-                      <kbd class="tw-mono-vital text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>
+                      <span class="text-xs leading-snug tw-text-muted">{badge.briefHint}</span>
+                      <kbd class="tw-mono-vital text-xs shrink-0 tw-text-muted">
                         [{badge.hotkey}]
                       </kbd>
                     </div>

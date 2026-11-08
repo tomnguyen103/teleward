@@ -204,4 +204,77 @@ describe('Ticket 02: Obsidian ICU Telemetry Cockpit, Unified 64px Header & 2-Bay
     fireEvent.pointerUp(canvasEl);
     expect(getByTestId('caliper-t2-ms').textContent).toBe('2500 ms');
   });
+
+  it('US-04.1, US-04.2 & US-04.3: normalizes lowercase cohort seeds, keeps Bazett QTc idempotent across repeated caliper autofills, preserves 12-rhythm counts under filter, and enforces single H1 on /daily', async () => {
+    const { parseCohortSeed } = await import('../src/billing/cohortAndEntitlement.ts');
+    const lowerSeed = parseCohortSeed('nurs402-fall26');
+    const upperSeed = parseCohortSeed('NURS402-FALL26');
+    expect(lowerSeed.valid).toBe(true);
+    expect(lowerSeed.cohort).toBe('NURS402-FALL26');
+    expect(lowerSeed.numericSeed).toBe(upperSeed.numericSeed);
+
+    const { getByTestId, container } = render(
+      <App initialPath="/caliper/ptbxl-001" preloadedDataset={DATASET} />
+    );
+    const autofillBtn = getByTestId('autofill-caliper-fiducials-btn');
+    const qtcField = container.querySelector('#input-qtc-ms') as HTMLInputElement;
+    fireEvent.click(autofillBtn);
+    expect(qtcField.value).toBe('894');
+    fireEvent.click(autofillBtn);
+    expect(qtcField.value).toBe('894');
+
+    const sidebar = container.querySelector('#tw-scope-sidebar')!;
+    const nsrBtn = Array.from(sidebar.querySelectorAll('button')).find(
+      (b) => !b.textContent?.startsWith('Bed ') && b.textContent?.includes('NSR')
+    )!;
+    fireEvent.click(nsrBtn);
+    const svtBtn = Array.from(sidebar.querySelectorAll('button')).find(
+      (b) => !b.textContent?.startsWith('Bed ') && b.textContent?.includes('SVT')
+    )!;
+    expect(svtBtn.textContent).toContain('2/10');
+
+    const inspector = getByTestId('causal-timeline-inspector');
+    expect(inspector.getAttribute('aria-hidden')).toBe('true');
+    fireEvent.click(getByTestId('toggle-causal-drawer-btn'));
+    expect(inspector.getAttribute('aria-hidden')).toBe('false');
+    fireEvent.click(getByTestId('toggle-causal-drawer-btn'));
+    expect(inspector.getAttribute('aria-hidden')).toBe('true');
+
+    cleanup();
+
+    const { container: dailyContainer } = render(
+      <App initialPath="/daily" preloadedDataset={DATASET} initialSeed={101} />
+    );
+    expect(dailyContainer.querySelectorAll('h1').length).toBe(1);
+    const standingsTab = Array.from(dailyContainer.querySelectorAll('[role="tab"]')).find((t) =>
+      t.textContent?.includes('Standings')
+    )!;
+    fireEvent.click(standingsTab);
+    expect(standingsTab.getAttribute('aria-selected')).toBe('true');
+
+    cleanup();
+
+    const { generateCohortReceipt } = await import('../src/billing/cohortAndEntitlement.ts');
+    const mismatchedReceipt = generateCohortReceipt({
+      cohort: 'EMS201',
+      scorePct: 90,
+      bedsStabilized: 4,
+      violations: 0,
+    });
+    const { getByTestId: getCohortTestId, container: cohortContainer } = render(
+      <App initialPath="/cohort" preloadedDataset={DATASET} />
+    );
+    expect(cohortContainer.querySelectorAll('h1').length).toBe(1);
+    const verifierTab = Array.from(cohortContainer.querySelectorAll('[role="tab"]')).find((t) =>
+      t.textContent?.includes('Receipt Verifier')
+    )!;
+    fireEvent.click(verifierTab);
+    expect(verifierTab.getAttribute('aria-selected')).toBe('true');
+    const receiptInput = getCohortTestId('cohort-receipt-input') as HTMLInputElement;
+    fireEvent.input(receiptInput, { target: { value: mismatchedReceipt } });
+    fireEvent.click(getCohortTestId('verify-cohort-receipt-btn'));
+    expect(getCohortTestId('cohort-receipt-verdict').textContent).toContain(
+      'INVALID RECEIPT (INVALID_COHORT)'
+    );
+  });
 });

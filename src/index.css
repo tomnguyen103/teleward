@@ -208,3 +208,177 @@ h3 {
   border: 1px solid var(--border);
   border-radius: 6px;
 }
+
+.tw-app-root {
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+.tw-topbar {
+  background-color: var(--surface);
+  border-color: var(--border);
+}
+
+.tw-brand-link {
+  color: var(--text);
+}
+
+.tw-brand-icon {
+  color: var(--primary);
+}
+
+.tw-chip-muted {
+  background-color: var(--surface-muted);
+  color: var(--text-muted);
+  border-color: var(--border);
+}
+
+.tw-nav-link {
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+}
+
+.tw-nav-link-active {
+  color: var(--primary);
+  border-bottom: 2px solid var(--primary);
+}
+
+.tw-search-box {
+  background-color: var(--surface-muted);
+  border-color: var(--border);
+}
+
+.tw-input {
+  background-color: var(--surface-muted);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.tw-beacon-crisis {
+  background-color: var(--alarm-crisis-bg);
+  color: var(--alarm-crisis-text);
+}
+
+.tw-beacon-warning {
+  background-color: var(--alarm-warn-bg);
+  color: var(--alarm-warn-text);
+}
+
+.tw-beacon-normal {
+  background-color: var(--alarm-normal-bg);
+  color: var(--alarm-normal-text);
+}
+
+.tw-audio-pill {
+  background-color: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.tw-audio-pill-armed {
+  background-color: var(--surface);
+  border-color: var(--border);
+  color: var(--primary);
+}
+
+.tw-silence-pill {
+  background-color: var(--surface);
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+.tw-silence-pill-active {
+  background-color: var(--alarm-warn-bg);
+  border-color: var(--border);
+  color: var(--alarm-warn-text);
+}
+
+.tw-sidebar {
+  background-color: var(--sidebar-bg);
+  color: var(--sidebar-text);
+  border-color: var(--border);
+}
+
+.tw-sidebar-heading {
+  color: var(--sidebar-text);
+}
+
+.tw-sidebar-muted {
+  color: var(--sidebar-muted);
+}
+
+.tw-sidebar-item {
+  background-color: transparent;
+  color: var(--sidebar-text);
+}
+
+.tw-sidebar-item-active {
+  background-color: var(--sidebar-active-bg);
+  color: var(--sidebar-text);
+}
+
+.tw-border {
+  border-color: var(--border);
+}
+
+.tw-text-muted {
+  color: var(--text-muted);
+}
+
+.tw-text-primary {
+  color: var(--primary);
+}
+
+.tw-text-ecg {
+  color: var(--trace-ecg);
+}
+
+.tw-text-abp {
+  color: var(--trace-abp);
+}
+
+.tw-text-spo2 {
+  color: var(--trace-spo2);
+}
+
+.tw-text-etco2 {
+  color: var(--trace-etco2);
+}
+
+.tw-peek-drawer {
+  background-color: var(--surface);
+  border-color: var(--border);
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tw-seg-group {
+  background-color: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px;
+  display: inline-flex;
+  gap: 2px;
+}
+
+.tw-seg-btn {
+  min-height: 36px;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background-color: transparent;
+  border: 1px solid transparent;
+}
+
+.tw-seg-btn-active {
+  min-height: 36px;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+}
+
