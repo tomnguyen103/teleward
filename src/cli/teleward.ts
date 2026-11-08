@@ -7,6 +7,7 @@ import {
   TelewardCliValidationError,
   runSimulation,
 } from '../engine/aclsEngine.ts';
+import { startTelewardServer } from '../server/apiServer.ts';
 import type { Rfc7807Error } from '../types/teleward.ts';
 
 function resolveCompilerScriptPath(): string {
@@ -144,11 +145,43 @@ export function executeCli(argv: string[]): number {
       return 0;
     }
 
+    if (subcommand === 'serve') {
+      const portRaw = flags.get('port');
+      const port =
+        portRaw === undefined
+          ? 4173
+          : typeof portRaw === 'string' && /^\d+$/.test(portRaw.trim())
+            ? Number(portRaw.trim())
+            : Number.NaN;
+
+      if (!Number.isInteger(port) || port < 0 || port > 65535) {
+        throw new TelewardCliValidationError(
+          `Invalid --port "${String(portRaw)}". Must be an integer between 0 and 65535.`,
+          'INVALID_PORT'
+        );
+      }
+
+      void startTelewardServer(port).then((started) => {
+        process.stdout.write(
+          JSON.stringify({
+            status: 'listening',
+            service: 'teleward-api',
+            port: started.port,
+            url: `http://127.0.0.1:${started.port}`,
+          }) + '\n'
+        );
+        if (flags.get('once')) {
+          void started.close();
+        }
+      });
+      return 0;
+    }
+
     const unknownProblem: Rfc7807Error = {
       type: 'https://teleward.clinic/errors/unknown_subcommand',
       title: 'Unknown TeleWard CLI Subcommand',
       status: 422,
-      detail: `Unsupported subcommand "${subcommand}". Use "sim", "compile", or "verify".`,
+      detail: `Unsupported subcommand "${subcommand}". Use "sim", "compile", "verify", or "serve".`,
       code: 'UNKNOWN_SUBCOMMAND',
     };
     process.stdout.write(JSON.stringify(unknownProblem) + '\n');

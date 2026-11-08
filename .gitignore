@@ -3,6 +3,7 @@ dist/
 .scratch/
 .codegraph/
 graphify-out/
+.teleward-data/
 *.tmp
 *.tmp.*
 __pycache__/

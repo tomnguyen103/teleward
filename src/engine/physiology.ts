@@ -297,14 +297,27 @@ export interface RealtimeWaveformSample {
   etco2MmHg: number;
 }
 
+export interface ContinuousPhaseState {
+  ecgPhase?: number;
+  respPhase?: number;
+}
+
 /**
  * Synthesizes 500 Hz coupled physiological traces (ECG Lead II, arterial ABP dicrotic wave, SpO2 pleth, EtCO2 capnogram).
+ * When continuous phase accumulators are provided via `phases`, waveform synthesis maintains C0 phase continuity across HR/RR changes.
  */
-export function synthesizeRealtimeSample(vitals: VitalState, timeSec: number): RealtimeWaveformSample {
+export function synthesizeRealtimeSample(
+  vitals: VitalState,
+  timeSec: number,
+  phases?: ContinuousPhaseState
+): RealtimeWaveformSample {
   const { rhythm, hr, sbp, dbp, etco2, rr } = vitals;
   const t = Math.max(0, timeSec);
   const afibMod =
     rhythm === 'AFIB' ? 0.14 * Math.sin(t * 2.3) + 0.09 * Math.cos(t * 3.7) : 0;
+
+  const hasContinuousEcgPhase =
+    phases?.ecgPhase !== undefined && Number.isFinite(phases.ecgPhase);
 
   let ecgMv = 0;
   if (rhythm === 'ASYSTOLE') {
@@ -317,16 +330,21 @@ export function synthesizeRealtimeSample(vitals: VitalState, timeSec: number): R
   } else if (rhythm === 'TORSADES') {
     const freqHz = Math.max(0.5, (hr || 224) / 60);
     const spindle = 0.35 + 0.65 * Math.sin(2 * Math.PI * 0.8 * t);
-    ecgMv = 1.15 * spindle * Math.sin(2 * Math.PI * freqHz * t);
+    const carrierPhase = hasContinuousEcgPhase ? phases!.ecgPhase! : freqHz * t;
+    ecgMv = 1.15 * spindle * Math.sin(2 * Math.PI * carrierPhase);
   } else if (rhythm === 'VT_MONO') {
     const freqHz = Math.max(0.5, (hr || 172) / 60);
+    const carrierPhase = hasContinuousEcgPhase ? phases!.ecgPhase! : freqHz * t;
     ecgMv =
-      1.1 * Math.sin(2 * Math.PI * freqHz * t) -
-      0.28 * Math.sin(4 * Math.PI * freqHz * t + 0.4);
+      1.1 * Math.sin(2 * Math.PI * carrierPhase) -
+      0.28 * Math.sin(4 * Math.PI * carrierPhase + 0.4);
   } else {
     const effectiveHr = Math.max(30, vitals.paced ? 70 : hr || 60);
     const beatPeriod = 60 / effectiveHr;
-    const phase = (((t % beatPeriod) / beatPeriod + afibMod) % 1 + 1) % 1;
+    const basePhase = hasContinuousEcgPhase
+      ? phases!.ecgPhase!
+      : (t % beatPeriod) / beatPeriod;
+    const phase = ((basePhase + afibMod) % 1 + 1) % 1;
     const gauss = (center: number, width: number) => Math.exp(-0.5 * ((phase - center) / width) ** 2);
     const atrialPhase = (((t * (78 / 60)) % 1) + 1) % 1;
     const pWave =
@@ -350,13 +368,19 @@ export function synthesizeRealtimeSample(vitals: VitalState, timeSec: number): R
   if (sbp > 15 && hr > 0 && rhythm !== 'VFIB' && rhythm !== 'ASYSTOLE' && rhythm !== 'PEA') {
     const effectivePulseHr = Math.max(30, vitals.paced ? 70 : hr);
     const beatPeriod = 60 / effectivePulseHr;
-    const pulsePhase = ((((t - 0.12 + beatPeriod) % beatPeriod) / beatPeriod + afibMod) % 1 + 1) % 1;
+    const pulseBase = hasContinuousEcgPhase
+      ? phases!.ecgPhase! - 0.15
+      : ((t - 0.12 + beatPeriod) % beatPeriod) / beatPeriod;
+    const pulsePhase = ((pulseBase + afibMod) % 1 + 1) % 1;
     const upstroke = Math.exp(-0.5 * ((pulsePhase - 0.18) / 0.07) ** 2);
     const dicrotic = 0.36 * Math.exp(-0.5 * ((pulsePhase - 0.42) / 0.11) ** 2);
     const shape = Math.min(1, (upstroke + dicrotic) / 1.08);
     abpMmHg = dbp + (sbp - dbp) * shape;
 
-    const plethPhase = ((((t - 0.22 + beatPeriod) % beatPeriod) / beatPeriod + afibMod) % 1 + 1) % 1;
+    const plethBase = hasContinuousEcgPhase
+      ? phases!.ecgPhase! - 0.28
+      : ((t - 0.22 + beatPeriod) % beatPeriod) / beatPeriod;
+    const plethPhase = ((plethBase + afibMod) % 1 + 1) % 1;
     spo2Wave =
       Math.exp(-0.5 * ((plethPhase - 0.22) / 0.08) ** 2) +
       0.3 * Math.exp(-0.5 * ((plethPhase - 0.46) / 0.12) ** 2);
@@ -366,7 +390,10 @@ export function synthesizeRealtimeSample(vitals: VitalState, timeSec: number): R
   let etco2MmHg = 0;
   if (etco2 > 2 && rr > 0) {
     const breathPeriod = 60 / Math.max(6, rr);
-    const bPhase = (timeSec % breathPeriod) / breathPeriod;
+    const bPhase =
+      phases?.respPhase !== undefined && Number.isFinite(phases.respPhase)
+        ? ((phases.respPhase % 1) + 1) % 1
+        : (timeSec % breathPeriod) / breathPeriod;
     if (bPhase >= 0.15 && bPhase < 0.62) {
       const rise = Math.min(1, (bPhase - 0.15) / 0.08);
       const slope = 0.92 + 0.08 * ((bPhase - 0.15) / 0.47);
@@ -384,3 +411,89 @@ export function synthesizeRealtimeSample(vitals: VitalState, timeSec: number): R
     etco2MmHg,
   };
 }
+
+/**
+ * Zero-allocation Float32Array circular buffer for 500 Hz 4-trace ICU bed telemetry
+ * with continuous cardiac (`ecgPhase`) and respiratory (`respPhase`) phase integration.
+ */
+export class TelemetryRingBuffer {
+  public readonly capacity: number;
+  public readonly eraseGapSamples: number;
+  public readonly ecg: Float32Array;
+  public readonly abp: Float32Array;
+  public readonly spo2: Float32Array;
+  public readonly etco2: Float32Array;
+  public writeCursor = 0;
+  public sampleTimeSec = 0;
+  public fractionalSamples = 0;
+  public ecgPhase = 0;
+  public respPhase = 0;
+
+  constructor(capacity = 2500, eraseGapSamples = 90) {
+    this.capacity = capacity;
+    this.eraseGapSamples = eraseGapSamples;
+    this.ecg = new Float32Array(capacity);
+    this.abp = new Float32Array(capacity);
+    this.spo2 = new Float32Array(capacity);
+    this.etco2 = new Float32Array(capacity);
+  }
+
+  public advanceOneSample(vitals: VitalState, dtSec = 0.002): void {
+    this.sampleTimeSec += dtSec;
+    const effectiveHr =
+      vitals.rhythm === 'ASYSTOLE' || vitals.rhythm === 'VFIB'
+        ? 0
+        : Math.max(
+            30,
+            vitals.paced
+              ? 70
+              : vitals.hr ||
+                  (vitals.rhythm === 'TORSADES'
+                    ? 224
+                    : vitals.rhythm === 'VT_MONO'
+                      ? 172
+                      : 60)
+          );
+    this.ecgPhase = (((this.ecgPhase + (effectiveHr / 60) * dtSec) % 1) + 1) % 1;
+    const effectiveRr = vitals.rr > 0 ? Math.max(6, vitals.rr) : 0;
+    this.respPhase =
+      effectiveRr > 0
+        ? (((this.respPhase + (effectiveRr / 60) * dtSec) % 1) + 1) % 1
+        : 0;
+
+    const s = synthesizeRealtimeSample(vitals, this.sampleTimeSec, {
+      ecgPhase: this.ecgPhase,
+      respPhase: this.respPhase,
+    });
+    this.ecg[this.writeCursor] = s.ecgMv;
+    this.abp[this.writeCursor] = s.abpMmHg;
+    this.spo2[this.writeCursor] = s.spo2Wave;
+    this.etco2[this.writeCursor] = s.etco2MmHg;
+    this.writeCursor = (this.writeCursor + 1) % this.capacity;
+  }
+
+  public prefill(vitals: VitalState, samplesToFill = 1200): void {
+    const count = Math.min(this.capacity, samplesToFill);
+    for (let i = 0; i < count; i++) {
+      this.advanceOneSample(vitals, 0.002);
+    }
+  }
+}
+
+export function stepTelemetryFrame(
+  ring: TelemetryRingBuffer,
+  vitals: VitalState,
+  rawDeltaMs: number
+): { clampedDeltaMs: number; samplesWritten: number } {
+  const clampedDeltaMs = Math.max(0, Math.min(100, rawDeltaMs));
+  const exactSamples = (clampedDeltaMs / 1000) * 500 + ring.fractionalSamples;
+  const samplesWritten = Math.floor(exactSamples + 1e-9);
+  ring.fractionalSamples = Math.max(0, exactSamples - samplesWritten);
+
+  for (let i = 0; i < samplesWritten; i++) {
+    ring.advanceOneSample(vitals, 0.002);
+  }
+
+  return { clampedDeltaMs, samplesWritten };
+}
+
