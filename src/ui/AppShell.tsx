@@ -145,17 +145,17 @@ export function AppShell(props: AppShellProps) {
   ];
 
   const workspaceGridCols = sidebarCollapsed
-    ? 'grid-cols-1 md:grid-cols-[56px_minmax(0,1fr)] xl:grid-cols-[56px_minmax(0,1fr)_360px]'
-    : 'grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_360px]';
+    ? 'grid-cols-1 md:grid-cols-[56px_minmax(0,1fr)] xl:grid-cols-[56px_minmax(0,1fr)_280px] 2xl:grid-cols-[56px_minmax(0,1fr)_360px]'
+    : 'grid-cols-1 md:grid-cols-[200px_minmax(0,1fr)] xl:grid-cols-[200px_minmax(0,1fr)_280px] 2xl:grid-cols-[240px_minmax(0,1fr)_360px]';
 
   return (
     <div class="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--bg)', color: 'var(--text)' }}>
       {/* Unified Single 64px Sticky Top Bar (Zero Double-Stacked Banners) */}
       <header
-        class="sticky top-0 z-30 h-16 px-4 border-b flex items-center justify-between gap-3"
+        class="sticky top-0 z-30 h-16 px-3 sm:px-4 border-b flex items-center justify-between gap-2"
         style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
       >
-        <div class="flex items-center gap-3 min-w-0">
+        <div class="flex items-center gap-2.5 min-w-0 shrink-0">
           <button
             type="button"
             data-testid="sidebar-collapse-toggle"
@@ -184,13 +184,13 @@ export function AppShell(props: AppShellProps) {
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style={{ color: 'var(--primary)' }}>
               <path d="M2 12h4l3-8 4 16 3-8h6" />
             </svg>
-            <span>TeleWard</span>
+            <span class="hidden sm:inline">TeleWard</span>
             <span class="hidden 2xl:inline tw-mono-vital text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--surface-muted)', color: 'var(--text-muted)' }}>
               ICU-4A // 500Hz
             </span>
           </a>
 
-          <nav aria-label="Primary Workspace Navigation" class="hidden lg:flex items-center gap-1 h-16">
+          <nav aria-label="Primary Workspace Navigation" class="hidden xl:flex items-center gap-0.5 h-16">
             {navItems.map((item) => {
               const isActive = activeArea === item.area;
               return (
@@ -202,7 +202,7 @@ export function AppShell(props: AppShellProps) {
                     onNavigate(item.href);
                   }}
                   aria-current={isActive ? 'page' : undefined}
-                  class="h-16 px-3 inline-flex items-center text-sm font-medium no-underline transition-colors whitespace-nowrap"
+                  class="h-16 px-2.5 2xl:px-3 inline-flex items-center text-sm font-medium no-underline transition-colors whitespace-nowrap"
                   style={{
                     color: isActive ? 'var(--primary)' : 'var(--text-muted)',
                     borderBottom: isActive ? '2px solid var(--primary)' : '2px solid transparent',
@@ -216,8 +216,8 @@ export function AppShell(props: AppShellProps) {
         </div>
 
         {/* Center Instrument Strip: Quick Strip Search + Embedded IEC 60601-1-8 Alarm Beacon & Silence Countdown */}
-        <div class="flex items-center gap-2.5 min-w-0 flex-1 max-w-2xl justify-center">
-          <div class="w-full max-w-xs hidden sm:block">
+        <div class="flex items-center gap-2 min-w-0 justify-center">
+          <div class="w-56 hidden 2xl:block">
             <label htmlFor="tw-global-search" class="sr-only">
               Filter PTB-XL cases or rhythm class
             </label>
@@ -245,20 +245,21 @@ export function AppShell(props: AppShellProps) {
 
           <div
             data-testid="audio-arm-banner"
-            class="h-10 px-2.5 rounded-md border flex items-center gap-2 text-sm shrink-0"
+            class="h-10 px-2 rounded-md border flex items-center gap-1.5 text-sm shrink-0"
             style={{ backgroundColor: 'var(--surface-muted)', borderColor: 'var(--border)' }}
           >
             <span
-              class="tw-mono-vital px-2 py-0.5 rounded text-xs font-semibold"
+              class="tw-mono-vital px-2 py-0.5 rounded text-xs font-semibold whitespace-nowrap"
               style={{ backgroundColor: beaconBg, color: beaconText }}
             >
-              IEC 60601-1-8 · {highestPriority}
+              <span class="hidden md:inline">IEC 60601-1-8 · </span>
+              {highestPriority}
             </span>
 
             <button
               type="button"
               onClick={onToggleAudioArmOrMute}
-              class="min-h-8 px-2 inline-flex items-center text-xs font-semibold rounded border"
+              class="min-h-8 px-2 hidden md:inline-flex items-center text-xs font-semibold rounded border whitespace-nowrap"
               style={{
                 backgroundColor: 'var(--surface)',
                 borderColor: 'var(--border)',
@@ -272,7 +273,7 @@ export function AppShell(props: AppShellProps) {
               type="button"
               data-testid="alarm-silence-120s-btn"
               onClick={handleToggleSilence120s}
-              class="min-h-8 px-2 inline-flex items-center tw-mono-vital text-xs font-semibold rounded border"
+              class="min-h-8 px-2 inline-flex items-center tw-mono-vital text-xs font-semibold rounded border whitespace-nowrap"
               style={{
                 backgroundColor: silenceRemainingSec > 0 ? 'var(--alarm-warn-bg)' : 'var(--surface)',
                 borderColor: 'var(--border)',
@@ -280,12 +281,18 @@ export function AppShell(props: AppShellProps) {
               }}
               title="Silence IEC 60601-1-8 audible alarms for 120 seconds"
             >
-              {silenceRemainingSec > 0 ? `SILENCED ${silenceRemainingSec}s` : 'Silence 120s'}
+              {silenceRemainingSec > 0 ? (
+                `SILENCED ${silenceRemainingSec}s`
+              ) : (
+                <>
+                  <span class="hidden sm:inline">Silence&nbsp;</span>120s
+                </>
+              )}
             </button>
 
             {cohortBannerText ? (
               <span
-                class="hidden xl:inline-flex px-2 py-0.5 rounded text-xs tw-mono-vital"
+                class="hidden 2xl:inline-flex px-2 py-0.5 rounded text-xs tw-mono-vital whitespace-nowrap"
                 style={{ backgroundColor: 'var(--surface)', color: 'var(--text)' }}
               >
                 {cohortBannerText}
@@ -436,13 +443,19 @@ export function AppShell(props: AppShellProps) {
                 >
                   <span>{sidebarCollapsed ? 'ALL' : 'All Curated Strips'}</span>
                   {!sidebarCollapsed ? (
-                    <span class="tw-mono-vital" style={{ color: 'var(--sidebar-muted)' }}>
-                      {records.length}
+                    <span class="tw-mono-vital text-xs" style={{ color: 'var(--sidebar-muted)' }}>
+                      {(() => {
+                        const unlockedCount = records.filter((r) => !canAccessCase || canAccessCase(r)).length;
+                        return unlockedCount === records.length
+                          ? String(records.length)
+                          : `${unlockedCount}/${records.length}`;
+                      })()}
                     </span>
                   ) : null}
                 </button>
               </li>
               {RHYTHM_CLASSES.map((rClass) => {
+                const totalForClass = records.filter((r) => r.rhythmClass === rClass).length;
                 const count = records.filter(
                   (r) => (!canAccessCase || canAccessCase(r)) && r.rhythmClass === rClass
                 ).length;
@@ -451,7 +464,7 @@ export function AppShell(props: AppShellProps) {
                   <li key={rClass}>
                     <button
                       type="button"
-                      title={`${rClass} (${count} strips)`}
+                      title={`${rClass} (${count} of ${totalForClass} strips unlocked)`}
                       onClick={() => {
                         onSelectRhythmFilter(rClass);
                         const firstMatch = records.find(
@@ -469,8 +482,8 @@ export function AppShell(props: AppShellProps) {
                     >
                       <span>{sidebarCollapsed ? rClass.slice(0, 3) : rClass}</span>
                       {!sidebarCollapsed ? (
-                        <span class="tw-mono-vital" style={{ color: 'var(--sidebar-muted)' }}>
-                          {count}
+                        <span class="tw-mono-vital text-xs" style={{ color: 'var(--sidebar-muted)' }}>
+                          {count === totalForClass ? count : `${count}/${totalForClass}`}
                         </span>
                       ) : null}
                     </button>

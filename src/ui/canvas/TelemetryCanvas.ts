@@ -58,11 +58,16 @@ export function syncCanvasHiDpi(
   canvas: HTMLCanvasElement,
   logicalWidth: number,
   logicalHeight: number,
-  ctx?: CanvasRenderingContext2D | null
+  ctx?: CanvasRenderingContext2D | null,
+  adaptClientWidth = false
 ): { width: number; height: number; dpr: number } {
+  const effLogicalW =
+    adaptClientWidth && canvas.clientWidth > 120
+      ? Math.round(canvas.clientWidth)
+      : logicalWidth;
   const rawDpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
   const dpr = Math.max(1, Math.min(3, rawDpr));
-  const targetW = Math.round(logicalWidth * dpr);
+  const targetW = Math.round(effLogicalW * dpr);
   const targetH = Math.round(logicalHeight * dpr);
   if (canvas.width !== targetW || canvas.height !== targetH) {
     canvas.width = targetW;
@@ -71,7 +76,7 @@ export function syncCanvasHiDpi(
   if (ctx && typeof ctx.setTransform === 'function') {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
-  return { width: logicalWidth, height: logicalHeight, dpr };
+  return { width: effLogicalW, height: logicalHeight, dpr };
 }
 
 export function renderTelemetryBedCanvas(
@@ -340,6 +345,39 @@ export function render12LeadCaliperCanvas(
   ctx.lineTo(xT2, height);
   ctx.stroke();
 
+  // Horizontal measurement bridge & grab handles between T1 and T2
+  const bridgeY = stripTop - 14;
+  ctx.strokeStyle = '#0EA5E9';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(xT1, bridgeY);
+  ctx.lineTo(xT2, bridgeY);
+  ctx.stroke();
+
+  ctx.fillStyle = '#0EA5E9';
+  ctx.fillRect(xT1 - 3, 2, 6, 6);
+  ctx.fillRect(xT2 - 3, 2, 6, 6);
+  ctx.fillRect(xT1 - 3, height - 8, 6, 6);
+  ctx.fillRect(xT2 - 3, height - 8, 6, 6);
+
+  if (typeof ctx.fillText === 'function') {
+    const deltaMs = Math.round(Math.abs(caliper.t2Ms - caliper.t1Ms));
+    const bpmText = deltaMs >= 150 ? ` · ${Math.round(60000 / deltaMs)} bpm` : '';
+    const midX = Math.max(40, Math.min(width - 140, (xT1 + xT2) * 0.5 - 52));
+    ctx.fillStyle = darkTheme ? '#0C1117' : '#FCFBF9';
+    ctx.fillRect(midX - 4, bridgeY - 10, 128, 16);
+    if (typeof ctx.strokeRect === 'function') {
+      ctx.strokeStyle = '#0EA5E9';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(midX - 4, bridgeY - 10, 128, 16);
+    }
+    ctx.fillStyle = '#0EA5E9';
+    ctx.font = '600 10px monospace';
+    ctx.fillText(`Δt ${deltaMs} ms${bpmText}`, midX + 2, bridgeY + 2);
+    ctx.fillText(`T1 ${Math.round(caliper.t1Ms)}ms`, Math.min(width - 72, xT1 + 6), height - 10);
+    ctx.fillText(`T2 ${Math.round(caliper.t2Ms)}ms`, Math.min(width - 72, xT2 + 6), height - 10);
+  }
+
   // Horizontal V1 & V2 amplitude calipers on the bottom Lead II strip
   const yV1 = stripMid - caliper.v1Mv * stripScale;
   const yV2 = stripMid - caliper.v2Mv * stripScale;
@@ -351,6 +389,13 @@ export function render12LeadCaliperCanvas(
   ctx.moveTo(0, yV2);
   ctx.lineTo(width, yV2);
   ctx.stroke();
+
+  if (typeof ctx.fillText === 'function') {
+    ctx.fillStyle = '#FF5252';
+    ctx.font = '600 10px monospace';
+    ctx.fillText(`V1 ${caliper.v1Mv >= 0 ? '+' : ''}${caliper.v1Mv.toFixed(2)}mV`, width - 168, Math.max(stripTop + 12, yV1 - 4));
+    ctx.fillText(`V2 ${caliper.v2Mv >= 0 ? '+' : ''}${caliper.v2Mv.toFixed(2)}mV`, width - 82, Math.max(stripTop + 12, yV2 - 4));
+  }
 
   if (showGroundTruth) {
     const f = record.fiducials;

@@ -786,6 +786,11 @@ export class ShiftController {
             bed.stabilized = false;
             nextRhythm = 'ASYSTOLE';
             nextPaced = false;
+            nextState.hr = 0;
+            nextState.sbp = 0;
+            nextState.dbp = 0;
+            nextState.rr = 0;
+            this.continuousStates[i] = nextState;
             bed.caseId = getCaseIdForRhythm('ASYSTOLE', bed.bedIndex);
             expiredThisTick = true;
           }
