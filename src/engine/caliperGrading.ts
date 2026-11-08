@@ -98,6 +98,7 @@ export interface CaliperSubmissionInput {
 
 export interface CaliperGradeReport {
   prPass: boolean;
+  prExempt?: boolean;
   qrsPass: boolean;
   qtcPass: boolean;
   stPass: boolean;
@@ -119,31 +120,33 @@ export function gradeCaliperSubmission(
   sub: CaliperSubmissionInput
 ): CaliperGradeReport {
   const f = record.fiducials;
-  const rawPrErr = Math.abs(sub.prMs - f.prMs);
+  const prExempt = f.prMs === 0;
+  const rawPrErr = prExempt ? 0 : Math.abs(sub.prMs - f.prMs);
   const rawQrsErr = Math.abs(sub.qrsMs - f.qrsMs);
   const rawQtcErr = Math.abs(sub.qtcMs - f.qtcMs);
   const rawStErr = Math.abs(sub.stMv - f.stMv);
 
-  const prValid = Number.isFinite(sub.prMs) && sub.prMs >= 0;
+  const prValid = prExempt || (Number.isFinite(sub.prMs) && sub.prMs >= 0);
   const qrsValid =
     Number.isFinite(sub.qrsMs) && (f.qrsMs === 0 ? sub.qrsMs >= 0 : sub.qrsMs > 0);
   const qtcValid =
     Number.isFinite(sub.qtcMs) && (f.qtcMs === 0 ? sub.qtcMs >= 0 : sub.qtcMs > 0);
   const stValid = Number.isFinite(sub.stMv);
 
-  const prPass = prValid && rawPrErr <= PR_TOLERANCE_MS + 1e-6;
+  const prPass = prExempt ? true : prValid && rawPrErr <= PR_TOLERANCE_MS + 1e-6;
   const qrsPass = qrsValid && rawQrsErr <= QRS_TOLERANCE_MS + 1e-6;
   const qtcPass = qtcValid && rawQtcErr <= QTC_TOLERANCE_MS + 1e-6;
   const stPass = stValid && rawStErr <= ST_TOLERANCE_MV + 1e-6;
   const rhythmPass = sub.rhythmClass === record.rhythmClass;
 
-  const prErrorMs = Math.round(sub.prMs - f.prMs);
+  const prErrorMs = prExempt ? 0 : Math.round(sub.prMs - f.prMs);
   const qrsErrorMs = Math.round(sub.qrsMs - f.qrsMs);
   const qtcErrorMs = Math.round(sub.qtcMs - f.qtcMs);
   const stErrorMv = Number((sub.stMv - f.stMv).toFixed(3));
 
   return {
     prPass,
+    prExempt,
     qrsPass,
     qtcPass,
     stPass,
@@ -155,3 +158,5 @@ export function gradeCaliperSubmission(
     stErrorMv,
   };
 }
+
+export const gradeCaliperMeasurements = gradeCaliperSubmission;

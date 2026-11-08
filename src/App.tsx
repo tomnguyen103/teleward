@@ -22,6 +22,7 @@ import type { CaliperGradeReport } from './engine/caliperGrading.ts';
 import { requestEntitlementCheckout } from './ui/apiClient.ts';
 import { AppShell, type ActiveRouteArea } from './ui/AppShell.tsx';
 import { Iec60601AlarmSynthesizer } from './ui/audio/iec60601Alarms.ts';
+import { buildCohortSubPath, parseTelewardRoute } from './ui/router.ts';
 import { CaliperView } from './ui/views/CaliperView.tsx';
 import { CohortProView } from './ui/views/CohortProView.tsx';
 import { DailyChallengeView } from './ui/views/DailyChallengeView.tsx';
@@ -69,6 +70,7 @@ export function App(props: AppProps) {
     report: CaliperGradeReport | null;
     record: PtbxlCaseRecord | null;
   }>({ report: null, record: null });
+  const [sessionCohortSeed, setSessionCohortSeed] = useState<string | null>(null);
 
   const alarmSynthRef = useRef<Iec60601AlarmSynthesizer | null>(null);
   if (!alarmSynthRef.current) {
@@ -78,22 +80,12 @@ export function App(props: AppProps) {
   const [audioMuted, setAudioMuted] = useState(false);
   const checkoutSeqRef = useRef(0);
 
-  // Parse path and optional ?cohort= or ?checkout= query parameters
-  const [pathnamePart, searchPart = ''] = currentPath.split('?');
-  const pathname = pathnamePart || '/shift';
-  const urlParams = new URLSearchParams(searchPart);
-  const rawCohortParam = urlParams.get('cohort');
-  const parsedCohort = parseCohortSeed(rawCohortParam);
-  const validCohortSeed = parsedCohort.valid ? parsedCohort.cohort : null;
-  const checkoutParam = urlParams.get('checkout');
-
-  const activeArea: ActiveRouteArea = pathname.startsWith('/daily')
-    ? 'daily'
-    : pathname.startsWith('/caliper')
-      ? 'caliper'
-      : pathname.startsWith('/cohort')
-        ? 'cohort'
-        : 'shift';
+  const parsedRoute = parseTelewardRoute(currentPath);
+  const activeArea: ActiveRouteArea = parsedRoute.area;
+  const validCohortSeed = parsedRoute.invalidCohortParam
+    ? null
+    : parsedRoute.cohortSeed ?? sessionCohortSeed;
+  const parsedCohort = parseCohortSeed(validCohortSeed);
 
   const shiftSeed =
     (props.initialSeed ??
@@ -112,13 +104,17 @@ export function App(props: AppProps) {
   }
 
   useEffect(() => {
-    if (checkoutParam === 'cancelled') {
-      setCheckoutNotice(
-        'Checkout cancelled. Your free starter tier (24 PTB-XL records) remains active with zero charges.'
-      );
-    } else if (checkoutParam === 'success') {
-      const tierParam = urlParams.get('tier');
-      const tokenParam = urlParams.get('token')?.trim() ?? '';
+    if (parsedRoute.cohortSeed) {
+      setSessionCohortSeed(parsedRoute.cohortSeed);
+    }
+  }, [parsedRoute.cohortSeed]);
+
+  useEffect(() => {
+    if (parsedRoute.checkoutStatus === 'cancelled') {
+      setCheckoutNotice('Checkout cancelled. Free starter access stays active.');
+    } else if (parsedRoute.checkoutStatus === 'success') {
+      const tierParam = parsedRoute.checkoutTier;
+      const tokenParam = parsedRoute.checkoutToken?.trim() ?? '';
       if (
         (tierParam === 'exam_pass' || tierParam === 'instructor_cohort') &&
         tokenParam !== ''
@@ -128,13 +124,13 @@ export function App(props: AppProps) {
           setEntitlementTier(res.tier);
           setCheckoutNotice(`Stripe Checkout verified. ${res.tier} unlocked.`);
         } else {
-          setCheckoutNotice('Checkout token invalid or missing. Entitlement remains free.');
+          setCheckoutNotice('Checkout token invalid or missing. Free tier stays active.');
         }
       } else {
-        setCheckoutNotice('Checkout token invalid or missing. Entitlement remains free.');
+        setCheckoutNotice('Checkout token invalid or missing. Free tier stays active.');
       }
     }
-  }, [checkoutParam, searchPart]);
+  }, [parsedRoute.checkoutStatus, parsedRoute.checkoutTier, parsedRoute.checkoutToken]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -203,13 +199,9 @@ export function App(props: AppProps) {
   }, [darkTheme]);
 
   const navigate = (nextPath: string) => {
-    const resolvedPath =
-      validCohortSeed !== null && !nextPath.includes('?')
-        ? `${nextPath}?cohort=${encodeURIComponent(validCohortSeed)}`
-        : nextPath;
-    setCurrentPath(resolvedPath);
+    setCurrentPath(nextPath);
     if (typeof window !== 'undefined' && !props.initialPath) {
-      window.history.pushState({}, '', resolvedPath);
+      window.history.pushState({}, '', nextPath);
     }
   };
 
@@ -256,6 +248,7 @@ export function App(props: AppProps) {
     const synth = alarmSynthRef.current!;
     if (!synth.isArmed()) {
       const ok = synth.armAudio();
+      void synth.arm();
       setAudioArmed(ok);
       setAudioMuted(false);
       const priorities = controller.getBeds().map((b) => b.alarmPriority);
@@ -411,13 +404,11 @@ export function App(props: AppProps) {
 
   const shiftResetKey = `${controller.getSeed()}:${resetCount}`;
 
-  const caseIdFromRoute = pathname.startsWith('/caliper/')
-    ? pathname.slice('/caliper/'.length) || 'ptbxl-001'
-    : 'ptbxl-001';
+  const caseIdFromRoute = parsedRoute.caseId;
 
   const cohortBanner = validCohortSeed
     ? `Cohort Mode Active: ${validCohortSeed}`
-    : rawCohortParam !== null && !parsedCohort.valid
+    : parsedRoute.invalidCohortParam
       ? 'Invalid cohort parameter ignored. Default shift is active.'
       : null;
 
@@ -498,7 +489,7 @@ export function App(props: AppProps) {
           caseId={caseIdFromRoute}
           onSelectCaseId={(cid) => navigate(`/caliper/${cid}`)}
           canAccessCase={canAccessCase}
-          onNavigateCohortUnlock={() => navigate('/cohort')}
+          onNavigateCohortUnlock={() => navigate('/cohort/billing')}
           darkTheme={darkTheme}
           onGradeUpdate={(report, record) => setLastCaliperGrade({ report, record })}
         />
@@ -508,10 +499,17 @@ export function App(props: AppProps) {
         <CohortProView
           entitlementTier={entitlementTier}
           activeCohortSeed={validCohortSeed}
+          cohortSubRoute={parsedRoute.cohortSubRoute}
+          onSelectSubRoute={(sub, seed) =>
+            navigate(buildCohortSubPath(sub, seed ?? validCohortSeed))
+          }
           checkoutNotice={checkoutNotice}
           scoreSummary={scoreSummary}
           onActivateTier={handleActivateTier}
-          onLaunchCohortShift={(seed) => navigate(`/shift?cohort=${seed}`)}
+          onLaunchCohortShift={(seed) => {
+            setSessionCohortSeed(seed);
+            navigate(`/shift/cohort/${encodeURIComponent(seed)}`);
+          }}
         />
       ) : null}
     </AppShell>

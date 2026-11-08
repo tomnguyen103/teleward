@@ -96,7 +96,7 @@ export function DailyChallengeView(props: DailyChallengeViewProps) {
         setLeaderboard(res.leaderboard);
         if (!res.online) {
           setStorageWarning(
-            'Server offline: score saved locally only and not confirmed in shared standings.'
+            'Server is offline. Score stays in local storage.'
           );
         }
       }

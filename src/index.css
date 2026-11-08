@@ -2,8 +2,9 @@
 
 :root,
 [data-theme="dark"] {
-  --font-sans: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-display: 'Sora', 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-sans: 'Source Sans 3', 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, monospace;
 
   --bg: #070A0E;
   --surface: #0C1117;
@@ -113,7 +114,7 @@ a:focus-visible {
 h1,
 h2,
 h3 {
-  font-family: var(--font-sans);
+  font-family: var(--font-display);
   font-style: normal;
   color: var(--text);
   text-wrap: balance;

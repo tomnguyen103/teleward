@@ -182,6 +182,26 @@ export function loadPtbxlBinary(
     );
   }
 
+  if (
+    manifest.sha256Hex !== undefined &&
+    (typeof manifest.sha256Hex !== 'string' || !/^[0-9a-f]{64}$/i.test(manifest.sha256Hex))
+  ) {
+    throw new TelewardBinaryError(
+      'MANIFEST_MISMATCH',
+      `Manifest sha256Hex "${String(manifest.sha256Hex)}" is not a valid 64-character hex digest.`
+    );
+  }
+
+  if (
+    manifest.binaryByteLength !== undefined &&
+    manifest.binaryByteLength !== buffer.byteLength
+  ) {
+    throw new TelewardBinaryError(
+      'MANIFEST_MISMATCH',
+      `Manifest binaryByteLength ${String(manifest.binaryByteLength)} does not match binary buffer length ${buffer.byteLength}.`
+    );
+  }
+
   const payloadFloats = new Float32Array(buffer, HEADER_BYTE_LENGTH, EXPECTED_PAYLOAD_FLOATS);
   const recordsById = new Map<string, PtbxlCaseRecord>();
   for (let i = 0; i < manifest.records.length; i++) {

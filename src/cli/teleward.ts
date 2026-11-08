@@ -4,9 +4,11 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadPtbxlBinary } from '../data/ptbxlLoader.ts';
 import {
+  ShiftController,
   TelewardCliValidationError,
   runSimulation,
 } from '../engine/aclsEngine.ts';
+import { fnv1a32 } from '../engine/prng.ts';
 import { startTelewardServer } from '../server/apiServer.ts';
 import type { Rfc7807Error } from '../types/teleward.ts';
 
@@ -141,6 +143,43 @@ export function executeCli(argv: string[]): number {
           `[TeleWard ACLS Sim] seed=${result.seed} scenario=${result.scenario} intervention=${result.intervention ?? 'none'} -> outcome=${result.outcome} final=${result.finalVitals.rhythm} BP=${result.finalVitals.sbp}/${result.finalVitals.dbp} EtCO2=${result.finalVitals.etco2}\n`
         );
       }
+      return 0;
+    }
+
+    if (subcommand === 'simulate') {
+      const seedRaw = flags.get('seed');
+      const numericSeed =
+        seedRaw === undefined
+          ? 42
+          : typeof seedRaw === 'string' && /^\d+$/.test(seedRaw.trim())
+            ? Number(seedRaw.trim()) >>> 0
+            : typeof seedRaw === 'string' && seedRaw.trim() !== ''
+              ? fnv1a32(seedRaw.trim().toUpperCase())
+              : 42;
+      const ctrl = new ShiftController(numericSeed);
+      const summary = ctrl.computeShiftScore();
+      const payload = {
+        seed: typeof seedRaw === 'string' ? seedRaw.trim() : numericSeed,
+        numericSeed,
+        elapsedSec: ctrl.getElapsedSec(),
+        scorePct: summary.scorePct,
+        bedsStabilized: summary.bedsStabilized,
+        totalViolations: summary.totalViolations,
+        beds: ctrl.getBeds().map((b) => ({
+          bedIndex: b.bedIndex,
+          bedLabel: b.bedLabel,
+          patientName: b.patientName,
+          caseId: b.caseId,
+          rhythm: b.vitals.rhythm,
+          hr: b.vitals.hr,
+          sbp: b.vitals.sbp,
+          dbp: b.vitals.dbp,
+          map: b.vitals.map,
+          spo2: b.vitals.spo2,
+          stabilized: b.stabilized,
+        })),
+      };
+      process.stdout.write(JSON.stringify(payload, null, 2) + '\n');
       return 0;
     }
 

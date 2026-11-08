@@ -94,5 +94,74 @@ describe('Ticket 01: Continuous-Phase Cardiac Synthesis & Coupled Hemodynamics',
     rescueShift.applyIntervention(nonVfibBed.bedIndex, 'defibrillation', 2000);
     expect(rescueShift.getBeds()[nonVfibBed.bedIndex]!.vitals.rhythm).toBe('NSR');
   });
-});
 
+  it('v2.0 Audit (F-09 & F-10): unifies isBedStabilized hemodynamic criteria, clamps ShiftController at 300s, and supports npx teleward simulate --seed 42 --json', async () => {
+    const { isBedStabilized, SHIFT_DURATION_SEC } = await import('../src/engine/aclsEngine.ts');
+    const { executeCli } = await import('../src/cli/teleward.ts');
+
+    // Hypotensive NSR (SBP 50, MAP 40) must NOT be marked stabilized
+    const hypotensiveNsr = {
+      ...createInitialVitals('NSR'),
+      sbp: 50,
+      dbp: 35,
+      map: 40,
+      spo2: 96,
+      etco2: 38,
+    };
+    expect(isBedStabilized(hypotensiveNsr, true, [])).toBe(false);
+
+    // Normotensive NSR without AHA violations is stabilized
+    const normotensiveNsr = {
+      ...createInitialVitals('NSR'),
+      sbp: 118,
+      dbp: 76,
+      map: 90,
+      spo2: 98,
+      etco2: 38,
+    };
+    expect(isBedStabilized(normotensiveNsr, true, [])).toBe(true);
+
+    // Normotensive NSR with prior AHA violation is NOT stabilized
+    expect(isBedStabilized(normotensiveNsr, true, ['AHA_UNSYNC_SHOCK_ON_PERFUSING'])).toBe(false);
+
+    // Paced AVB3 with normotension is stabilized
+    const pacedAvb3 = {
+      ...createInitialVitals('AVB3'),
+      paced: true,
+      hr: 70,
+      sbp: 108,
+      dbp: 68,
+      map: 81,
+      spo2: 96,
+      etco2: 37,
+    };
+    expect(isBedStabilized(pacedAvb3, true, [])).toBe(true);
+
+    // 300s shift horizon clamp
+    expect(SHIFT_DURATION_SEC).toBe(300);
+    const shift = new ShiftController(42);
+    expect(shift.isShiftComplete()).toBe(false);
+    for (let i = 0; i < 35; i++) {
+      shift.stepSeconds(10);
+    }
+    expect(shift.getElapsedSec()).toBe(300);
+    expect(shift.isShiftComplete()).toBe(true);
+
+    // CLI simulate subcommand alias
+    let cliStdout = '';
+    const origWrite = process.stdout.write.bind(process.stdout);
+    process.stdout.write = ((chunk: string | Uint8Array): boolean => {
+      cliStdout += String(chunk);
+      return true;
+    }) as typeof process.stdout.write;
+    try {
+      const cliCode = executeCli(['simulate', '--seed', '42', '--json']);
+      expect(cliCode).toBe(0);
+    } finally {
+      process.stdout.write = origWrite;
+    }
+    const parsed = JSON.parse(cliStdout) as { numericSeed: number; beds: unknown[] };
+    expect(parsed.numericSeed).toBe(42);
+    expect(parsed.beds.length).toBe(4);
+  });
+});

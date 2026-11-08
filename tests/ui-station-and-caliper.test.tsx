@@ -299,4 +299,63 @@ describe('Ticket 02: Obsidian ICU Telemetry Cockpit, Unified 64px Header & 2-Bay
       'INVALID RECEIPT (INVALID_COHORT)'
     );
   });
+
+  it('v2.0 Audit (F-15..F-22): enforces route-scoped left rail, 4-field bed cards, on-demand Code Cart drawer, clean-path router without query strings, VTM/STM compact rail badges, and 40px touch targets', async () => {
+    const { parseTelewardRoute, buildCohortSubPath } = await import('../src/ui/router.ts');
+
+    // 1. Clean-path router parsing & generation (zero ?tab= or ?cohort= query strings)
+    expect(buildCohortSubPath('roster', 'NURS402-FALL26')).toBe('/cohort/roster/NURS402-FALL26');
+    expect(buildCohortSubPath('assign', 'NURS402-FALL26')).toBe('/cohort/assign');
+    expect(buildCohortSubPath('billing')).toBe('/cohort/billing');
+    expect(parseTelewardRoute('/cohort/roster/NURS402-FALL26')).toMatchObject({
+      area: 'cohort',
+      cohortSubRoute: 'roster',
+      cohortSeed: 'NURS402-FALL26',
+    });
+    expect(parseTelewardRoute('/shift/cohort/NURS402-FALL26')).toMatchObject({
+      area: 'shift',
+      cohortSeed: 'NURS402-FALL26',
+    });
+
+    // 2. Shift view: route-scoped left rail (Ward Beds only), 4-field bed card ceiling, on-demand Code Cart drawer, and 40px touch targets
+    const { getByTestId, container } = render(
+      <App initialPath="/shift" preloadedDataset={DATASET} initialSeed={42} />
+    );
+
+    const shiftRail = container.querySelector('#tw-scope-sidebar')!;
+    expect(shiftRail.textContent).toContain('Ward Beds');
+    expect(shiftRail.textContent).not.toContain('Rhythm Bank');
+
+    const bedCard0 = getByTestId('bed-card-0');
+    const dlItems = bedCard0.querySelectorAll('dl > div');
+    expect(dlItems.length).toBeLessThanOrEqual(3); // 3 <dl> rows + header = 4 fields max
+
+    const codeCartDrawer = getByTestId('code-cart-drawer');
+    expect(codeCartDrawer.getAttribute('aria-hidden')).toBe('true');
+    expect(codeCartDrawer.classList.contains('hidden')).toBe(true);
+
+    fireEvent.click(getByTestId('open-code-cart-btn'));
+    expect(codeCartDrawer.getAttribute('aria-hidden')).toBe('false');
+    expect(codeCartDrawer.classList.contains('block')).toBe(true);
+
+    // 40px (min-h-10) touch targets on topbar pills
+    expect(getByTestId('arm-audio-btn').className).toContain('min-h-10');
+    expect(getByTestId('alarm-silence-120s-btn').className).toContain('min-h-10');
+
+    cleanup();
+
+    // 3. Caliper view: route-scoped left rail (Rhythm Bank only) and clean VTM/STM collapsed rail badges (never VT_)
+    window.localStorage.setItem('teleward_sidebar_collapsed_v1', 'false');
+    const { getByTestId: getCalTestId, container: calContainer } = render(
+      <App initialPath="/caliper/ptbxl-001" preloadedDataset={DATASET} />
+    );
+    const calRail = calContainer.querySelector('#tw-scope-sidebar')!;
+    expect(calRail.textContent).toContain('Rhythm Bank');
+    expect(calRail.textContent).not.toContain('Ward Beds');
+
+    fireEvent.click(getCalTestId('sidebar-collapse-toggle'));
+    expect(calRail.textContent).toContain('VTM');
+    expect(calRail.textContent).toContain('STM');
+    expect(calRail.textContent).not.toContain('VT_');
+  });
 });
