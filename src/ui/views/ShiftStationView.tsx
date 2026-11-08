@@ -28,6 +28,7 @@ export interface ShiftStationViewProps {
   onOpenCaliperForCase: (caseId: string) => void;
   scoreSummary: { scorePct: number; bedsStabilized: number; totalViolations: number };
   shiftResetKey?: string;
+  isShiftComplete?: boolean;
 }
 
 const ELECTRICAL_BAY_IDS: readonly AclsInterventionId[] = [
@@ -62,7 +63,7 @@ const ISO_26825_DRUG_BADGES: Record<
     hotkey: 1,
   },
   defibrillation: {
-    shortTitle: 'Defibrillation',
+    shortTitle: 'Defibrillate',
     tag: '200J',
     briefHint: 'Pulseless VF, Pulseless VT, or Torsades',
     bg: '#3B0A11',
@@ -70,8 +71,8 @@ const ISO_26825_DRUG_BADGES: Record<
     hotkey: 2,
   },
   transcutaneous_pacing: {
-    shortTitle: 'Pacer (TCP)',
-    tag: '70ppm',
+    shortTitle: 'Pace',
+    tag: '70 ppm',
     briefHint: '3rd-Degree AV Block or refractory Bradycardia',
     bg: '#052E1C',
     fg: '#A7F3D0',
@@ -79,7 +80,7 @@ const ISO_26825_DRUG_BADGES: Record<
   },
   adenosine_6mg: {
     shortTitle: 'Adenosine',
-    tag: '6mg',
+    tag: '6 mg',
     briefHint: 'Regular narrow-complex SVT (AVNRT)',
     bg: '#1E293B',
     fg: '#BAE6FD',
@@ -87,7 +88,7 @@ const ISO_26825_DRUG_BADGES: Record<
   },
   amiodarone_300mg: {
     shortTitle: 'Amiodarone',
-    tag: '300mg',
+    tag: '300 mg',
     briefHint: 'Shock-refractory VF/pVT or stable VT',
     bg: '#3B0A11',
     fg: '#FCA5A5',
@@ -95,7 +96,7 @@ const ISO_26825_DRUG_BADGES: Record<
   },
   epinephrine_1mg: {
     shortTitle: 'Epinephrine',
-    tag: '1mg',
+    tag: '1 mg',
     briefHint: 'Non-shockable Asystole / PEA arrest',
     bg: '#2E1065',
     fg: '#E9D5FF',
@@ -103,7 +104,7 @@ const ISO_26825_DRUG_BADGES: Record<
   },
   atropine_1mg: {
     shortTitle: 'Atropine',
-    tag: '1mg',
+    tag: '1 mg',
     briefHint: 'Symptomatic Sinus Bradycardia',
     bg: '#052E1C',
     fg: '#86EFAC',
@@ -111,7 +112,7 @@ const ISO_26825_DRUG_BADGES: Record<
   },
   magnesium_2g: {
     shortTitle: 'Magnesium',
-    tag: '2g',
+    tag: '2 g',
     briefHint: 'Polymorphic VT (Torsades de Pointes)',
     bg: '#3B2106',
     fg: '#FDE68A',
@@ -119,6 +120,9 @@ const ISO_26825_DRUG_BADGES: Record<
   },
 };
 
+/**
+ * Looks up ACLS intervention metadata by intervention identifier.
+ */
 function getMetadataById(id: AclsInterventionId): InterventionMetadata {
   return (
     ACLS_INTERVENTION_METADATA.find((m) => m.id === id) ?? ACLS_INTERVENTION_METADATA[0]!
@@ -142,18 +146,24 @@ export function ShiftStationView(props: ShiftStationViewProps) {
     onOpenCaliperForCase,
     scoreSummary,
     shiftResetKey,
+    isShiftComplete = false,
   } = props;
 
-  const [activeDockBay, setActiveDockBay] = useState<'all' | 'electrical' | 'pharmacology'>('all');
+  const activeDockBayState = useState<'all' | 'electrical' | 'pharmacology'>('all');
+  const activeDockBay = activeDockBayState[0];
+  const setActiveDockBay = activeDockBayState[1];
   const [codeCartOpen, setCodeCartOpen] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const canvasRefs = useRef<Array<HTMLCanvasElement | null>>([null, null, null, null]);
   const ringBuffersRef = useRef<TelemetryRingBuffer[] | null>(null);
   const lastResetKeyRef = useRef<string | undefined>(undefined);
   const accumSimMsRef = useRef(0);
+  const lastFrameTimeRef = useRef<number | null>(null);
 
   if (!ringBuffersRef.current || lastResetKeyRef.current !== shiftResetKey) {
     lastResetKeyRef.current = shiftResetKey;
     accumSimMsRef.current = 0;
+    lastFrameTimeRef.current = null;
     ringBuffersRef.current = beds.map((b) => {
       const rb = new TelemetryRingBuffer(2500, 90);
       rb.prefill(b.vitals, 1250);
@@ -162,6 +172,10 @@ export function ShiftStationView(props: ShiftStationViewProps) {
   }
 
   const activeBed = beds[selectedBedIndex] ?? beds[0]!;
+
+  useEffect(() => {
+    lastFrameTimeRef.current = null;
+  }, [isPaused, isShiftComplete, shiftResetKey]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || disableHotkeys) return;
@@ -187,18 +201,19 @@ export function ShiftStationView(props: ShiftStationViewProps) {
 
   useEffect(() => {
     let rafId = 0;
-    let lastTime = performance.now();
 
     const tick = (now: number) => {
-      const rawDelta = now - lastTime;
-      lastTime = now;
+      const prevTime = lastFrameTimeRef.current ?? now;
+      const rawDelta = now - prevTime;
+      lastFrameTimeRef.current = now;
       const clampedDelta = Math.max(0, Math.min(100, rawDelta));
-      accumSimMsRef.current += clampedDelta;
 
-      if (accumSimMsRef.current >= 250) {
-        const dtSec = accumSimMsRef.current / 1000;
-        accumSimMsRef.current = 0;
-        onStepSimulation(dtSec);
+      if (!isPaused && !isShiftComplete) {
+        accumSimMsRef.current += clampedDelta;
+        while (accumSimMsRef.current >= 250) {
+          accumSimMsRef.current -= 250;
+          onStepSimulation(0.25);
+        }
       }
 
       const rings = ringBuffersRef.current;
@@ -230,7 +245,7 @@ export function ShiftStationView(props: ShiftStationViewProps) {
 
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, [beds, selectedBedIndex, onStepSimulation]);
+  }, [beds, selectedBedIndex, onStepSimulation, isPaused, isShiftComplete]);
 
   return (
     <div class="flex flex-col gap-3">
@@ -271,13 +286,32 @@ export function ShiftStationView(props: ShiftStationViewProps) {
             {codeCartOpen ? 'Close Cart' : 'Code Cart'}
           </button>
 
+          <button
+            type="button"
+            data-testid="toggle-pause-shift-btn"
+            onClick={() => setIsPaused((p) => !p)}
+            class="tw-btn-secondary"
+          >
+            {isPaused ? 'Resume Shift' : 'Pause Shift'}
+          </button>
+
+          <button
+            type="button"
+            data-testid="step-shift-10s-btn"
+            onClick={() => onStepSimulation(10)}
+            disabled={isShiftComplete}
+            class="tw-btn-secondary tw-mono-vital"
+          >
+            Step +10s
+          </button>
+
           <button type="button" onClick={onResetShift} class="tw-btn-secondary">
             Reset Shift
           </button>
         </div>
       </section>
 
-      {/* Group 2: 2x2 HiDPI 60fps 2D Canvas ICU Bedside Monitor Matrix (4-Field Ceiling per Bed Tile) */}
+      {/* Group 2: 2x2 HiDPI 60fps 2D Canvas ICU Bedside Monitor Matrix (Strict 4-Field Ceiling per Bed Tile) */}
       <section aria-label="4-Bed ICU Telemetry Monitors" class="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {beds.map((bed, idx) => {
           const isSelected = idx === selectedBedIndex;
@@ -300,42 +334,30 @@ export function ShiftStationView(props: ShiftStationViewProps) {
                 isSelected ? 'ring-2 ring-emerald-500' : ''
               }`}
             >
-              {/* Field 1: Bed Identifier & Rhythm / Status */}
+              {/* Field 1 (Bed ID) & Field 2 (Rhythm / Status) */}
               <div class="flex items-center justify-between gap-2 pb-1.5 border-b tw-border">
-                <div class="flex items-center gap-2">
-                  <h2 class="m-0 text-base font-semibold">
-                    {bed.bedLabel} · {bed.patientName}
-                  </h2>
+                <h2 class="m-0 text-base font-semibold">
+                  {bed.bedLabel}
+                </h2>
+
+                <div class="flex items-center gap-2 shrink-0">
                   <span
                     data-testid={`bed-rhythm-${idx}`}
                     class={`tw-mono-vital px-2 py-1 rounded text-xs font-semibold ${alarmBadgeClass}`}
                   >
                     {bed.vitals.rhythm}
                   </span>
-                </div>
-
-                <div class="flex items-center gap-2 shrink-0">
-                  <span class="tw-mono-vital text-sm font-semibold whitespace-nowrap tw-text-muted">
+                  <span class="tw-mono-vital text-xs font-semibold whitespace-nowrap tw-text-muted">
                     {bed.stabilized
-                      ? 'ROSC / STABLE'
+                      ? 'ROSC'
                       : bed.arrested
-                        ? 'ARRESTED'
+                        ? 'ARREST'
                         : `T-${bed.countdownSec.toFixed(0)}s`}
                   </span>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onOpenCaliperForCase(bed.caseId);
-                    }}
-                    class="tw-btn-secondary min-h-10 text-xs px-2.5 whitespace-nowrap"
-                  >
-                    Calipers <span class="hidden 2xl:inline">({bed.caseId})</span>
-                  </button>
                 </div>
               </div>
 
-              {/* Canvas + 3-Item Bedside Readout Column (Total 4 Data Fields per Card) */}
+              {/* Canvas + Field 3 (HR bpm) & Field 4 (MAP / SpO2) */}
               <div class="grid grid-cols-[minmax(0,1fr)_116px] 2xl:grid-cols-[minmax(0,1fr)_140px] gap-2.5 items-center">
                 <canvas
                   ref={(el) => {
@@ -347,7 +369,7 @@ export function ShiftStationView(props: ShiftStationViewProps) {
                   aria-label={`${bed.bedLabel} 500 Hz ECG (II 1.0mV), ABP (ART mmHg), SpO2 (PLETH), and EtCO2 (CO2 mmHg) waveform monitor`}
                 />
 
-                <dl class="m-0 grid grid-cols-1 gap-1.5 text-right">
+                <dl class="m-0 grid grid-cols-1 gap-2 text-right">
                   <div>
                     <dt class="text-xs tw-text-muted">HR (bpm)</dt>
                     <dd class="m-0 tw-mono-vital text-2xl font-semibold tw-text-ecg">
@@ -355,15 +377,9 @@ export function ShiftStationView(props: ShiftStationViewProps) {
                     </dd>
                   </div>
                   <div>
-                    <dt class="text-xs tw-text-muted">ABP / MAP</dt>
+                    <dt class="text-xs tw-text-muted">MAP / SpO2</dt>
                     <dd class="m-0 tw-mono-vital text-sm font-semibold tw-text-abp">
-                      {bed.vitals.sbp}/{bed.vitals.dbp} ({bed.vitals.map})
-                    </dd>
-                  </div>
-                  <div>
-                    <dt class="text-xs tw-text-muted">SpO2 · EtCO2</dt>
-                    <dd class="m-0 tw-mono-vital text-sm font-semibold tw-text-spo2">
-                      {bed.vitals.spo2}% · <span class="tw-text-etco2">{bed.vitals.etco2}</span>
+                      {bed.vitals.map} · <span class="tw-text-spo2">{bed.vitals.spo2}%</span>
                     </dd>
                   </div>
                 </dl>
@@ -384,7 +400,7 @@ export function ShiftStationView(props: ShiftStationViewProps) {
       >
         <div class="px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
           <div class="flex flex-wrap items-center gap-3">
-            <h2 class="m-0">ACLS Crash Cart</h2>
+            <h2 class="m-0">Code Cart: {activeBed.bedLabel}</h2>
             <div class="tw-seg-group" role="group" aria-label="Crash Cart Bay Filter">
               <button
                 type="button"
@@ -410,13 +426,21 @@ export function ShiftStationView(props: ShiftStationViewProps) {
             </div>
           </div>
 
-          <div class="flex items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2">
             <span
               data-testid="acting-as-bed-guard"
-              class="px-3 py-1.5 rounded text-sm font-semibold tw-chip-muted"
+              class="px-3 py-1.5 rounded text-sm font-semibold tw-chip-muted tw-mono-vital"
             >
-              Target: {activeBed.bedLabel} ({activeBed.vitals.rhythm} · {RHYTHM_PROFILES[activeBed.vitals.rhythm].label} · RR {activeBed.vitals.rr})
+              {activeBed.bedLabel} · {activeBed.patientName} · {activeBed.vitals.rhythm} ({RHYTHM_PROFILES[activeBed.vitals.rhythm].label}) · ABP {activeBed.vitals.sbp}/{activeBed.vitals.dbp} · EtCO2 {activeBed.vitals.etco2} · RR {activeBed.vitals.rr}
             </span>
+            <button
+              type="button"
+              data-testid="open-active-bed-caliper-btn"
+              onClick={() => onOpenCaliperForCase(activeBed.caseId)}
+              class="tw-btn-secondary min-h-10 text-xs px-3"
+            >
+              Open Calipers
+            </button>
             <button
               type="button"
               onClick={() => setCodeCartOpen(false)}
@@ -447,24 +471,17 @@ export function ShiftStationView(props: ShiftStationViewProps) {
                     key={item.id}
                     type="button"
                     data-testid={`crash-cart-btn-${item.id}`}
+                    title={`${badge.briefHint} [Hotkey ${badge.hotkey}]`}
                     onClick={() => onApplyIntervention(activeBed.bedIndex, item.id)}
-                    class="tw-btn-secondary text-left flex flex-col justify-between p-2.5 gap-1"
+                    class="tw-btn-secondary text-left flex items-center justify-between p-2.5 gap-2"
                   >
-                    <div class="w-full flex flex-wrap items-center justify-between gap-1">
-                      <span class="font-semibold text-sm">{badge.shortTitle}</span>
-                      <span
-                        class="tw-mono-vital px-1.5 py-0.5 rounded text-xs font-semibold shrink-0"
-                        style={{ backgroundColor: badge.bg, color: badge.fg }}
-                      >
-                        {badge.tag}
-                      </span>
-                    </div>
-                    <div class="w-full flex items-end justify-between gap-1.5">
-                      <span class="text-xs leading-snug tw-text-muted">{badge.briefHint}</span>
-                      <kbd class="tw-mono-vital text-xs shrink-0 tw-text-muted">
-                        [{badge.hotkey}]
-                      </kbd>
-                    </div>
+                    <span class="font-semibold text-sm">{badge.shortTitle}</span>
+                    <span
+                      class="tw-mono-vital px-1.5 py-0.5 rounded text-xs font-semibold shrink-0"
+                      style={{ backgroundColor: badge.bg, color: badge.fg }}
+                    >
+                      {badge.tag}
+                    </span>
                   </button>
                 );
               })}
@@ -478,7 +495,7 @@ export function ShiftStationView(props: ShiftStationViewProps) {
             } ${activeDockBay === 'pharmacology' ? '2xl:col-span-12' : '2xl:col-span-7'} p-3 flex-col gap-2`}
           >
             <div class="flex items-center justify-between">
-              <h3 class="m-0 text-sm font-semibold">ISO-26825 IV Pharmacology Bolus Rack</h3>
+              <h3 class="m-0 text-sm font-semibold">IV Bolus Rack</h3>
               <span class="tw-mono-vital text-xs tw-text-muted">Hotkeys 4–8</span>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-2">
@@ -490,24 +507,17 @@ export function ShiftStationView(props: ShiftStationViewProps) {
                     key={item.id}
                     type="button"
                     data-testid={`crash-cart-btn-${item.id}`}
+                    title={`${badge.briefHint} [Hotkey ${badge.hotkey}]`}
                     onClick={() => onApplyIntervention(activeBed.bedIndex, item.id)}
-                    class="tw-btn-secondary text-left flex flex-col justify-between p-2.5 gap-1"
+                    class="tw-btn-secondary text-left flex items-center justify-between p-2.5 gap-2"
                   >
-                    <div class="w-full flex flex-wrap items-center justify-between gap-1">
-                      <span class="font-semibold text-sm">{badge.shortTitle}</span>
-                      <span
-                        class="tw-mono-vital px-1.5 py-0.5 rounded text-xs font-semibold shrink-0"
-                        style={{ backgroundColor: badge.bg, color: badge.fg }}
-                      >
-                        {badge.tag}
-                      </span>
-                    </div>
-                    <div class="w-full flex items-end justify-between gap-1.5">
-                      <span class="text-xs leading-snug tw-text-muted">{badge.briefHint}</span>
-                      <kbd class="tw-mono-vital text-xs shrink-0 tw-text-muted">
-                        [{badge.hotkey}]
-                      </kbd>
-                    </div>
+                    <span class="font-semibold text-sm">{badge.shortTitle}</span>
+                    <span
+                      class="tw-mono-vital px-1.5 py-0.5 rounded text-xs font-semibold shrink-0"
+                      style={{ backgroundColor: badge.bg, color: badge.fg }}
+                    >
+                      {badge.tag}
+                    </span>
                   </button>
                 );
               })}

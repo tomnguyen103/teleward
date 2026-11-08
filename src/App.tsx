@@ -91,6 +91,7 @@ export function App(props: AppProps) {
   }
   const [audioArmed, setAudioArmed] = useState(false);
   const [audioMuted, setAudioMuted] = useState(false);
+  const [dailySeedActive, setDailySeedActive] = useState(false);
   const checkoutSeqRef = useRef(0);
 
   const parsedRoute = parseTelewardRoute(currentPath);
@@ -129,7 +130,7 @@ export function App(props: AppProps) {
 
   useEffect(() => {
     if (parsedRoute.checkoutStatus === 'cancelled') {
-      setCheckoutNotice('Checkout cancelled. Free starter access stays active.');
+      setCheckoutNotice('Stripe checkout stopped. Free starter access stays active.');
     } else if (parsedRoute.checkoutStatus === 'success') {
       const tierParam = parsedRoute.checkoutTier;
       const tokenParam = parsedRoute.checkoutToken?.trim() ?? '';
@@ -140,12 +141,12 @@ export function App(props: AppProps) {
         const res = activateEntitlement(tierParam, tokenParam, { allowSandboxMint: false });
         if (res.valid) {
           setEntitlementTier(res.tier);
-          setCheckoutNotice(`Stripe Checkout verified. ${res.tier} unlocked.`);
+          setCheckoutNotice(`Stripe confirmed ${res.tier} access.`);
         } else {
-          setCheckoutNotice('Checkout token invalid or missing. Free tier stays active.');
+          setCheckoutNotice('Checkout token is invalid. Free tier stays active.');
         }
       } else {
-        setCheckoutNotice('Checkout token invalid or missing. Free tier stays active.');
+        setCheckoutNotice('Checkout token is invalid. Free tier stays active.');
       }
     }
   }, [parsedRoute.checkoutStatus, parsedRoute.checkoutTier, parsedRoute.checkoutToken]);
@@ -155,8 +156,12 @@ export function App(props: AppProps) {
     const onPopState = (e: PopStateEvent) => {
       const nextUrl = window.location.pathname + window.location.search;
       const poppedRoute = parseTelewardRoute(nextUrl);
-      const stateSeed = (e.state as { cohortSeed?: string | null } | null)?.cohortSeed;
+      const historyState = (e.state as { cohortSeed?: string | null; dailyMode?: boolean } | null) ?? null;
+      const stateSeed = historyState?.cohortSeed;
       const resolvedSeed = poppedRoute.cohortSeed ?? (stateSeed !== undefined ? stateSeed : null);
+      const nextDailyMode =
+        poppedRoute.area === 'shift' && !poppedRoute.cohortSeed && Boolean(historyState?.dailyMode);
+      setDailySeedActive(nextDailyMode);
       setSessionCohortSeed(resolvedSeed);
       try {
         if (resolvedSeed) {
@@ -230,23 +235,59 @@ export function App(props: AppProps) {
     }
   }, [darkTheme]);
 
-  const navigate = (nextPath: string, explicitCohortSeed?: string | null) => {
+  const navigate = (
+    nextPath: string,
+    explicitCohortSeed?: string | null,
+    options?: { dailyMode?: boolean }
+  ) => {
     const nextRoute = parseTelewardRoute(nextPath);
     const seedToStore =
       explicitCohortSeed !== undefined
         ? explicitCohortSeed
         : nextRoute.cohortSeed ?? validCohortSeed;
+    const nextDailyMode =
+      options?.dailyMode !== undefined
+        ? options.dailyMode
+        : nextRoute.area === 'shift' || nextRoute.area === 'cohort' || Boolean(nextRoute.cohortSeed)
+          ? false
+          : dailySeedActive;
+    setDailySeedActive(nextDailyMode);
     setCurrentPath(nextPath);
     if (typeof window !== 'undefined' && !props.initialPath) {
-      window.history.pushState({ cohortSeed: seedToStore }, '', nextPath);
+      window.history.pushState(
+        { cohortSeed: seedToStore, dailyMode: nextDailyMode },
+        '',
+        nextPath
+      );
     }
   };
 
-  const controller = activeArea === 'daily' ? dailyShiftRef.current : shiftRef.current;
+  const useDailyController =
+    activeArea === 'daily' ||
+    (activeArea === 'shift' && !parsedRoute.cohortSeed && dailySeedActive);
+  const controller = useDailyController ? dailyShiftRef.current : shiftRef.current;
   const beds = controller.getBeds();
   const activeBed = beds[selectedBedIndex] ?? beds[0]!;
   const scoreSummary = controller.computeShiftScore();
+  const shiftScoreSummary = shiftRef.current.computeShiftScore();
+  const dailyScoreSummary = dailyShiftRef.current.computeShiftScore();
+
   const shiftInterventionsLog = shiftRef.current
+    .getBeds()
+    .flatMap((b) =>
+      b.causalTimeline
+        .filter((ev) => ev.action !== 'SCENARIO_START' && ev.action !== 'ISCHEMIC_ARREST')
+        .map((ev) => ({
+          bedIndex: b.bedIndex,
+          action: String(ev.action),
+          atSec: ev.timeSec,
+          tick: ev.tick,
+        }))
+    )
+    .sort((a, b) => a.tick - b.tick)
+    .map(({ bedIndex, action, atSec }) => ({ bedIndex, action, atSec }));
+
+  const dailyInterventionsLog = dailyShiftRef.current
     .getBeds()
     .flatMap((b) =>
       b.causalTimeline
@@ -280,7 +321,7 @@ export function App(props: AppProps) {
   };
 
   const handleResetShift = () => {
-    if (activeArea === 'daily') {
+    if (useDailyController) {
       const nextController = new ShiftController(dailySeed);
       dailyShiftRef.current = nextController;
       const priorities = nextController.getBeds().map((b) => b.alarmPriority);
@@ -337,10 +378,10 @@ export function App(props: AppProps) {
     if (activated.valid) {
       setEntitlementTier(activated.tier);
       setCheckoutNotice(
-        `Sandbox Checkout complete: ${activated.tier} token signed and stored.`
+        `Sandbox checkout activated ${activated.tier} access.`
       );
     } else {
-      setCheckoutNotice('Checkout verification in progress.');
+      setCheckoutNotice('Checkout verification is active.');
     }
     void requestEntitlementCheckout(tier, undefined, { allowSandboxMint }).then((remote) => {
       if (checkoutSeqRef.current !== seq) return;
@@ -349,13 +390,13 @@ export function App(props: AppProps) {
         if (synced.valid) {
           setEntitlementTier(synced.tier);
           setCheckoutNotice(
-            `Checkout complete: ${synced.tier} token signed and stored.`
+            `Checkout activated ${synced.tier} access.`
           );
           return;
         }
       }
       if (!activated.valid) {
-        setCheckoutNotice('Checkout requires verified Stripe payment.');
+        setCheckoutNotice('Checkout failed. Start checkout again.');
       }
     });
   };
@@ -392,36 +433,42 @@ export function App(props: AppProps) {
   const inspectorContent = (
     <div class="flex flex-col gap-4" data-tick={renderTick}>
       <div class="flex items-center justify-between gap-2">
-        <h2 class="m-0">ACLS Causal Timeline &amp; Hemodynamic Receipt</h2>
+        <h2 class="m-0">Causal Timeline Log</h2>
         <span class="tw-mono-vital text-xs px-2 py-0.5 rounded tw-chip-muted">
           {activeBed.bedLabel} · {activeBed.vitals.rhythm}
         </span>
       </div>
 
       <div class="border-t pt-3 flex flex-col gap-2.5 tw-border">
-        {activeBed.causalTimeline.map((ev, i) => (
-          <div
-            key={`${ev.tick}-${i}`}
-            class="pb-2.5 border-b text-sm tw-border"
-          >
-            <div class="flex items-center justify-between font-semibold">
-              <span class="tw-mono-vital">t={ev.timeSec.toFixed(1)}s</span>
-              <span class="tw-mono-vital">{ev.action}</span>
-            </div>
-            <div class="tw-mono-vital text-sm mt-1 tw-text-muted">
-              {ev.preVitals.rhythm} ({ev.preVitals.sbp}/{ev.preVitals.dbp} mmHg) →{' '}
-              {ev.postVitals.rhythm} ({ev.postVitals.sbp}/{ev.postVitals.dbp} mmHg)
-            </div>
-            {ev.ahaViolationCode ? (
-              <div class="mt-1 font-semibold tw-text-abp">
-                Violation: <span class="tw-mono-vital">{ev.ahaViolationCode}</span>
+        {activeBed.causalTimeline.length === 0 ? (
+          <p class="m-0 text-sm tw-text-muted">
+            No events exist yet. Select a bed and apply an ACLS intervention.
+          </p>
+        ) : (
+          activeBed.causalTimeline.map((ev, i) => (
+            <div
+              key={`${ev.tick}-${i}`}
+              class="pb-2.5 border-b text-sm tw-border"
+            >
+              <div class="flex items-center justify-between font-semibold">
+                <span class="tw-mono-vital">t={ev.timeSec.toFixed(1)}s</span>
+                <span class="tw-mono-vital">{ev.action}</span>
               </div>
-            ) : null}
-            <p class="m-0 mt-1 text-sm tw-text-muted">
-              {ev.rationale}
-            </p>
-          </div>
-        ))}
+              <div class="tw-mono-vital text-sm mt-1 tw-text-muted">
+                {ev.preVitals.rhythm} ({ev.preVitals.sbp}/{ev.preVitals.dbp} mmHg) →{' '}
+                {ev.postVitals.rhythm} ({ev.postVitals.sbp}/{ev.postVitals.dbp} mmHg)
+              </div>
+              {ev.ahaViolationCode ? (
+                <div class="mt-1 font-semibold tw-text-abp">
+                  Violation: <span class="tw-mono-vital">{ev.ahaViolationCode}</span>
+                </div>
+              ) : null}
+              <p class="m-0 mt-1 text-sm tw-text-muted">
+                {ev.rationale}
+              </p>
+            </div>
+          ))
+        )}
       </div>
 
       {lastCaliperGrade.report !== null &&
@@ -432,7 +479,7 @@ export function App(props: AppProps) {
         validCohortSeed
       ) ? (
         <div class="border-t pt-3 text-sm tw-border">
-          <h3 class="m-0 mb-1">PTB-XL Cardiologist Fiducial Ground Truth</h3>
+          <h3 class="m-0 mb-1">Fiducial Ground Truth</h3>
           <div class="tw-mono-vital tw-text-muted">
             {lastCaliperGrade.record.caseId} · PR {lastCaliperGrade.record.fiducials.prMs} ms · QRS{' '}
             {lastCaliperGrade.record.fiducials.qrsMs} ms · QTc{' '}
@@ -462,7 +509,7 @@ export function App(props: AppProps) {
   const cohortBanner = validCohortSeed
     ? `Cohort Mode Active: ${validCohortSeed}`
     : parsedRoute.invalidCohortParam
-      ? 'Invalid cohort parameter ignored. Default shift is active.'
+      ? 'Cohort parameter is invalid. Default shift is active.'
       : null;
 
   return (
@@ -518,20 +565,18 @@ export function App(props: AppProps) {
           onOpenCaliperForCase={(cid) => navigate(`/caliper/${cid}`)}
           scoreSummary={scoreSummary}
           shiftResetKey={shiftResetKey}
+          isShiftComplete={controller.isShiftComplete()}
         />
       ) : null}
 
       {activeArea === 'daily' ? (
         <DailyChallengeView
-          beds={beds}
-          selectedBedIndex={selectedBedIndex}
-          onSelectBed={setSelectedBedIndex}
-          onApplyIntervention={handleApplyIntervention}
-          onResetShift={handleResetShift}
-          onStepSimulation={handleStepSimulation}
-          onOpenCaliperForCase={(cid) => navigate(`/caliper/${cid}`)}
-          scoreSummary={scoreSummary}
-          shiftResetKey={shiftResetKey}
+          scoreSummary={dailyScoreSummary}
+          interventionsLog={dailyInterventionsLog}
+          elapsedSec={dailyShiftRef.current.getElapsedSec()}
+          onLaunchDailyShift={() => {
+            navigate('/shift', undefined, { dailyMode: true });
+          }}
         />
       ) : null}
 
@@ -557,8 +602,9 @@ export function App(props: AppProps) {
             navigate(buildCohortSubPath(sub, seed ?? validCohortSeed), seed ?? validCohortSeed)
           }
           checkoutNotice={checkoutNotice}
-          scoreSummary={scoreSummary}
+          scoreSummary={shiftScoreSummary}
           interventionsLog={shiftInterventionsLog}
+          elapsedSec={shiftRef.current.getElapsedSec()}
           onActivateTier={handleActivateTier}
           onLaunchCohortShift={(seed) => {
             setSessionCohortSeed(seed);
@@ -567,7 +613,7 @@ export function App(props: AppProps) {
             } catch {
               // Ignore storage restrictions
             }
-            navigate(`/shift/cohort/${encodeURIComponent(seed)}`, seed);
+            navigate(`/shift/cohort/${encodeURIComponent(seed)}`, seed, { dailyMode: false });
           }}
         />
       ) : null}

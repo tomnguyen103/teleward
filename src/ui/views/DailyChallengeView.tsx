@@ -1,34 +1,26 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { formatDailyReceipt } from '../../billing/cohortAndEntitlement.ts';
-import type { BedState } from '../../engine/aclsEngine.ts';
-import { getUtcDateKey } from '../../engine/prng.ts';
-import type { AclsInterventionId } from '../../types/teleward.ts';
+import { getDailySeed, getUtcDateKey } from '../../engine/prng.ts';
 import {
   fetchDailyChallenge,
   getFallbackDailyLeaderboard,
   submitDailyChallenge,
   type DailyLeaderboardEntry,
 } from '../apiClient.ts';
-import { ShiftStationView } from './ShiftStationView.tsx';
 
 export interface DailyChallengeViewProps {
-  beds: readonly BedState[];
-  selectedBedIndex: number;
-  onSelectBed: (index: number) => void;
-  onApplyIntervention: (bedIndex: number, action: AclsInterventionId) => void;
-  onResetShift: () => void;
-  onStepSimulation: (deltaSec: number) => void;
-  onOpenCaliperForCase: (caseId: string) => void;
   scoreSummary: { scorePct: number; bedsStabilized: number; totalViolations: number };
-  shiftResetKey?: string;
+  interventionsLog?: Array<{ bedIndex: number; action: string; atSec?: number }>;
+  elapsedSec?: number;
+  onLaunchDailyShift?: () => void;
 }
 
 /**
- * Renders the UTC-seeded Daily Telemetry Challenge view with segmented sub-views for Live Ward and Standings.
+ * Renders the UTC-seeded Daily Shift Seed view with a 3-group layout: Briefing Strip, 4-Column Daily Standings, and CRC16 Receipt Strip.
  */
 export function DailyChallengeView(props: DailyChallengeViewProps) {
   const utcDateKey = getUtcDateKey();
-  const [activeSubView, setActiveSubView] = useState<'ward' | 'standings'>('ward');
+  const dailySeedNum = getDailySeed();
   const [clinicianAlias, setClinicianAlias] = useState('ICU Operator');
   const [dailyReceipt, setDailyReceipt] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
@@ -82,7 +74,7 @@ export function DailyChallengeView(props: DailyChallengeViewProps) {
       setStorageWarning(null);
     } catch {
       // Graceful fallback when localStorage throws QuotaExceededError (US-03.5)
-      setStorageWarning('Browser storage is full. Copy your daily receipt below.');
+      setStorageWarning('Browser storage is full. Copy the CRC16 receipt below.');
     }
 
     const seq = ++dailyReqSeqRef.current;
@@ -91,49 +83,105 @@ export function DailyChallengeView(props: DailyChallengeViewProps) {
       scorePct: props.scoreSummary.scorePct,
       bedsStabilized: props.scoreSummary.bedsStabilized,
       violations: props.scoreSummary.totalViolations,
+      ...(props.interventionsLog !== undefined ? { interventions: props.interventionsLog } : {}),
+      ...(props.elapsedSec !== undefined ? { elapsedSec: props.elapsedSec } : {}),
     }).then((res) => {
       if (dailyReqSeqRef.current === seq) {
         setLeaderboard(res.leaderboard);
         if (!res.online) {
-          setStorageWarning(
-            'Server is offline. Score stays in local storage.'
-          );
+          setStorageWarning('API server is offline. Local storage holds this score.');
         }
       }
     });
   };
 
   return (
-    <div class="flex flex-col gap-4">
-      {/* Group 1: Header Strip & Segmented Switch */}
+    <div class="flex flex-col gap-4 max-w-5xl mx-auto w-full">
+      {/* Group 1: UTC Daily Shift Seed Briefing Strip */}
       <section class="tw-surface px-4 py-3 flex flex-wrap items-center justify-between gap-4">
         <div class="flex flex-wrap items-center gap-3">
-          <h1 class="m-0">Daily Telemetry Challenge</h1>
+          <h1 class="m-0">Daily Shift Seed</h1>
           <span class="tw-mono-vital text-xs px-2 py-1 rounded tw-chip-muted">
-            UTC {utcDateKey}
+            UTC {utcDateKey} · Seed {dailySeedNum}
           </span>
-          <div class="tw-seg-group" role="tablist" aria-label="Daily Challenge Sub-View">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeSubView === 'ward'}
-              data-active={activeSubView === 'ward' ? 'true' : 'false'}
-              onClick={() => setActiveSubView('ward')}
-              class={activeSubView === 'ward' ? 'tw-seg-btn-active' : 'tw-seg-btn'}
-            >
-              Live Ward
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeSubView === 'standings'}
-              data-active={activeSubView === 'standings' ? 'true' : 'false'}
-              onClick={() => setActiveSubView('standings')}
-              class={activeSubView === 'standings' ? 'tw-seg-btn-active' : 'tw-seg-btn'}
-            >
-              Standings
-            </button>
-          </div>
+          <span class="tw-mono-vital text-xs px-2 py-1 rounded tw-chip-muted">
+            {props.scoreSummary.bedsStabilized} / 4 Beds ({props.scoreSummary.scorePct}%)
+          </span>
+        </div>
+
+        <button
+          type="button"
+          data-testid="launch-daily-shift-btn"
+          onClick={() => props.onLaunchDailyShift?.()}
+          class="tw-btn-primary"
+        >
+          Run Daily Shift
+        </button>
+      </section>
+
+      {storageWarning ? (
+        <div class="tw-surface p-3 text-sm" role="status">
+          {storageWarning}
+        </div>
+      ) : null}
+
+      {/* Group 2: 4-Column Daily Standings Table */}
+      <section class="flex tw-surface p-4 flex-col gap-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b tw-border">
+          <h2 class="m-0">Daily Standings</h2>
+          <span class="tw-mono-vital text-xs tw-text-muted">
+            {leaderboard.length} Daily Entries ({utcDateKey})
+          </span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table
+            data-testid="daily-leaderboard-table"
+            class="w-full text-left border-collapse text-sm"
+          >
+            <thead>
+              <tr class="border-b tw-border tw-text-muted">
+                <th class="py-2 pr-3 font-medium">Rank</th>
+                <th class="py-2 pr-3 font-medium">Clinician</th>
+                <th class="py-2 pr-3 font-medium">Score %</th>
+                <th class="py-2 font-medium">Beds Stabilized</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y tw-border">
+              {leaderboard.map((row, idx) => (
+                <tr key={`${row.receipt}-${idx}`}>
+                  <td class="py-2 pr-3 tw-mono-vital">#{row.rank ?? idx + 1}</td>
+                  <td class="py-2 pr-3 font-medium">{row.clinicianAlias}</td>
+                  <td class="py-2 pr-3 tw-mono-vital font-semibold tw-text-ecg">
+                    {row.scorePct}%
+                  </td>
+                  <td class="py-2 tw-mono-vital text-xs tw-text-muted">
+                    {row.bedsStabilized} / 4 · {row.receipt}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Group 3: Compact CRC16 Receipt & Score Submission Strip */}
+      <section class="tw-surface px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex flex-wrap items-center gap-3">
+          <h2 class="m-0 text-base font-semibold">CRC16 Receipt</h2>
+          {dailyReceipt ? (
+            <strong data-testid="daily-receipt-code" class="tw-mono-vital text-sm px-2.5 py-1 rounded tw-chip-muted">
+              {dailyReceipt}
+            </strong>
+          ) : (
+            <span class="tw-mono-vital text-xs tw-text-muted">
+              {formatDailyReceipt(
+                utcDateKey,
+                props.scoreSummary.scorePct,
+                props.scoreSummary.bedsStabilized
+              )}
+            </span>
+          )}
         </div>
 
         <div class="flex flex-wrap items-center gap-3">
@@ -154,77 +202,14 @@ export function DailyChallengeView(props: DailyChallengeViewProps) {
             />
           </div>
 
-          {dailyReceipt ? (
-            <div class="px-3 py-2 rounded text-sm tw-chip-muted">
-              <span>Receipt: </span>
-              <strong class="tw-mono-vital">{dailyReceipt}</strong>
-            </div>
-          ) : null}
-
           <button
             type="button"
             data-testid="finish-daily-shift-btn"
             onClick={handleFinishDaily}
-            class="tw-btn-primary"
+            class="tw-btn-secondary"
           >
             Submit Score
           </button>
-        </div>
-      </section>
-
-      {storageWarning ? (
-        <div class="tw-surface p-3 text-sm" role="status">
-          {storageWarning}
-        </div>
-      ) : null}
-
-      {/* Group 2A: Live Ward Sub-Panel (Single H1 preserved via hideStationHeader) */}
-      <div class={activeSubView === 'ward' ? 'block' : 'hidden'}>
-        <ShiftStationView
-          stationTitle="Daily Telemetry Challenge"
-          hideStationHeader={true}
-          disableHotkeys={activeSubView !== 'ward'}
-          {...props}
-        />
-      </div>
-
-      {/* Group 2B: Standings Sub-Panel (4-column ceiling, kept mounted in DOM) */}
-      <section class={`${activeSubView === 'standings' ? 'flex' : 'hidden'} tw-surface p-4 flex-col gap-3`}>
-        <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b tw-border">
-          <h2 class="m-0">Daily Standings</h2>
-          <span class="tw-mono-vital text-xs tw-text-muted">
-            {leaderboard.length} Verified Runs ({utcDateKey})
-          </span>
-        </div>
-
-        <div class="overflow-x-auto">
-          <table
-            data-testid="daily-leaderboard-table"
-            class="w-full text-left border-collapse text-sm"
-          >
-            <thead>
-              <tr class="border-b tw-border tw-text-muted">
-                <th class="py-2 pr-3 font-medium">Rank</th>
-                <th class="py-2 pr-3 font-medium">Clinician Callsign</th>
-                <th class="py-2 pr-3 font-medium">Score</th>
-                <th class="py-2 font-medium">Daily Receipt</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y tw-border">
-              {leaderboard.map((row, idx) => (
-                <tr key={`${row.receipt}-${idx}`}>
-                  <td class="py-2 pr-3 tw-mono-vital">#{row.rank ?? idx + 1}</td>
-                  <td class="py-2 pr-3 font-medium">{row.clinicianAlias}</td>
-                  <td class="py-2 pr-3 tw-mono-vital font-semibold tw-text-ecg">
-                    {row.scorePct}% ({row.bedsStabilized}/4)
-                  </td>
-                  <td class="py-2 tw-mono-vital text-xs tw-text-muted">
-                    {row.receipt}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       </section>
     </div>

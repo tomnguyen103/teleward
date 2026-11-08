@@ -255,7 +255,7 @@ export function CaliperView(props: CaliperViewProps) {
             onClick={onNavigateCohortUnlock}
             class="tw-btn-primary"
           >
-            Unlock Pro Access
+            Unlock Pro
           </button>
           <button
             type="button"
@@ -408,7 +408,7 @@ export function CaliperView(props: CaliperViewProps) {
       !Number.isFinite(qtcVal) ||
       !Number.isFinite(stVal)
     ) {
-      setFormError('Enter finite numeric values for PR, QRS, QTc, and ST.');
+      setFormError('Enter numbers for PR, QRS, QTc, and ST.');
       return;
     }
 
@@ -435,18 +435,37 @@ export function CaliperView(props: CaliperViewProps) {
       r.caseId === 'ptbxl-051'
   );
 
+  const hasInputs =
+    qrsInput.trim() !== '' || qtcInput.trim() !== '' || stInput.trim() !== '' || prInput.trim() !== '';
+  const activeStep = gradeReport !== null ? 3 : hasInputs ? 2 : 1;
+
   return (
     <div class="flex flex-col gap-4">
-      {/* Group 1: Header Strip & Case Switcher */}
+      {/* Group 1: Header Strip, 3-Step Phase Indicator & Case Switcher */}
       <section class="tw-surface px-4 py-3 flex flex-wrap items-center justify-between gap-4">
         <div class="flex flex-wrap items-center gap-3">
-          <h1 class="m-0">Diagnostic Strip Calipers</h1>
+          <h1 class="m-0">12-Lead Caliper Workbench</h1>
           <span
             data-testid="active-caliper-case-id"
             class="tw-mono-vital text-xs px-2 py-1 rounded tw-chip-muted"
           >
             {resolvedRecord.caseId} · {paperSpeedMmPerSec} mm/s · {gainMmPerMv} mm/mV
           </span>
+          <div
+            data-testid="caliper-phase-bar"
+            class="hidden md:flex items-center gap-1.5 text-xs tw-mono-vital"
+            aria-label="Caliper adjudication phases"
+          >
+            <span class={`px-2 py-1 rounded ${activeStep === 1 ? 'tw-audio-pill-armed' : 'tw-chip-muted'}`}>
+              1. Measure
+            </span>
+            <span class={`px-2 py-1 rounded ${activeStep === 2 ? 'tw-audio-pill-armed' : 'tw-chip-muted'}`}>
+              2. Diagnose
+            </span>
+            <span class={`px-2 py-1 rounded ${activeStep === 3 ? 'tw-audio-pill-armed' : 'tw-chip-muted'}`}>
+              3. Result
+            </span>
+          </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-3">
@@ -501,7 +520,7 @@ export function CaliperView(props: CaliperViewProps) {
                 const unlocked = canAccessCase(r);
                 return (
                   <option key={r.caseId} value={r.caseId}>
-                    {r.caseId} {unlocked ? `(${r.rhythmClass})` : '(Pro Exam Strip: Locked)'}{' '}
+                    {r.caseId} {unlocked ? `(${r.rhythmClass})` : '(Pro Locked)'}{' '}
                     {r.freeStarter ? '· Free' : '· Pro'}
                   </option>
                 );
@@ -511,7 +530,7 @@ export function CaliperView(props: CaliperViewProps) {
         </div>
       </section>
 
-      {/* Group 2: Interactive Caliper Toolbar & 12-Lead Paper Grid */}
+      {/* Group 2: Interactive Caliper Toolbar (4-Field Readout Strip) & 12-Lead Paper Grid */}
       <section class="tw-surface p-4 flex flex-col gap-3">
         <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b tw-border">
           <div class="tw-seg-group" role="group" aria-label="Active Caliper Handle Selector">
@@ -530,10 +549,8 @@ export function CaliperView(props: CaliperViewProps) {
 
           <div class="flex flex-wrap items-center gap-4 text-sm">
             <span>
-              T1: <strong data-testid="caliper-t1-ms" class="tw-mono-vital">{caliper.t1Ms} ms</strong>
-            </span>
-            <span>
-              T2: <strong data-testid="caliper-t2-ms" class="tw-mono-vital">{caliper.t2Ms} ms</strong>
+              T1/T2: <strong data-testid="caliper-t1-ms" class="tw-mono-vital">{caliper.t1Ms} ms</strong> /{' '}
+              <strong data-testid="caliper-t2-ms" class="tw-mono-vital">{caliper.t2Ms} ms</strong>
             </span>
             <span>
               Δt: <strong class="tw-mono-vital">{metrics.deltaMs} ms ({metrics.hrDisplay})</strong>
@@ -542,13 +559,9 @@ export function CaliperView(props: CaliperViewProps) {
               Bazett QTc: <strong class="tw-mono-vital">{metrics.qtcMs} ms</strong>
             </span>
             <span>
-              V1: <strong data-testid="caliper-v1-mv" class="tw-mono-vital">{caliper.v1Mv} mV</strong>
-            </span>
-            <span>
-              V2: <strong data-testid="caliper-v2-mv" class="tw-mono-vital">{caliper.v2Mv} mV</strong>
-            </span>
-            <span>
-              ΔV: <strong class="tw-mono-vital">{metrics.deltaMv} mV</strong>
+              V1/V2: <strong data-testid="caliper-v1-mv" class="tw-mono-vital">{caliper.v1Mv} mV</strong> /{' '}
+              <strong data-testid="caliper-v2-mv" class="tw-mono-vital">{caliper.v2Mv} mV</strong> (ΔV{' '}
+              <strong class="tw-mono-vital">{metrics.deltaMv} mV</strong>)
             </span>
           </div>
         </div>
@@ -608,6 +621,17 @@ export function CaliperView(props: CaliperViewProps) {
               class="tw-btn-secondary text-sm"
             >
               Set QT
+            </button>
+            <button
+              type="button"
+              data-testid="set-caliper-st-btn"
+              onClick={() => {
+                setStInput(metrics.deltaMv.toFixed(2));
+                setFormError(null);
+              }}
+              class="tw-btn-secondary text-sm"
+            >
+              Set ST Offset
             </button>
             <button
               type="button"
@@ -717,18 +741,24 @@ export function CaliperView(props: CaliperViewProps) {
         ) : null}
 
         {gradeReport ? (
-          <div data-testid="caliper-grade-result" class="mt-4 pt-3 border-t text-sm tw-border">
-            <strong>{gradeReport.overallPass ? 'OVERALL PASS' : 'NEEDS REVIEW'}</strong> · Ground Truth:{' '}
-            <span class="tw-mono-vital">
-              PR{' '}
-              {gradeReport.prExempt
-                ? 'EXEMPT'
-                : `${resolvedRecord.fiducials.prMs} ms (${gradeReport.prPass ? 'PASS' : 'FAIL'})`}{' '}
-              · QRS {resolvedRecord.fiducials.qrsMs} ms ({gradeReport.qrsPass ? 'PASS' : 'FAIL'}) · QTc{' '}
-              {resolvedRecord.fiducials.qtcMs} ms ({gradeReport.qtcPass ? 'PASS' : 'FAIL'}) · ST{' '}
-              {resolvedRecord.fiducials.stMv} mV ({gradeReport.stPass ? 'PASS' : 'FAIL'}) ·{' '}
-              {resolvedRecord.rhythmClass}
-            </span>
+          <div data-testid="caliper-grade-result" class="mt-4 pt-3 border-t text-sm tw-border flex flex-col gap-2">
+            <div>
+              <strong>{gradeReport.overallPass ? 'OVERALL PASS' : 'NEEDS REVIEW'}</strong> · Ground Truth ({resolvedRecord.rhythmClass})
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 tw-mono-vital text-xs">
+              <div class="p-2 rounded tw-chip-muted">
+                PR: {gradeReport.prExempt ? 'EXEMPT' : `${resolvedRecord.fiducials.prMs} ms (${gradeReport.prPass ? 'PASS' : 'FAIL'})`}
+              </div>
+              <div class="p-2 rounded tw-chip-muted">
+                QRS: {resolvedRecord.fiducials.qrsMs} ms ({gradeReport.qrsPass ? 'PASS' : 'FAIL'})
+              </div>
+              <div class="p-2 rounded tw-chip-muted">
+                QTc: {resolvedRecord.fiducials.qtcMs} ms ({gradeReport.qtcPass ? 'PASS' : 'FAIL'})
+              </div>
+              <div class="p-2 rounded tw-chip-muted">
+                ST: {resolvedRecord.fiducials.stMv} mV ({gradeReport.stPass ? 'PASS' : 'FAIL'})
+              </div>
+            </div>
           </div>
         ) : null}
       </section>
