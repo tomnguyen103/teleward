@@ -158,7 +158,7 @@ export function ShiftStationView(props: ShiftStationViewProps) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
       const target = e.target as HTMLElement | null;
       const tag = target?.tagName?.toUpperCase() ?? '';
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) {

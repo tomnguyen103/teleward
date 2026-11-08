@@ -252,12 +252,14 @@ export function render12LeadCaliperCanvas(
   ctx.fillStyle = darkTheme ? '#0A0F16' : '#FFFDF9';
   ctx.fillRect(0, 0, width, height);
 
-  // Calibrated ECG paper minor (1mm) and major (5mm) grid
+  // Calibrated ECG paper minor (1mm) and major (5mm) grid:
+  // 250 minor squares across full width (40 ms/mm at 25 mm/s, 20 ms/mm at 50 mm/s)
+  // and 10 minor squares per 1 mV at standard 10 mm/mV gain.
   ctx.strokeStyle = 'rgba(225, 29, 72, 0.14)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  const minorStepX = Math.max(4, (width / 125) * speedScale);
-  const minorStepY = Math.max(4, height / 60);
+  const minorStepX = Math.max(2, width / 250);
+  const minorStepY = Math.max(2, ((height - stripTop) * 0.34) / 10);
   for (let x = 0; x <= width; x += minorStepX) {
     ctx.moveTo(x, 0);
     ctx.lineTo(x, height);
@@ -287,7 +289,7 @@ export function render12LeadCaliperCanvas(
   const cols = 3;
   const cellW = width / cols;
   const cellH = (height * 0.75) / rows;
-  const mvPxCell = cellH * 0.32 * gainScale;
+  const mvPxCell = stripScale;
 
   ctx.strokeStyle = darkTheme ? '#00E676' : '#0F172A';
   ctx.lineWidth = 1.4;
@@ -300,13 +302,13 @@ export function render12LeadCaliperCanvas(
     ctx.moveTo(2, yMid);
     ctx.lineTo(5, yMid);
     ctx.lineTo(5, yTop);
-    ctx.lineTo(13, yTop);
-    ctx.lineTo(13, yMid);
-    ctx.lineTo(16, yMid);
+    ctx.lineTo(5 + minorStepX * 5, yTop);
+    ctx.lineTo(5 + minorStepX * 5, yMid);
+    ctx.lineTo(8 + minorStepX * 5, yMid);
     ctx.stroke();
   }
 
-  const sliceSamples = Math.max(625, Math.round(1250 / speedScale));
+  const colSamples = Math.max(1, Math.round(stripSamples / cols));
 
   for (let l = 0; l < LEAD_NAMES.length; l++) {
     const leadName = LEAD_NAMES[l]!;
@@ -317,8 +319,8 @@ export function render12LeadCaliperCanvas(
     const samples = waveforms[leadName];
 
     ctx.beginPath();
-    for (let s = 0; s < sliceSamples; s += 2) {
-      const px = x0 + (s / sliceSamples) * (cellW - 20) + 18;
+    for (let s = 0; s < colSamples; s += 2) {
+      const px = x0 + (s / colSamples) * cellW;
       const py = yMid - (samples[s] ?? 0) * mvPxCell;
       if (s === 0) ctx.moveTo(px, py);
       else ctx.lineTo(px, py);
@@ -453,5 +455,3 @@ export function render12LeadCaliperCanvas(
     ctx.stroke();
   }
 }
-
-export const render12LeadCanvas = render12LeadCaliperCanvas;

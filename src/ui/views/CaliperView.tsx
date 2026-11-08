@@ -59,7 +59,14 @@ export function hitTestCaliperHandle(
     { handle: 'v2', dist: Math.abs(localY - yV2) },
   ];
 
-  candidates.sort((a, b) => a.dist - b.dist);
+  candidates.sort((a, b) => {
+    const diff = a.dist - b.dist;
+    if (Math.abs(diff) < 1e-6) {
+      if (a.handle === fallbackHandle) return -1;
+      if (b.handle === fallbackHandle) return 1;
+    }
+    return diff;
+  });
   const nearest = candidates[0]!;
   if (nearest.dist <= thresholdPx) {
     return nearest.handle;
@@ -239,14 +246,20 @@ export function CaliperView(props: CaliperViewProps) {
       e.key === 'ArrowDown'
     ) {
       e.preventDefault();
-      setCaliper((prev) =>
-        nudgeCaliperState(
+      const maxDurationMs = paperSpeedMmPerSec === 50 ? 5000 : 10000;
+      setCaliper((prev) => {
+        const next = nudgeCaliperState(
           prev,
           activeHandle,
           e.key as 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown',
           e.shiftKey
-        )
-      );
+        );
+        return {
+          ...next,
+          t1Ms: Math.min(maxDurationMs, next.t1Ms),
+          t2Ms: Math.min(maxDurationMs, next.t2Ms),
+        };
+      });
     }
   };
 
@@ -410,7 +423,14 @@ export function CaliperView(props: CaliperViewProps) {
             <button
               type="button"
               data-testid="caliper-speed-50"
-              onClick={() => setPaperSpeedMmPerSec(50)}
+              onClick={() => {
+                setPaperSpeedMmPerSec(50);
+                setCaliper((prev) => ({
+                  ...prev,
+                  t1Ms: Math.min(5000, prev.t1Ms),
+                  t2Ms: Math.min(5000, prev.t2Ms),
+                }));
+              }}
               class={paperSpeedMmPerSec === 50 ? 'tw-btn-primary tw-mono-vital' : 'tw-btn-secondary tw-mono-vital'}
             >
               50 mm/s

@@ -132,10 +132,18 @@ describe('Ticket 01: Full-Stack Telemetry, Cohort & Entitlement REST Backend (/a
         scenario: 'VFIB',
         seed: 42,
         durationSec: 5,
-        intervene: 'defibrillation',
+        intervention: 'defibrillation',
       }),
     });
     expect(shortSimRes.status).toBe(200);
+    const shortSimJson = (await shortSimRes.json()) as {
+      intervention: string;
+      interventionAtSec: number;
+      causalTimeline: Array<{ action: string; timeSec: number }>;
+    };
+    expect(shortSimJson.intervention).toBe('defibrillation');
+    expect(shortSimJson.interventionAtSec).toBe(5);
+    expect(shortSimJson.causalTimeline.some((e) => e.action === 'defibrillation')).toBe(true);
 
     // Verify atSec > durationSec returns 400
     const outOfRangeAtSecRes = await fetch(`${baseUrl}/api/sim`, {

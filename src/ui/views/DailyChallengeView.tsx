@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { formatDailyReceipt } from '../../billing/cohortAndEntitlement.ts';
 import type { BedState } from '../../engine/aclsEngine.ts';
 import { getUtcDateKey } from '../../engine/prng.ts';
@@ -44,16 +44,17 @@ export function DailyChallengeView(props: DailyChallengeViewProps) {
   const [leaderboard, setLeaderboard] = useState<DailyLeaderboardEntry[]>(() =>
     getFallbackDailyLeaderboard(utcDateKey)
   );
+  const dailyReqSeqRef = useRef(0);
 
   useEffect(() => {
-    let cancelled = false;
+    const seq = ++dailyReqSeqRef.current;
     void fetchDailyChallenge().then((res) => {
-      if (!cancelled && res.leaderboard.length > 0) {
+      if (dailyReqSeqRef.current === seq && res.leaderboard.length > 0) {
         setLeaderboard(res.leaderboard);
       }
     });
     return () => {
-      cancelled = true;
+      dailyReqSeqRef.current++;
     };
   }, [utcDateKey]);
 
@@ -82,13 +83,16 @@ export function DailyChallengeView(props: DailyChallengeViewProps) {
       );
     }
 
+    const seq = ++dailyReqSeqRef.current;
     void submitDailyChallenge({
       clinicianAlias: clinicianAlias.trim() || 'ICU Operator',
       scorePct: props.scoreSummary.scorePct,
       bedsStabilized: props.scoreSummary.bedsStabilized,
       violations: props.scoreSummary.totalViolations,
     }).then((res) => {
-      setLeaderboard(res.leaderboard);
+      if (dailyReqSeqRef.current === seq) {
+        setLeaderboard(res.leaderboard);
+      }
     });
   };
 

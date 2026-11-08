@@ -73,6 +73,7 @@ export function App(props: AppProps) {
   }
   const [audioArmed, setAudioArmed] = useState(false);
   const [audioMuted, setAudioMuted] = useState(false);
+  const checkoutSeqRef = useRef(0);
 
   // Parse path and optional ?cohort= or ?checkout= query parameters
   const [pathnamePart, searchPart = ''] = currentPath.split('?');
@@ -281,12 +282,14 @@ export function App(props: AppProps) {
       return;
     }
 
+    const seq = ++checkoutSeqRef.current;
     const activated = activateEntitlement(tier, undefined, { allowSandboxMint: true });
     setEntitlementTier(activated.tier);
     setCheckoutNotice(
       `Sandbox Checkout completed: ${activated.tier} entitlement signed and persisted to localStorage.`
     );
     void requestEntitlementCheckout(tier).then((remote) => {
+      if (checkoutSeqRef.current !== seq) return;
       if (remote.valid && remote.token) {
         const synced = activateEntitlement(tier, remote.token);
         if (synced.valid) {

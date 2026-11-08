@@ -199,7 +199,10 @@ export async function submitCohortRun(
 
   writeOfflineCohortCustom(cleanSeed, submission);
   const custom = readOfflineCohortCustom(cleanSeed);
-  const roster = [...custom, ...getFallbackBaselineCohortRoster(cleanSeed)].sort(
+  const mergedCustom = custom.some((c) => c.id === submission.id)
+    ? custom
+    : [submission, ...custom];
+  const roster = [...mergedCustom, ...getFallbackBaselineCohortRoster(cleanSeed)].sort(
     (a, b) => b.score - a.score
   );
   return {

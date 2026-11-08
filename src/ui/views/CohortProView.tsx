@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import {
   generateCohortReceipt,
   parseCohortSeed,
@@ -48,22 +48,23 @@ export function CohortProView(props: CohortProViewProps) {
   });
   const [receiptToVerify, setReceiptToVerify] = useState('');
   const [verificationResult, setVerificationResult] = useState<
-    (VerifiedCohortReceipt & { registeredInLedger?: boolean }) | null
+    (VerifiedCohortReceipt & { registeredInLedger?: boolean; online?: boolean }) | null
   >(null);
+  const cohortReqSeqRef = useRef(0);
 
   const parsedCurrentCohort = parseCohortSeed(cohortInput);
   const effectiveSeed = parsedCurrentCohort.valid && parsedCurrentCohort.cohort ? parsedCurrentCohort.cohort : 'NURS402-FALL26';
 
   useEffect(() => {
-    let cancelled = false;
+    const seq = ++cohortReqSeqRef.current;
     void fetchCohortSubmissions(effectiveSeed).then((res) => {
-      if (!cancelled) {
+      if (cohortReqSeqRef.current === seq) {
         setRoster(res.roster);
         setSummary(res.summary);
       }
     });
     return () => {
-      cancelled = true;
+      cohortReqSeqRef.current++;
     };
   }, [effectiveSeed]);
 
@@ -97,14 +98,17 @@ export function CohortProView(props: CohortProViewProps) {
       return;
     }
     setCohortError(null);
+    const seq = ++cohortReqSeqRef.current;
     void submitCohortRun(check.cohort, {
       studentAlias: studentAlias.trim() || 'ICU Student',
       score: scoreSummary.scorePct,
       stabilizedBeds: scoreSummary.bedsStabilized,
       violations: scoreSummary.totalViolations,
     }).then((res) => {
-      setRoster(res.roster);
-      setSummary(res.summary);
+      if (cohortReqSeqRef.current === seq) {
+        setRoster(res.roster);
+        setSummary(res.summary);
+      }
     });
   };
 
@@ -334,7 +338,13 @@ export function CohortProView(props: CohortProViewProps) {
                 }}
               >
                 {verificationResult.valid
-                  ? `VALID RECEIPT · Cohort ${verificationResult.cohort} · Score ${verificationResult.scorePct}% (${verificationResult.bedsStabilized}/4 beds, ${verificationResult.violations} violations)`
+                  ? `VALID RECEIPT · Cohort ${verificationResult.cohort} · Score ${verificationResult.scorePct}% (${verificationResult.bedsStabilized}/4 beds, ${verificationResult.violations} violations)${
+                      verificationResult.registeredInLedger === undefined
+                        ? ''
+                        : verificationResult.registeredInLedger
+                          ? ' · Registered in Cohort Ledger'
+                          : ' · Unregistered in Cohort Ledger'
+                    }`
                   : `INVALID RECEIPT (${verificationResult.reason})`}
               </div>
             ) : null}

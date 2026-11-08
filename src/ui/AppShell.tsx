@@ -93,13 +93,15 @@ export function AppShell(props: AppShellProps) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
+  const silenceActive = silenceRemainingSec > 0;
+
   useEffect(() => {
-    if (silenceRemainingSec <= 0) return;
+    if (!silenceActive) return;
     const timer = setInterval(() => {
       setSilenceRemainingSec((prev) => Math.max(0, prev - 1));
     }, 1000);
     return () => clearInterval(timer);
-  }, [silenceRemainingSec]);
+  }, [silenceActive]);
 
   useEffect(() => {
     if (prevSilenceSecRef.current > 0 && silenceRemainingSec === 0) {
@@ -110,6 +112,14 @@ export function AppShell(props: AppShellProps) {
     }
     prevSilenceSecRef.current = silenceRemainingSec;
   }, [silenceRemainingSec, audioMuted, onToggleAudioArmOrMute]);
+
+  const handleManualAudioToggle = () => {
+    mutedBySilenceRef.current = false;
+    if (silenceRemainingSec > 0) {
+      setSilenceRemainingSec(0);
+    }
+    onToggleAudioArmOrMute();
+  };
 
   let highestPriority: AlarmPriority = 'NORMAL';
   for (const b of beds) {
@@ -161,8 +171,8 @@ export function AppShell(props: AppShellProps) {
   ];
 
   const workspaceGridCols = sidebarCollapsed
-    ? 'grid-cols-1 md:grid-cols-[56px_minmax(0,1fr)] xl:grid-cols-[56px_minmax(0,1fr)_280px] 2xl:grid-cols-[56px_minmax(0,1fr)_360px]'
-    : 'grid-cols-1 md:grid-cols-[200px_minmax(0,1fr)] xl:grid-cols-[200px_minmax(0,1fr)_280px] 2xl:grid-cols-[240px_minmax(0,1fr)_360px]';
+    ? 'grid-cols-1 md:grid-cols-[56px_minmax(0,1fr)] xl:grid-cols-[56px_minmax(0,1fr)_320px] 2xl:grid-cols-[56px_minmax(0,1fr)_360px]'
+    : 'grid-cols-1 md:grid-cols-[200px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_320px] 2xl:grid-cols-[240px_minmax(0,1fr)_360px]';
 
   return (
     <div class="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--bg)', color: 'var(--text)' }}>
@@ -232,13 +242,13 @@ export function AppShell(props: AppShellProps) {
         </div>
 
         {/* Center Instrument Strip: Quick Strip Search + Embedded IEC 60601-1-8 Alarm Beacon & Silence Countdown */}
-        <div class="flex items-center gap-2 min-w-0 justify-center">
-          <div class="w-56 hidden 2xl:block">
+        <div class="flex items-center gap-1.5 sm:gap-2 min-w-0 justify-center">
+          <div class="w-36 xl:w-44 2xl:w-56 hidden lg:block">
             <label htmlFor="tw-global-search" class="sr-only">
               Filter PTB-XL cases or rhythm class
             </label>
             <div
-              class="flex items-center px-3 h-10 rounded-md border"
+              class="flex items-center px-2.5 h-10 rounded-md border"
               style={{ backgroundColor: 'var(--surface-muted)', borderColor: 'var(--border)' }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" class="mr-2 shrink-0">
@@ -275,7 +285,7 @@ export function AppShell(props: AppShellProps) {
             <button
               type="button"
               data-testid="arm-audio-btn"
-              onClick={onToggleAudioArmOrMute}
+              onClick={handleManualAudioToggle}
               class="min-h-8 px-2 hidden md:inline-flex items-center text-xs font-semibold rounded border whitespace-nowrap"
               style={{
                 backgroundColor: 'var(--surface)',
@@ -309,8 +319,7 @@ export function AppShell(props: AppShellProps) {
 
             {cohortBannerText ? (
               <span
-                class="hidden 2xl:inline-flex px-2 py-0.5 rounded text-xs tw-mono-vital whitespace-nowrap"
-                style={{ backgroundColor: 'var(--surface)', color: 'var(--text)' }}
+                class="hidden sm:inline-flex px-2 py-0.5 rounded text-xs tw-mono-vital whitespace-nowrap tw-surface"
               >
                 {cohortBannerText}
               </span>
@@ -322,7 +331,7 @@ export function AppShell(props: AppShellProps) {
         <div class="flex items-center gap-2 shrink-0" role="toolbar" aria-label="Station Controls">
           <button
             type="button"
-            onClick={onToggleAudioArmOrMute}
+            onClick={handleManualAudioToggle}
             class="tw-icon-btn"
             aria-label={audioArmed && !audioMuted ? 'Mute IEC 60601-1-8 alarm synthesizer' : 'Arm IEC 60601-1-8 alarm synthesizer'}
             title={audioArmed && !audioMuted ? 'Mute IEC 60601-1-8 alarms' : 'Arm IEC 60601-1-8 alarms'}

@@ -27,17 +27,11 @@ import {
 import { ShiftController, TelewardCliValidationError, runSimulation } from '../engine/aclsEngine.ts';
 import { getDailySeed, getUtcDateKey } from '../engine/prng.ts';
 
-export {
-  buildBaselineCohortEntries,
-  buildBaselineDailyEntries,
-  computeCohortSummary,
-  formatDailyReceipt,
-  type CohortSubmissionRecord,
-  type CohortSummaryMetrics,
-  type DailyLeaderboardEntry,
+export type {
+  CohortSubmissionRecord,
+  CohortSummaryMetrics,
+  DailyLeaderboardEntry,
 };
-
-export const runAclsSimulation = runSimulation;
 
 export interface DailyChallengeSpec {
   dateKey: string;
@@ -336,21 +330,46 @@ export function createTelewardApiMiddleware(
           }
 
           let intervention: AclsInterventionId | null = null;
-          let atSec: number | undefined =
-            typeof body.atSec === 'number' && Number.isFinite(body.atSec) ? body.atSec : undefined;
+          let atSec: number | undefined;
+          if (body.atSec !== undefined) {
+            if (typeof body.atSec !== 'number' || !Number.isFinite(body.atSec)) {
+              sendJson(res, 400, {
+                error: 'INVALID_AT_SEC',
+                status: 400,
+                detail: 'atSec must be a finite number.',
+              });
+              return;
+            }
+            atSec = body.atSec;
+          }
 
-          if (typeof body.intervention === 'string' && body.intervention.trim() !== '') {
-            const cand = body.intervention.trim().toLowerCase() as AclsInterventionId;
+          const rawDirectIntervention =
+            typeof body.intervention === 'string' && body.intervention.trim() !== ''
+              ? body.intervention
+              : typeof body.intervene === 'string' && body.intervene.trim() !== ''
+                ? body.intervene
+                : null;
+
+          if (rawDirectIntervention !== null) {
+            const cand = rawDirectIntervention.trim().toLowerCase() as AclsInterventionId;
             if (!ACLS_INTERVENTIONS.includes(cand)) {
               sendJson(res, 400, {
                 error: 'INVALID_INTERVENTION',
                 status: 400,
-                detail: `Unsupported intervention "${body.intervention}".`,
+                detail: `Unsupported intervention "${rawDirectIntervention}".`,
               });
               return;
             }
             intervention = cand;
           } else if (Array.isArray(body.interventions) && body.interventions.length > 0) {
+            if (body.interventions.length > 1) {
+              sendJson(res, 400, {
+                error: 'INVALID_INTERVENTION',
+                status: 400,
+                detail: 'Only a single intervention per simulation run is supported.',
+              });
+              return;
+            }
             const first = body.interventions[0] as unknown;
             if (typeof first === 'string') {
               const cand = first.trim().toLowerCase() as AclsInterventionId;
@@ -364,8 +383,21 @@ export function createTelewardApiMiddleware(
               }
               intervention = cand;
             } else if (first && typeof first === 'object') {
-              const obj = first as { action?: string; intervention?: string; atSec?: number };
-              const rawAction = obj.action ?? obj.intervention ?? '';
+              const obj = first as { action?: unknown; intervention?: unknown; atSec?: unknown };
+              const rawAction =
+                typeof obj.action === 'string'
+                  ? obj.action
+                  : typeof obj.intervention === 'string'
+                    ? obj.intervention
+                    : null;
+              if (rawAction === null) {
+                sendJson(res, 400, {
+                  error: 'INVALID_INTERVENTION',
+                  status: 400,
+                  detail: 'Intervention action must be a string.',
+                });
+                return;
+              }
               const cand = rawAction.trim().toLowerCase() as AclsInterventionId;
               if (!ACLS_INTERVENTIONS.includes(cand)) {
                 sendJson(res, 400, {
@@ -376,9 +408,24 @@ export function createTelewardApiMiddleware(
                 return;
               }
               intervention = cand;
-              if (typeof obj.atSec === 'number' && Number.isFinite(obj.atSec)) {
+              if (obj.atSec !== undefined) {
+                if (typeof obj.atSec !== 'number' || !Number.isFinite(obj.atSec)) {
+                  sendJson(res, 400, {
+                    error: 'INVALID_AT_SEC',
+                    status: 400,
+                    detail: 'Intervention atSec must be a finite number.',
+                  });
+                  return;
+                }
                 atSec = obj.atSec;
               }
+            } else {
+              sendJson(res, 400, {
+                error: 'INVALID_INTERVENTION',
+                status: 400,
+                detail: 'Malformed intervention entry.',
+              });
+              return;
             }
           }
 
@@ -689,6 +736,20 @@ export function createTelewardApiMiddleware(
               error: 'INVALID_ENTITLEMENT_TIER',
               status: 400,
               detail: 'Supported tiers: exam_pass (or pro_exam_pass), instructor_cohort.',
+            });
+            return;
+          }
+
+          const stripeSecretConfigured =
+            typeof process.env.STRIPE_SECRET_KEY === 'string' &&
+            process.env.STRIPE_SECRET_KEY.trim() !== '';
+          if (stripeSecretConfigured && body.sandbox !== true) {
+            sendJson(res, 402, {
+              valid: false,
+              error: 'PAYMENT_VERIFICATION_REQUIRED',
+              status: 402,
+              detail:
+                'Live Stripe checkout is enabled; direct token minting requires a verified payment session.',
             });
             return;
           }
