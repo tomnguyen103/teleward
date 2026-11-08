@@ -165,7 +165,7 @@ describe('US-04.6 & US-05: Stripe Checkout Pro Exam Pass ($19) & Stateless ?coho
     const { container: unauthContainer } = render(
       <App initialPath="/cohort?checkout=success&tier=exam_pass" preloadedDataset={DATASET} />
     );
-    expect(unauthContainer.textContent).toContain('Checkout token invalid or missing');
+    expect(unauthContainer.textContent).toContain('Checkout token is invalid');
     expect(readEntitlementFromStorage().tier).toBe('free');
     cleanup();
 
@@ -173,7 +173,7 @@ describe('US-04.6 & US-05: Stripe Checkout Pro Exam Pass ($19) & Stateless ?coho
     const { getByTestId, container } = render(
       <App initialPath="/cohort?checkout=cancelled" preloadedDataset={DATASET} />
     );
-    expect(container.textContent).toContain('Checkout cancelled');
+    expect(container.textContent).toContain('Stripe checkout stopped');
     expect(readEntitlementFromStorage().tier).toBe('free');
 
     // Trigger offline/sandbox Pro Exam Pass activation from /cohort UI

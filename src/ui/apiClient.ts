@@ -161,6 +161,7 @@ export async function submitCohortRun(
     violations: number;
     receipt?: string;
     interventions?: Array<{ bedIndex: number; action: string; atSec?: number; dtSec?: number }>;
+    elapsedSec?: number;
   },
   baseUrl?: string
 ): Promise<{
@@ -337,6 +338,7 @@ export async function submitDailyChallenge(
     bedsStabilized: number;
     violations: number;
     interventions?: Array<{ bedIndex: number; action: string; atSec?: number; dtSec?: number }>;
+    elapsedSec?: number;
   },
   baseUrl?: string
 ): Promise<{

@@ -16,6 +16,14 @@ export interface ParsedTelewardRoute {
   checkoutToken: string | null;
 }
 
+function safeDecodeSegment(raw: string): string {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
 /**
  * Parses clean path routes (/shift, /daily, /caliper/:caseId, /cohort/overview, /cohort/roster/:seed, /cohort/assign, /cohort/billing) and legacy query parameters.
  */
@@ -45,7 +53,7 @@ export function parseTelewardRoute(rawPath: string): ParsedTelewardRoute {
 
   const caseId =
     area === 'caliper' && segments[1]
-      ? decodeURIComponent(segments[1])
+      ? safeDecodeSegment(segments[1])
       : 'ptbxl-001';
 
   let cohortSubRoute: CohortSubRoute = 'roster';
@@ -59,7 +67,7 @@ export function parseTelewardRoute(rawPath: string): ParsedTelewardRoute {
     if (sub === 'overview') {
       cohortSubRoute = 'overview';
       if (segments[2]) {
-        pathCohortCandidate = decodeURIComponent(segments[2]);
+        pathCohortCandidate = safeDecodeSegment(segments[2]);
       }
     } else if (sub === 'assign' || sub === 'verifier') {
       cohortSubRoute = 'assign';
@@ -75,20 +83,20 @@ export function parseTelewardRoute(rawPath: string): ParsedTelewardRoute {
           pathCheckoutTier = tierSeg;
         }
         if (segments[4]) {
-          pathCheckoutToken = decodeURIComponent(segments[4]);
+          pathCheckoutToken = safeDecodeSegment(segments[4]);
         }
       }
     } else if (sub === 'roster') {
       cohortSubRoute = 'roster';
       if (segments[2]) {
-        pathCohortCandidate = decodeURIComponent(segments[2]);
+        pathCohortCandidate = safeDecodeSegment(segments[2]);
       }
     } else {
       cohortSubRoute = 'roster';
-      pathCohortCandidate = decodeURIComponent(segments[1]!);
+      pathCohortCandidate = safeDecodeSegment(segments[1]!);
     }
   } else if (area === 'shift' && segments[1]?.toLowerCase() === 'cohort' && segments[2]) {
-    pathCohortCandidate = decodeURIComponent(segments[2]);
+    pathCohortCandidate = safeDecodeSegment(segments[2]);
   }
 
   const rawCohortParam = pathCohortCandidate ?? queryCohortParam;

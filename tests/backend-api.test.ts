@@ -573,24 +573,32 @@ describe('Ticket 01: Full-Stack Telemetry, Cohort & Entitlement REST Backend (/a
       1,
       () => {
         attempts++;
-        if (attempts < 3) {
+        if (attempts === 1) {
           const err = new Error('Simulated Windows AV lock') as NodeJS.ErrnoException;
           err.code = 'EPERM';
+          throw err;
+        }
+        if (attempts === 2) {
+          const err = new Error('Simulated Windows EBUSY lock') as NodeJS.ErrnoException;
+          err.code = 'EBUSY';
           throw err;
         }
       }
     );
     expect(attempts).toBe(3);
 
-    // 3. F-02 & F-08: verifyShiftReplay supports atSec interventions, returns 422 on forged score, and never leaks expectedReceipt
+    // 3. F-02 & F-08: verifyShiftReplay supports atSec interventions, monotonic attemptedAtMs fallback, returns 422 on forged score, and never leaks expectedReceipt
     const { ShiftController } = await import('../src/engine/aclsEngine.ts');
     const numericSeed = parseCohortSeed(seed).numericSeed!;
     const refCtrl = new ShiftController(numericSeed);
     refCtrl.stepSeconds(2);
-    refCtrl.applyIntervention(0, 'defibrillation', 1000);
+    refCtrl.applyIntervention(0, 'defibrillation', 5000);
+    refCtrl.stepSeconds(2);
+    refCtrl.applyIntervention(1, 'epinephrine_1mg', 6000);
     const refScore = refCtrl.computeShiftScore();
     const replayCheck = verifyShiftReplay(numericSeed, [
-      { atSec: 2, bedIndex: 0, action: 'defibrillation' },
+      { atSec: 2, bedIndex: 0, action: 'defibrillation', attemptedAtMs: 5000 },
+      { atSec: 4, bedIndex: 1, action: 'epinephrine_1mg' },
     ]);
     expect(replayCheck.valid).toBe(true);
     if (replayCheck.valid) {
@@ -598,6 +606,16 @@ describe('Ticket 01: Full-Stack Telemetry, Cohort & Entitlement REST Backend (/a
       expect(replayCheck.bedsStabilized).toBe(refScore.bedsStabilized);
       expect(replayCheck.violations).toBe(refScore.totalViolations);
     }
+
+    const checkoutCleanRes = await fetch(`${baseUrl}/api/entitlement/checkout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tier: 'exam_pass', email: 'dr@clinic.org' }),
+    });
+    expect(checkoutCleanRes.status).toBe(200);
+    const checkoutCleanJson = (await checkoutCleanRes.json()) as { checkoutUrl: string };
+    expect(checkoutCleanJson.checkoutUrl).toContain('/cohort/billing/success/exam_pass/');
+    expect(checkoutCleanJson.checkoutUrl).not.toContain('?');
 
     const overHorizonReplay = verifyShiftReplay(numericSeed, [
       { dtSec: 200, bedIndex: 0, action: 'defibrillation' },
@@ -634,7 +652,10 @@ describe('Ticket 01: Full-Stack Telemetry, Cohort & Entitlement REST Backend (/a
         stabilizedBeds: refScore.bedsStabilized,
         violations: refScore.totalViolations,
         receipt: `TW-${seed}-${refScore.scorePct}-DEAD`,
-        interventions: [{ atSec: 2, bedIndex: 0, action: 'defibrillation' }],
+        interventions: [
+          { atSec: 2, bedIndex: 0, action: 'defibrillation', attemptedAtMs: 5000 },
+          { atSec: 4, bedIndex: 1, action: 'epinephrine_1mg' },
+        ],
       }),
     });
     expect(receiptMismatchRes.status).toBe(422);

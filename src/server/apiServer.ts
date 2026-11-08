@@ -183,7 +183,7 @@ export function renameWithRetrySync(
     } catch (err: unknown) {
       lastErr = err;
       const code = (err as { code?: string })?.code;
-      if ((code === 'EPERM' || code === 'EACCES') && attempt < maxRetries - 1) {
+      if ((code === 'EPERM' || code === 'EACCES' || code === 'EBUSY') && attempt < maxRetries - 1) {
         sleepSync(baseDelayMs * Math.pow(2, attempt));
         continue;
       }
@@ -208,7 +208,7 @@ export async function renameWithRetryAsync(
     } catch (err: unknown) {
       lastErr = err;
       const code = (err as { code?: string })?.code;
-      if ((code === 'EPERM' || code === 'EACCES') && attempt < maxRetries - 1) {
+      if ((code === 'EPERM' || code === 'EACCES' || code === 'EBUSY') && attempt < maxRetries - 1) {
         const delayMs = baseDelayMs * Math.pow(2, attempt);
         await new Promise((resolveDelay) => setTimeout(resolveDelay, delayMs));
         continue;
@@ -418,6 +418,7 @@ export function verifyShiftReplay(
 
   let currentSec = 0;
   let stepIdx = 0;
+  let lastAttemptedMs = 0;
   for (const item of interventions) {
     stepIdx += 1;
     if (!item || typeof item !== 'object') {
@@ -470,10 +471,12 @@ export function verifyShiftReplay(
           detail: 'Intervention entry requires bedIndex (0..3) and a valid ACLS intervention id.',
         };
       }
+      const fallbackMs = Math.max(stepIdx * 1000, lastAttemptedMs + 1000);
       const attemptedAtMs =
         typeof entry.attemptedAtMs === 'number' && Number.isFinite(entry.attemptedAtMs)
           ? entry.attemptedAtMs
-          : stepIdx * 1000;
+          : fallbackMs;
+      lastAttemptedMs = Math.max(lastAttemptedMs, attemptedAtMs);
       controller.applyIntervention(bedIndex, action as AclsInterventionId, attemptedAtMs);
     }
   }
@@ -501,8 +504,6 @@ export function verifyShiftReplay(
     violations: summary.totalViolations,
   };
 }
-
-const verifyActionLogReplay = verifyShiftReplay;
 
 /**
  * Creates the HTTP request handler middleware for all TeleWard /api/* endpoints.
@@ -1132,7 +1133,7 @@ export function createTelewardApiMiddleware(
 
             const score = Math.round(scoreRaw);
             if (body.actionLog !== undefined) {
-              const replay = verifyActionLogReplay(rawSeed, body.actionLog, elapsedSecRaw);
+              const replay = verifyShiftReplay(rawSeed, body.actionLog, elapsedSecRaw);
               if (
                 !replay.valid ||
                 replay.scorePct !== score ||
@@ -1389,7 +1390,7 @@ export function createTelewardApiMiddleware(
           const violations = Math.max(0, Math.min(15, Math.round(violationsRaw)));
 
           if (body.actionLog !== undefined) {
-            const replay = verifyActionLogReplay(targetSeed, body.actionLog, elapsedSecRaw);
+            const replay = verifyShiftReplay(targetSeed, body.actionLog, elapsedSecRaw);
             if (
               !replay.valid ||
               replay.scorePct !== scorePct ||
@@ -1610,7 +1611,7 @@ export function createTelewardApiMiddleware(
             tier: rawTier,
             normalizedTier,
             token,
-            checkoutUrl: `/cohort?checkout=success&tier=${normalizedTier}&token=${token}`,
+            checkoutUrl: `/cohort/billing/success/${normalizedTier}/${encodeURIComponent(token)}`,
           });
           return;
         }

@@ -468,7 +468,7 @@ export function evaluateAclsTransition(
     paced: false,
     converted: false,
     ahaViolationCode: `AHA_MISMATCH_${currentRhythm}_${action.toUpperCase()}`,
-    rationale: `${action} is not indicated for ${currentRhythm}; review the AHA ACLS algorithm.`,
+    rationale: `${action} conflicts with ${currentRhythm}. Follow the AHA ACLS algorithm.`,
   };
 }
 
@@ -522,7 +522,7 @@ export function runSimulation(rawOptions: SimulationOptions): SimulationResult {
       postVitals: initialVitals,
       converted: false,
       ahaViolationCode: null,
-      rationale: `Telemetry monitor initialized in ${RHYTHM_PROFILES[cfg.scenario].label} (seed=${cfg.seed}).`,
+      rationale: `Telemetry monitor starts in ${RHYTHM_PROFILES[cfg.scenario].label} (seed=${cfg.seed}).`,
     },
   ];
 
@@ -740,7 +740,7 @@ export class ShiftController {
             postVitals: initVitals,
             converted: false,
             ahaViolationCode: null,
-            rationale: `${meta.bedLabel} admitted in ${RHYTHM_PROFILES[rhythm].label}.`,
+            rationale: `${meta.bedLabel} starts in ${RHYTHM_PROFILES[rhythm].label}.`,
           },
         ],
       });

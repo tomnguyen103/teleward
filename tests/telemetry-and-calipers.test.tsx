@@ -60,7 +60,7 @@ describe('US-03 & US-04: 60fps 2D Canvas 4-Bed ICU Telemetry, IEC 60601-1-8 Alar
 
     expect(getByTestId('bed-rhythm-0').textContent).toContain('NSR');
     const timelineText = container.textContent ?? '';
-    expect(timelineText).toContain('ACLS Causal Timeline');
+    expect(timelineText).toContain('Causal Timeline Log');
   });
 
   it('US-03.2: clamps background tab deltaMs <= 100ms, wraps 2500-sample Float32Array ring buffer across 2499 -> 0 with zero reallocation, and draws 4 beds in < 4.0ms', () => {
@@ -239,9 +239,9 @@ describe('US-03 & US-04: 60fps 2D Canvas 4-Bed ICU Telemetry, IEC 60601-1-8 Alar
     // Submit empty grading form -> shows inline validation error without crashing
     const submitBtn = getByTestId('submit-caliper-grade-btn');
     fireEvent.click(submitBtn);
-    expect(getByTestId('caliper-form-error').textContent).toContain('Enter finite numeric values');
+    expect(getByTestId('caliper-form-error').textContent).toContain('Enter numbers for PR, QRS, QTc, and ST.');
 
-    // "Load Caliper Readings into Form" loads current caliper metrics (deltaMs=800), NOT ground-truth fiducials
+    // "Apply Calipers" loads current caliper metrics (deltaMs=800), NOT ground-truth fiducials
     fireEvent.click(getByTestId('autofill-caliper-fiducials-btn'));
     const prField = container.querySelector('#input-pr-ms') as HTMLInputElement;
     const stField = container.querySelector('#input-st-mv') as HTMLInputElement;
@@ -275,10 +275,10 @@ describe('US-03 & US-04: 60fps 2D Canvas 4-Bed ICU Telemetry, IEC 60601-1-8 Alar
 
     // Switch to another starter case (ptbxl-003) and verify active case title updates
     const caseSelect = getByTestId('caliper-case-switcher') as HTMLSelectElement;
-    // Locked Pro cases in <select> must show "(Pro Exam Strip: Locked)" and never leak rhythm diagnosis
+    // Locked Pro cases in <select> must show "(Pro Locked)" and never leak rhythm diagnosis
     const lockedOptionText =
       Array.from(caseSelect.options).find((o) => o.value === 'ptbxl-051')?.textContent ?? '';
-    expect(lockedOptionText).toContain('(Pro Exam Strip: Locked)');
+    expect(lockedOptionText).toContain('(Pro Locked)');
     expect(lockedOptionText).not.toContain(DATASET.records[50]!.rhythmClass);
 
     fireEvent.change(caseSelect, { target: { value: 'ptbxl-003' } });
@@ -287,7 +287,7 @@ describe('US-03 & US-04: 60fps 2D Canvas 4-Bed ICU Telemetry, IEC 60601-1-8 Alar
     const rhythmSelect = container.querySelector('#select-rhythm-class') as HTMLSelectElement;
     expect(rhythmSelect.value).toBe('NSR');
     expect(getByTestId('causal-timeline-inspector').textContent).not.toContain(
-      'PTB-XL Cardiologist Fiducial Ground Truth'
+      'Fiducial Ground Truth'
     );
   });
 

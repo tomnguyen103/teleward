@@ -183,7 +183,7 @@ export function AppShell(props: AppShellProps) {
   };
 
   const navItems: Array<{ area: ActiveRouteArea; label: string; shortLabel: string; href: string }> = [
-    { area: 'shift', label: 'Shift Ward', shortLabel: 'SW', href: '/shift' },
+    { area: 'shift', label: 'Shift Station', shortLabel: 'SS', href: '/shift' },
     { area: 'daily', label: 'Daily Seed', shortLabel: 'DS', href: '/daily' },
     { area: 'caliper', label: 'Calipers', shortLabel: '12L', href: '/caliper/ptbxl-001' },
     { area: 'cohort', label: 'Cohort Pro', shortLabel: 'PRO', href: '/cohort' },
@@ -244,9 +244,6 @@ export function AppShell(props: AppShellProps) {
               <path d="M2 12h4l3-8 4 16 3-8h6" />
             </svg>
             <span class="hidden sm:inline">TeleWard</span>
-            <span class="hidden 2xl:inline tw-mono-vital text-xs px-1.5 py-0.5 rounded tw-chip-muted">
-              ICU-4A // 500Hz
-            </span>
           </a>
 
           <nav aria-label="Primary Workspace Navigation" class="hidden xl:flex items-center gap-0.5 h-16">
@@ -326,7 +323,7 @@ export function AppShell(props: AppShellProps) {
               title="Silence IEC 60601-1-8 audible alarms for 120 seconds"
             >
               {silenceRemainingSec > 0 ? (
-                `SILENCED ${silenceRemainingSec}s`
+                `Audio Paused (${silenceRemainingSec}s)`
               ) : (
                 <>
                   <span class="hidden sm:inline">Silence&nbsp;</span>120s
@@ -505,17 +502,17 @@ export function AppShell(props: AppShellProps) {
             </div>
           ) : null}
 
-          {/* PTB-XL 12-Rhythm Bank (Caliper route only) */}
+          {/* PTB-XL 12-Rhythm Class Filter (Caliper route only) */}
           {activeArea === 'caliper' ? (
             <div class="border-t pt-3 tw-border">
               {showFullRailLabels ? (
-                <h2 class="text-sm font-semibold mb-2 tw-sidebar-heading">Rhythm Bank</h2>
+                <h2 class="text-sm font-semibold mb-2 tw-sidebar-heading">Rhythm Class</h2>
               ) : null}
               <ul class="list-none p-0 m-0 flex flex-col gap-1">
                 <li>
                   <button
                     type="button"
-                    title="All Curated Strips"
+                    title="All Curated Records"
                     onClick={() => onSelectRhythmFilter('ALL')}
                     class={`w-full min-h-10 text-left ${
                       showFullRailLabels ? 'px-3 justify-between' : 'px-1 justify-center'
@@ -523,7 +520,7 @@ export function AppShell(props: AppShellProps) {
                       activeRhythmFilter === 'ALL' ? 'tw-sidebar-item-active' : 'tw-sidebar-item'
                     }`}
                   >
-                    <span>{showFullRailLabels ? 'All Strips' : 'ALL'}</span>
+                    <span>{showFullRailLabels ? 'All Records' : 'ALL'}</span>
                     {showFullRailLabels ? (
                       <span class="tw-mono-vital text-xs tw-sidebar-muted">
                         {(() => {

@@ -99,7 +99,7 @@ describe('Ticket 02: Obsidian ICU Telemetry Cockpit, Unified 64px Header & 2-Bay
       expect(armBtn.textContent?.toUpperCase()).toContain('ARMED');
 
       fireEvent.click(silenceBtn);
-      expect(silenceBtn.textContent).toContain('SILENCED');
+      expect(silenceBtn.textContent).toContain('Audio Paused');
       expect(armBtn.textContent?.toUpperCase()).toContain('MUTED');
 
       act(() => {
@@ -125,7 +125,7 @@ describe('Ticket 02: Obsidian ICU Telemetry Cockpit, Unified 64px Header & 2-Bay
     expect(text).toContain('CO2 mmHg');
     expect(text).toContain('RR');
     expect(text).toContain('Electrical Therapy Bay');
-    expect(text).toContain('ISO-26825 IV Pharmacology Bolus Rack');
+    expect(text).toContain('IV Bolus Rack');
 
     // Select Bed 02 and trigger hotkey for its rescuing intervention
     fireEvent.click(getByTestId('bed-card-1'));
@@ -205,7 +205,7 @@ describe('Ticket 02: Obsidian ICU Telemetry Cockpit, Unified 64px Header & 2-Bay
     expect(getByTestId('caliper-t2-ms').textContent).toBe('2500 ms');
   });
 
-  it('US-04.1, US-04.2 & US-04.3: normalizes lowercase cohort seeds, keeps Bazett QTc idempotent across repeated caliper autofills, preserves 12-rhythm counts under filter, and enforces single H1 on /daily', async () => {
+  it('US-04.1, US-04.2 & US-04.3: normalizes lowercase cohort seeds, keeps Bazett QTc idempotent across repeated caliper autofills, preserves 12-rhythm counts under filter, and enforces single H1 and standalone layout on /daily', async () => {
     const { parseCohortSeed } = await import('../src/billing/cohortAndEntitlement.ts');
     const lowerSeed = parseCohortSeed('nurs402-fall26');
     const upperSeed = parseCohortSeed('NURS402-FALL26');
@@ -218,8 +218,12 @@ describe('Ticket 02: Obsidian ICU Telemetry Cockpit, Unified 64px Header & 2-Bay
     );
     const autofillBtn = getByTestId('autofill-caliper-fiducials-btn');
     const setQtBtn = getByTestId('set-caliper-qt-btn');
+    const setStBtn = getByTestId('set-caliper-st-btn');
     const qtcField = container.querySelector('#input-qtc-ms') as HTMLInputElement;
+    const stField = container.querySelector('#input-st-mv') as HTMLInputElement;
     const calCanvas = getByTestId('caliper-12lead-canvas') as HTMLCanvasElement;
+    fireEvent.click(setStBtn);
+    expect(stField.value).toBe('0.25');
     fireEvent.click(autofillBtn);
     expect(qtcField.value).toBe('894');
     fireEvent.click(autofillBtn);
@@ -262,16 +266,13 @@ describe('Ticket 02: Obsidian ICU Telemetry Cockpit, Unified 64px Header & 2-Bay
       <App initialPath="/daily" preloadedDataset={DATASET} initialSeed={101} />
     );
     expect(dailyContainer.querySelectorAll('h1').length).toBe(1);
-    const standingsTab = Array.from(dailyContainer.querySelectorAll('[role="tab"]')).find((t) =>
-      t.textContent?.includes('Standings')
-    )!;
-    fireEvent.click(standingsTab);
-    expect(standingsTab.getAttribute('aria-selected')).toBe('true');
-    expect(standingsTab.classList.contains('tw-seg-btn-active')).toBe(true);
+    expect(dailyContainer.querySelector('h1')?.textContent).toBe('Daily Shift Seed');
     const lbSection = getDailyTestId('daily-leaderboard-table').closest('section')!;
     expect(lbSection.classList.contains('flex')).toBe(true);
-    const wardWrapper = getDailyTestId('bed-card-0').closest('div.hidden, div.block')!;
-    expect(wardWrapper.classList.contains('hidden')).toBe(true);
+    // F-18 & T-07: ShiftStationView (bed-card-0) is not mounted inline on /daily until Run Daily Shift is clicked
+    expect(dailyContainer.querySelector('[data-testid="bed-card-0"]')).toBeNull();
+    fireEvent.click(getDailyTestId('launch-daily-shift-btn'));
+    expect(dailyContainer.querySelector('[data-testid="bed-card-0"]')).not.toBeNull();
 
     cleanup();
 
@@ -300,10 +301,10 @@ describe('Ticket 02: Obsidian ICU Telemetry Cockpit, Unified 64px Header & 2-Bay
     );
   });
 
-  it('v2.0 Audit (F-15..F-22): enforces route-scoped left rail, 4-field bed cards, on-demand Code Cart drawer, clean-path router without query strings, VTM/STM compact rail badges, and 40px touch targets', async () => {
+  it('v2.0 Audit (F-15..F-22): enforces route-scoped left rail, 4-field bed cards, 3-word Crash Cart buttons, on-demand Code Cart drawer, clean-path router without URIError, VTM/STM compact rail badges, and 40px touch targets', async () => {
     const { parseTelewardRoute, buildCohortSubPath } = await import('../src/ui/router.ts');
 
-    // 1. Clean-path router parsing & generation (zero ?tab= or ?cohort= query strings)
+    // 1. Clean-path router parsing & generation (zero ?tab= or ?cohort= query strings, safe against malformed URI)
     expect(buildCohortSubPath('roster', 'NURS402-FALL26')).toBe('/cohort/roster/NURS402-FALL26');
     expect(buildCohortSubPath('assign', 'NURS402-FALL26')).toBe('/cohort/assign');
     expect(buildCohortSubPath('billing')).toBe('/cohort/billing');
@@ -316,19 +317,21 @@ describe('Ticket 02: Obsidian ICU Telemetry Cockpit, Unified 64px Header & 2-Bay
       area: 'shift',
       cohortSeed: 'NURS402-FALL26',
     });
+    expect(() => parseTelewardRoute('/caliper/%E0%A4%A')).not.toThrow();
+    expect(() => parseTelewardRoute('/cohort/roster/%E0%A4%A')).not.toThrow();
 
-    // 2. Shift view: route-scoped left rail (Ward Beds only), 4-field bed card ceiling, on-demand Code Cart drawer, and 40px touch targets
+    // 2. Shift view: route-scoped left rail (Ward Beds only), 4-field bed card ceiling, 3-word button ceiling, on-demand Code Cart drawer, and 40px touch targets
     const { getByTestId, container } = render(
       <App initialPath="/shift" preloadedDataset={DATASET} initialSeed={42} />
     );
 
     const shiftRail = container.querySelector('#tw-scope-sidebar')!;
     expect(shiftRail.textContent).toContain('Ward Beds');
-    expect(shiftRail.textContent).not.toContain('Rhythm Bank');
+    expect(shiftRail.textContent).not.toContain('Rhythm Class');
 
     const bedCard0 = getByTestId('bed-card-0');
     const dlItems = bedCard0.querySelectorAll('dl > div');
-    expect(dlItems.length).toBeLessThanOrEqual(3); // 3 <dl> rows + header = 4 fields max
+    expect(dlItems.length).toBeLessThanOrEqual(2); // 2 <dl> rows + Bed ID + Rhythm/Status = 4 fields max
 
     const codeCartDrawer = getByTestId('code-cart-drawer');
     expect(codeCartDrawer.getAttribute('aria-hidden')).toBe('true');
@@ -338,19 +341,27 @@ describe('Ticket 02: Obsidian ICU Telemetry Cockpit, Unified 64px Header & 2-Bay
     expect(codeCartDrawer.getAttribute('aria-hidden')).toBe('false');
     expect(codeCartDrawer.classList.contains('block')).toBe(true);
 
+    // Every Crash Cart button must obey the <= 3 word ASD-STE100 ceiling
+    const crashButtons = Array.from(codeCartDrawer.querySelectorAll('[data-testid^="crash-cart-btn-"]'));
+    expect(crashButtons.length).toBe(8);
+    for (const btn of crashButtons) {
+      const words = (btn.textContent ?? '').trim().split(/\s+/).filter(Boolean);
+      expect(words.length).toBeLessThanOrEqual(3);
+    }
+
     // 40px (min-h-10) touch targets on topbar pills
     expect(getByTestId('arm-audio-btn').className).toContain('min-h-10');
     expect(getByTestId('alarm-silence-120s-btn').className).toContain('min-h-10');
 
     cleanup();
 
-    // 3. Caliper view: route-scoped left rail (Rhythm Bank only) and clean VTM/STM collapsed rail badges (never VT_)
+    // 3. Caliper view: route-scoped left rail (Rhythm Class only) and clean VTM/STM collapsed rail badges (never VT_)
     window.localStorage.setItem('teleward_sidebar_collapsed_v1', 'false');
     const { getByTestId: getCalTestId, container: calContainer } = render(
       <App initialPath="/caliper/ptbxl-001" preloadedDataset={DATASET} />
     );
     const calRail = calContainer.querySelector('#tw-scope-sidebar')!;
-    expect(calRail.textContent).toContain('Rhythm Bank');
+    expect(calRail.textContent).toContain('Rhythm Class');
     expect(calRail.textContent).not.toContain('Ward Beds');
 
     fireEvent.click(getCalTestId('sidebar-collapse-toggle'));

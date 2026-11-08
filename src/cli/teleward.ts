@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { generateCohortReceipt } from '../billing/cohortAndEntitlement.ts';
 import { loadPtbxlBinary } from '../data/ptbxlLoader.ts';
 import {
   ShiftController,
@@ -161,13 +162,26 @@ export function executeCli(argv: string[]): number {
         ctrl.stepSeconds(10);
       }
       const summary = ctrl.computeShiftScore();
+      const cohortLabel =
+        typeof seedRaw === 'string' && seedRaw.trim() !== ''
+          ? seedRaw.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '') || `SIM-${numericSeed}`
+          : `SIM-${numericSeed}`;
+      const receipt = generateCohortReceipt({
+        cohort: cohortLabel.slice(0, 24),
+        scorePct: summary.scorePct,
+        bedsStabilized: summary.bedsStabilized,
+        violations: summary.totalViolations,
+      });
       const payload = {
         seed: typeof seedRaw === 'string' ? seedRaw.trim() : numericSeed,
         numericSeed,
         elapsedSec: ctrl.getElapsedSec(),
+        score: summary.scorePct,
         scorePct: summary.scorePct,
+        stabilizedBeds: summary.bedsStabilized,
         bedsStabilized: summary.bedsStabilized,
         totalViolations: summary.totalViolations,
+        receipt,
         beds: ctrl.getBeds().map((b) => ({
           bedIndex: b.bedIndex,
           bedLabel: b.bedLabel,

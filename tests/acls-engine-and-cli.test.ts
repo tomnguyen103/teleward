@@ -307,5 +307,23 @@ describe('US-02: Deterministic Coupled Cardiopulmonary & ACLS State Engine + CLI
     expect(expiredBed).toBeTruthy();
     expect(expiredBed.vitals.rhythm).toBe('ASYSTOLE');
     expect(expiredBed.causalTimeline.some((ev) => ev.action === 'ISCHEMIC_ARREST')).toBe(true);
+
+    // Verify CLI simulate --seed 42 --json outputs score, stabilizedBeds, and receipt (F-22)
+    const simShiftRes = runCli(['simulate', '--seed', '42', '--json']);
+    expect(simShiftRes.status).toBe(0);
+    const simShiftJson = JSON.parse(simShiftRes.stdout.trim()) as {
+      seed: string;
+      numericSeed: number;
+      score: number;
+      scorePct: number;
+      stabilizedBeds: number;
+      bedsStabilized: number;
+      receipt: string;
+    };
+    expect(simShiftJson.seed).toBe('42');
+    expect(simShiftJson.numericSeed).toBe(42);
+    expect(simShiftJson.score).toBe(simShiftJson.scorePct);
+    expect(simShiftJson.stabilizedBeds).toBe(simShiftJson.bedsStabilized);
+    expect(simShiftJson.receipt).toMatch(/^TW-42-\d+-[0-9A-F]{4}$/);
   });
 });

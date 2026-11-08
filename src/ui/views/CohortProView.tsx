@@ -25,18 +25,20 @@ export interface CohortProViewProps {
   checkoutNotice: string | null;
   scoreSummary: { scorePct: number; bedsStabilized: number; totalViolations: number };
   interventionsLog?: Array<{ bedIndex: number; action: string; atSec?: number }>;
+  elapsedSec?: number;
   onActivateTier: (tier: 'exam_pass' | 'instructor_cohort') => void;
   onLaunchCohortShift: (cohortSeed: string) => void;
 }
 
-function mapSubRouteToTab(subRoute?: CohortSubRoute): 'roster' | 'verifier' | 'access' {
+function mapSubRouteToTab(subRoute?: CohortSubRoute): 'overview' | 'roster' | 'verifier' | 'access' {
+  if (subRoute === 'overview') return 'overview';
   if (subRoute === 'assign') return 'verifier';
   if (subRoute === 'billing') return 'access';
   return 'roster';
 }
 
 /**
- * Renders the Cohort Pro workspace with clean sub-routes and segmented tabs for Cohort Roster, Receipt Verifier, and Pro Access.
+ * Renders the Cohort Pro workspace with clean sub-routes and segmented tabs for Overview, Cohort Roster, Receipt Verifier, and Pro Access.
  */
 export function CohortProView(props: CohortProViewProps) {
   const {
@@ -47,6 +49,7 @@ export function CohortProView(props: CohortProViewProps) {
     checkoutNotice,
     scoreSummary,
     interventionsLog,
+    elapsedSec,
     onActivateTier,
     onLaunchCohortShift,
   } = props;
@@ -67,7 +70,7 @@ export function CohortProView(props: CohortProViewProps) {
   const [verificationResult, setVerificationResult] = useState<
     (VerifiedCohortReceipt & { registeredInLedger?: boolean; online?: boolean }) | null
   >(null);
-  const [activeTab, setActiveTab] = useState<'roster' | 'verifier' | 'access'>(() =>
+  const [activeTab, setActiveTab] = useState<'overview' | 'roster' | 'verifier' | 'access'>(() =>
     mapSubRouteToTab(cohortSubRoute)
   );
   const cohortReqSeqRef = useRef(0);
@@ -132,7 +135,7 @@ export function CohortProView(props: CohortProViewProps) {
     e.preventDefault();
     const check = parseCohortSeed(cohortInput.trim());
     if (!check.valid || !check.cohort) {
-      setCohortError('Cohort seed is invalid. Enter a valid seed.');
+      setCohortError('Cohort seed is invalid. Set a valid seed first.');
       return;
     }
     setCohortError(null);
@@ -143,12 +146,13 @@ export function CohortProView(props: CohortProViewProps) {
       stabilizedBeds: scoreSummary.bedsStabilized,
       violations: scoreSummary.totalViolations,
       ...(interventionsLog !== undefined ? { interventions: interventionsLog } : {}),
+      ...(elapsedSec !== undefined ? { elapsedSec } : {}),
     }).then((res) => {
       if (cohortReqSeqRef.current === seq) {
         setRoster(res.roster);
         setSummary(res.summary);
         if (!res.online) {
-          setCohortError('Server is offline. Score stays in local storage.');
+          setCohortError('API server is offline. Local storage holds this submission until reconnect.');
         }
       }
     });
@@ -179,9 +183,11 @@ export function CohortProView(props: CohortProViewProps) {
     });
   };
 
-  const selectTabAndRoute = (tab: 'roster' | 'verifier' | 'access') => {
+  const selectTabAndRoute = (tab: 'overview' | 'roster' | 'verifier' | 'access') => {
     setActiveTab(tab);
-    if (tab === 'roster') {
+    if (tab === 'overview') {
+      onSelectSubRoute?.('overview', effectiveSeed);
+    } else if (tab === 'roster') {
       onSelectSubRoute?.('roster', effectiveSeed);
     } else if (tab === 'verifier') {
       onSelectSubRoute?.('assign', effectiveSeed);
@@ -189,6 +195,8 @@ export function CohortProView(props: CohortProViewProps) {
       onSelectSubRoute?.('billing', effectiveSeed);
     }
   };
+
+  const showRosterPanel = activeTab === 'roster' || activeTab === 'overview';
 
   return (
     <div class="flex flex-col gap-4 max-w-5xl mx-auto">
@@ -200,10 +208,20 @@ export function CohortProView(props: CohortProViewProps) {
 
       <section class="tw-surface divide-y tw-border">
         <div class="p-4 flex flex-wrap items-center justify-between gap-4">
-          <h1>Cohort Roster and Access</h1>
+          <h1>Cohort Roster</h1>
 
           <div class="flex flex-wrap items-center gap-4">
             <div class="tw-seg-group" role="tablist" aria-label="Cohort workspace views">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'overview'}
+                data-active={activeTab === 'overview' ? 'true' : 'false'}
+                onClick={() => selectTabAndRoute('overview')}
+                class={activeTab === 'overview' ? 'tw-seg-btn-active' : 'tw-seg-btn'}
+              >
+                Overview
+              </button>
               <button
                 type="button"
                 role="tab"
@@ -249,7 +267,7 @@ export function CohortProView(props: CohortProViewProps) {
         </div>
 
         {/* Panel 1: Cohort Synchronizer & Live Roster */}
-        <div class={activeTab === 'roster' ? 'divide-y tw-border block' : 'hidden'}>
+        <div class={showRosterPanel ? 'divide-y tw-border block' : 'hidden'}>
           <div class="p-5 grid grid-cols-1 lg:grid-cols-[15rem_minmax(0,1fr)] gap-6">
             <div>
               <h2 class="mt-2 mb-1">Cohort Seed Setup</h2>
@@ -439,7 +457,7 @@ export function CohortProView(props: CohortProViewProps) {
           <div class="divide-y tw-border">
             <div class="pb-4 flex flex-wrap items-center justify-between gap-4">
               <div>
-                <h3 class="mt-2 mb-1">Pro Telemetry Exam Pass ($19)</h3>
+                <h3 class="mt-2 mb-1">Pro Exam Pass ($19)</h3>
               </div>
               <button
                 type="button"
@@ -449,7 +467,7 @@ export function CohortProView(props: CohortProViewProps) {
               >
                 {entitlementTier === 'exam_pass'
                   ? 'Exam Pass Active'
-                  : 'Unlock Exam Pass'}
+                  : 'Activate Pack'}
               </button>
             </div>
 
@@ -465,7 +483,7 @@ export function CohortProView(props: CohortProViewProps) {
               >
                 {entitlementTier === 'instructor_cohort'
                   ? 'Cohort Pack Active'
-                  : 'Unlock Cohort Pack'}
+                  : 'Activate Pack'}
               </button>
             </div>
           </div>
