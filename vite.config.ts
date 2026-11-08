@@ -20,8 +20,11 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: false,
+    pool: 'threads',
+    fileParallelism: false,
     include: ['tests/**/*.test.{ts,tsx}'],
     hookTimeout: 30000,
     testTimeout: 30000,
   },
 });
+

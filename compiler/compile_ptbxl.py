@@ -336,15 +336,26 @@ def validate_safe_path(raw_path: str, workspace_root: Path) -> Path:
 
 
 def replace_with_retry(src: Path, dst: Path, retries: int = 8, base_delay_sec: float = 0.04) -> None:
-    """
-    Atomically replace dst with src, retrying transient Windows PermissionError
-    (WinError 5 / WinError 32) caused by file watchers or indexers.
-    """
+    """Replace dst with src atomically and retry transient Windows PermissionError."""
     if retries < 1:
         raise ValueError("retries must be >= 1")
     for attempt in range(retries):
         try:
             os.replace(src, dst)
+            return
+        except PermissionError:
+            if attempt + 1 >= retries:
+                raise
+            time.sleep(base_delay_sec * (attempt + 1))
+
+
+def copy_with_retry(src: Path, dst: Path, retries: int = 8, base_delay_sec: float = 0.04) -> None:
+    """Copy src to dst and retry transient Windows PermissionError."""
+    if retries < 1:
+        raise ValueError("retries must be >= 1")
+    for attempt in range(retries):
+        try:
+            shutil.copy2(src, dst)
             return
         except PermissionError:
             if attempt + 1 >= retries:
@@ -358,9 +369,7 @@ def unlink_with_retry(
     base_delay_sec: float = 0.02,
     ignore_final_error: bool = False,
 ) -> None:
-    """
-    Remove target if present, retrying transient Windows PermissionError.
-    """
+    """Remove target if present and retry transient Windows PermissionError."""
     max_attempts = max(1, retries)
     for attempt in range(max_attempts):
         try:
@@ -374,12 +383,51 @@ def unlink_with_retry(
             time.sleep(base_delay_sec * (attempt + 1))
 
 
+def atomic_write_artifacts(out_dir: Path, full_binary: bytes, manifest: dict) -> None:
+    """Write ptbxl_120.bin and ptbxl_index.json atomically and restore prior state on failure."""
+    pid = os.getpid()
+    bin_target = out_dir / "ptbxl_120.bin"
+    bin_tmp = out_dir / f"ptbxl_120.bin.tmp.{pid}"
+    bin_bak = out_dir / f"ptbxl_120.bin.tmp.bak.{pid}"
+    idx_target = out_dir / "ptbxl_index.json"
+    idx_tmp = out_dir / f"ptbxl_index.json.tmp.{pid}"
+
+    for p in (bin_target, bin_tmp, bin_bak, idx_target, idx_tmp):
+        reject_if_symlink(p, str(p))
+
+    had_bin_target = bin_target.exists()
+    try:
+        with open(bin_tmp, "wb") as f_bin:
+            f_bin.write(full_binary)
+            f_bin.flush()
+            os.fsync(f_bin.fileno())
+
+        with open(idx_tmp, "w", encoding="utf-8", newline="\n") as f_idx:
+            json.dump(manifest, f_idx, indent=2)
+            f_idx.write("\n")
+            f_idx.flush()
+            os.fsync(f_idx.fileno())
+
+        if had_bin_target:
+            copy_with_retry(bin_target, bin_bak)
+
+        replace_with_retry(bin_tmp, bin_target)
+        try:
+            replace_with_retry(idx_tmp, idx_target)
+        except Exception:
+            if had_bin_target and bin_bak.exists():
+                replace_with_retry(bin_bak, bin_target)
+            elif not had_bin_target:
+                unlink_with_retry(bin_target, ignore_final_error=True)
+            raise
+    finally:
+        unlink_with_retry(bin_tmp, ignore_final_error=True)
+        unlink_with_retry(bin_bak, ignore_final_error=True)
+        unlink_with_retry(idx_tmp, ignore_final_error=True)
+
+
 def load_optional_local_wfdb_metadata(ptbxl_dir: Path, conn: duckdb.DuckDBPyConnection) -> dict[int, tuple[int, int, str]]:
-    """
-    If ptbxl_dir contains a local ptbxl_database.csv or .hea files, parse patient metadata
-    (ecg_id, age, sex) so local WFDB archives seed DuckDB records before falling back to
-    offline deterministic synthesis.
-    """
+    """Parse optional ptbxl_database.csv metadata to seed DuckDB records before offline synthesis."""
     overrides: dict[int, tuple[int, int, str]] = {}
     if not ptbxl_dir.exists() or not ptbxl_dir.is_dir():
         return overrides
@@ -440,8 +488,8 @@ def main() -> None:
     )
 
     payload_chunks: list[bytes] = []
-    # Ordering: First 24 records (indices 0..23) are 2 starter records per class (freeStarter = True),
-    # remaining 96 records (indices 24..119) are 8 Pro exam records per class (freeStarter = False).
+    # Order first 24 records (indices 0..23) as 2 starter records per class (freeStarter = True)
+    # and next 96 records (indices 24..119) as 8 Pro exam records per class (freeStarter = False).
     ordered_pairs: list[tuple[str, int, bool]] = []
     for class_idx, (rhythm_name, *_rest) in enumerate(RHYTHM_SPECS):
         for k in range(2):
@@ -552,42 +600,7 @@ def main() -> None:
         "records": records_out,
     }
 
-    pid = os.getpid()
-    bin_target = out_dir / "ptbxl_120.bin"
-    bin_tmp = out_dir / f"ptbxl_120.bin.tmp.{pid}"
-    bin_bak = out_dir / f"ptbxl_120.bin.tmp.bak.{pid}"
-    idx_target = out_dir / "ptbxl_index.json"
-    idx_tmp = out_dir / f"ptbxl_index.json.tmp.{pid}"
-
-    for p in (bin_target, bin_tmp, bin_bak, idx_target, idx_tmp):
-        reject_if_symlink(p, str(p))
-
-    try:
-        with open(bin_tmp, "wb") as f_bin:
-            f_bin.write(full_binary)
-            f_bin.flush()
-            os.fsync(f_bin.fileno())
-
-        with open(idx_tmp, "w", encoding="utf-8", newline="\n") as f_idx:
-            json.dump(manifest, f_idx, indent=2)
-            f_idx.write("\n")
-            f_idx.flush()
-            os.fsync(f_idx.fileno())
-
-        if bin_target.exists():
-            shutil.copy2(bin_target, bin_bak)
-
-        replace_with_retry(bin_tmp, bin_target)
-        try:
-            replace_with_retry(idx_tmp, idx_target)
-        except Exception:
-            if bin_bak.exists():
-                replace_with_retry(bin_bak, bin_target)
-            raise
-    finally:
-        unlink_with_retry(bin_tmp, ignore_final_error=True)
-        unlink_with_retry(bin_bak, ignore_final_error=True)
-        unlink_with_retry(idx_tmp, ignore_final_error=True)
+    atomic_write_artifacts(out_dir, full_binary, manifest)
 
     print(
         json.dumps(
@@ -604,3 +617,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
