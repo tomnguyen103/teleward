@@ -91,6 +91,11 @@ export function DailyChallengeView(props: DailyChallengeViewProps) {
     }).then((res) => {
       if (dailyReqSeqRef.current === seq) {
         setLeaderboard(res.leaderboard);
+        if (!res.online) {
+          setStorageWarning(
+            'Server offline: score saved locally only and not confirmed in shared standings.'
+          );
+        }
       }
     });
   };
@@ -175,6 +180,7 @@ export function DailyChallengeView(props: DailyChallengeViewProps) {
         <ShiftStationView
           stationTitle="Daily Telemetry Challenge"
           hideStationHeader={true}
+          disableHotkeys={activeSubView !== 'ward'}
           {...props}
         />
       </div>

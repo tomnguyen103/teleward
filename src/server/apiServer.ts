@@ -743,7 +743,7 @@ export function createTelewardApiMiddleware(
           const stripeSecretConfigured =
             typeof process.env.STRIPE_SECRET_KEY === 'string' &&
             process.env.STRIPE_SECRET_KEY.trim() !== '';
-          if (stripeSecretConfigured && body.sandbox !== true) {
+          if (stripeSecretConfigured) {
             sendJson(res, 402, {
               valid: false,
               error: 'PAYMENT_VERIFICATION_REQUIRED',

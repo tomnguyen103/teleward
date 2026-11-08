@@ -285,17 +285,28 @@ export function App(props: AppProps) {
     const allowSandboxMint = Boolean(envObj?.DEV || envObj?.MODE === 'test');
     const seq = ++checkoutSeqRef.current;
     const activated = activateEntitlement(tier, undefined, { allowSandboxMint });
-    setEntitlementTier(activated.tier);
-    setCheckoutNotice(
-      `Sandbox Checkout complete: ${activated.tier} token signed and stored.`
-    );
-    void requestEntitlementCheckout(tier).then((remote) => {
+    if (activated.valid) {
+      setEntitlementTier(activated.tier);
+      setCheckoutNotice(
+        `Sandbox Checkout complete: ${activated.tier} token signed and stored.`
+      );
+    } else {
+      setCheckoutNotice('Checkout verification in progress.');
+    }
+    void requestEntitlementCheckout(tier, undefined, { allowSandboxMint }).then((remote) => {
       if (checkoutSeqRef.current !== seq) return;
-      if (remote.valid && remote.token) {
-        const synced = activateEntitlement(tier, remote.token);
+      if (remote.valid && remote.token && (remote.online || allowSandboxMint)) {
+        const synced = activateEntitlement(tier, remote.token, { allowSandboxMint });
         if (synced.valid) {
           setEntitlementTier(synced.tier);
+          setCheckoutNotice(
+            `Checkout complete: ${synced.tier} token signed and stored.`
+          );
+          return;
         }
+      }
+      if (!activated.valid) {
+        setCheckoutNotice('Checkout requires verified Stripe payment.');
       }
     });
   };

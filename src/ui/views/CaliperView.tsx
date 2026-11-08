@@ -113,6 +113,7 @@ export function CaliperView(props: CaliperViewProps) {
   const [prInput, setPrInput] = useState('');
   const [qrsInput, setQrsInput] = useState('');
   const [qtcInput, setQtcInput] = useState('');
+  const [measuredQtMs, setMeasuredQtMs] = useState<number | null>(null);
   const [stInput, setStInput] = useState('');
   const [rhythmInput, setRhythmInput] = useState<RhythmClass>('NSR');
   const [formError, setFormError] = useState<string | null>(null);
@@ -135,6 +136,7 @@ export function CaliperView(props: CaliperViewProps) {
     setPrInput('');
     setQrsInput('');
     setQtcInput('');
+    setMeasuredQtMs(null);
     setStInput('');
     setFormError(null);
     setGradeReport(null);
@@ -143,13 +145,17 @@ export function CaliperView(props: CaliperViewProps) {
   }, [caseId, isUnlocked]);
 
   const rawCaliperDeltaMs = Math.max(1, Math.abs(caliper.t2Ms - caliper.t1Ms));
+  const qtForBazettMs =
+    measuredQtMs !== null && Number.isFinite(measuredQtMs) && measuredQtMs > 0
+      ? measuredQtMs
+      : rawCaliperDeltaMs;
 
   const metrics = computeCaliperMetrics(
     caliper.t1Ms,
     caliper.t2Ms,
     caliper.v1Mv,
     caliper.v2Mv,
-    rawCaliperDeltaMs
+    qtForBazettMs
   );
 
   useEffect(() => {
@@ -256,8 +262,8 @@ export function CaliperView(props: CaliperViewProps) {
         );
         return {
           ...next,
-          t1Ms: Math.min(maxDurationMs, next.t1Ms),
-          t2Ms: Math.min(maxDurationMs, next.t2Ms),
+          t1Ms: activeHandle === 't1' ? Math.min(maxDurationMs, next.t1Ms) : next.t1Ms,
+          t2Ms: activeHandle === 't2' ? Math.min(maxDurationMs, next.t2Ms) : next.t2Ms,
         };
       });
     }
@@ -430,14 +436,7 @@ export function CaliperView(props: CaliperViewProps) {
             <button
               type="button"
               data-testid="caliper-speed-50"
-              onClick={() => {
-                setPaperSpeedMmPerSec(50);
-                setCaliper((prev) => ({
-                  ...prev,
-                  t1Ms: Math.min(5000, prev.t1Ms),
-                  t2Ms: Math.min(5000, prev.t2Ms),
-                }));
-              }}
+              onClick={() => setPaperSpeedMmPerSec(50)}
               class={paperSpeedMmPerSec === 50 ? 'tw-btn-primary tw-mono-vital' : 'tw-btn-secondary tw-mono-vital'}
             >
               50 mm/s
@@ -625,7 +624,16 @@ export function CaliperView(props: CaliperViewProps) {
               inputMode="numeric"
               autocomplete="off"
               value={qtcInput}
-              onInput={(e) => setQtcInput((e.target as HTMLInputElement).value)}
+              onInput={(e) => {
+                const rawVal = (e.target as HTMLInputElement).value;
+                setQtcInput(rawVal);
+                const parsedQt = Number(rawVal);
+                setMeasuredQtMs(
+                  rawVal.trim() !== '' && Number.isFinite(parsedQt) && parsedQt > 0
+                    ? parsedQt
+                    : null
+                );
+              }}
               class="w-full h-10 px-3 rounded tw-mono-vital text-sm tw-input"
             />
           </div>

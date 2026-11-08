@@ -62,6 +62,9 @@ export function AppShell(props: AppShellProps) {
     }
   });
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  );
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [silenceRemainingSec, setSilenceRemainingSec] = useState(0);
   const mutedBySilenceRef = useRef(false);
@@ -87,19 +90,29 @@ export function AppShell(props: AppShellProps) {
       return;
     }
     toggleDesktopRail();
-    setMobileDrawerOpen((m) => !m);
   };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    const onResize = () => {
+      setIsMobileViewport(window.innerWidth < 768);
+    };
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
         e.preventDefault();
-        toggleDesktopRail();
+        if (window.innerWidth < 768) {
+          setMobileDrawerOpen((m) => !m);
+        } else {
+          toggleDesktopRail();
+        }
       }
     };
+    window.addEventListener('resize', onResize);
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('keydown', onKeyDown);
+    };
   }, []);
 
   const silenceActive = silenceRemainingSec > 0;
@@ -173,7 +186,8 @@ export function AppShell(props: AppShellProps) {
     { area: 'cohort', label: 'Cohort Pro', shortLabel: 'PRO', href: '/cohort' },
   ];
 
-  const showFullRailLabels = !sidebarCollapsed || mobileDrawerOpen;
+  const isRailExpanded = isMobileViewport ? mobileDrawerOpen : !sidebarCollapsed;
+  const showFullRailLabels = isRailExpanded;
 
   const workspaceGridCols = sidebarCollapsed
     ? 'grid-cols-1 md:grid-cols-[56px_minmax(0,1fr)]'
@@ -182,15 +196,15 @@ export function AppShell(props: AppShellProps) {
   return (
     <div class="min-h-screen flex flex-col tw-app-root">
       {/* Unified Single 64px Sticky Top Bar */}
-      <header class="sticky top-0 z-30 h-16 px-3 sm:px-4 border-b flex items-center justify-between gap-2 tw-topbar">
+      <header class="sticky top-0 z-30 min-h-16 py-1.5 sm:py-0 sm:h-16 px-3 sm:px-4 border-b flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 tw-topbar">
         <div class="flex items-center gap-2.5 min-w-0 shrink-0">
           <button
             type="button"
             data-testid="sidebar-collapse-toggle"
             onClick={handleToggleRailOrDrawer}
-            aria-expanded={!sidebarCollapsed}
+            aria-expanded={isRailExpanded}
             aria-controls="tw-scope-sidebar"
-            aria-label={sidebarCollapsed ? 'Expand ICU Scope Rail (Ctrl+B)' : 'Collapse ICU Scope Rail (Ctrl+B)'}
+            aria-label={isRailExpanded ? 'Collapse ICU Scope Rail (Ctrl+B)' : 'Expand ICU Scope Rail (Ctrl+B)'}
             title="Toggle Scope Rail (Ctrl+B)"
             class="tw-icon-btn shrink-0"
           >

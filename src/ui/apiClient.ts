@@ -40,9 +40,19 @@ function readOfflineCohortCustom(cohortSeed: string): CohortSubmissionRecord[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as Record<string, CohortSubmissionRecord[]>;
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return [];
-    return Object.hasOwn(parsed, safeSeed) && Array.isArray(parsed[safeSeed])
-      ? parsed[safeSeed]!
-      : [];
+    const seenIds = new Set<string>();
+    const merged: CohortSubmissionRecord[] = [];
+    for (const key of Object.keys(parsed)) {
+      if (key.toUpperCase() === safeSeed.toUpperCase() && Array.isArray(parsed[key])) {
+        for (const item of parsed[key]!) {
+          if (item && typeof item.id === 'string' && !seenIds.has(item.id)) {
+            seenIds.add(item.id);
+            merged.push({ ...item, cohortSeed: safeSeed });
+          }
+        }
+      }
+    }
+    return merged;
   } catch {
     return [];
   }
@@ -56,11 +66,13 @@ function writeOfflineCohortCustom(cohortSeed: string, item: CohortSubmissionReco
     const parsedRaw = raw ? (JSON.parse(raw) as Record<string, CohortSubmissionRecord[]>) : {};
     const parsed =
       parsedRaw && typeof parsedRaw === 'object' && !Array.isArray(parsedRaw) ? parsedRaw : {};
-    const existing =
-      Object.hasOwn(parsed, safeSeed) && Array.isArray(parsed[safeSeed])
-        ? parsed[safeSeed]!
-        : [];
-    parsed[safeSeed] = [item, ...existing].slice(0, 50);
+    const existing = readOfflineCohortCustom(safeSeed);
+    for (const key of Object.keys(parsed)) {
+      if (key.toUpperCase() === safeSeed.toUpperCase() && key !== safeSeed) {
+        delete parsed[key];
+      }
+    }
+    parsed[safeSeed] = [item, ...existing.filter((e) => e.id !== item.id)].slice(0, 50);
     window.localStorage?.setItem(OFFLINE_COHORT_STORAGE_KEY, JSON.stringify(parsed));
   } catch {
     // Ignore localStorage quota errors
@@ -390,7 +402,8 @@ export async function submitDailyChallenge(
 
 export async function requestEntitlementCheckout(
   tier: 'exam_pass' | 'instructor_cohort',
-  baseUrl?: string
+  baseUrl?: string,
+  options?: { allowSandboxMint?: boolean }
 ): Promise<{
   valid: boolean;
   tier: EntitlementTier;
@@ -418,8 +431,18 @@ export async function requestEntitlementCheckout(
         };
       }
     } catch {
-      // Fall back to local signed entitlement mint
+      // Fall back to local signed entitlement mint only when sandbox minting is permitted
     }
+  }
+
+  const allowSandbox = options?.allowSandboxMint ?? true;
+  if (!allowSandbox) {
+    return {
+      valid: false,
+      tier: 'free',
+      token: '',
+      online: false,
+    };
   }
 
   const token = createSignedEntitlementToken(tier);

@@ -52,6 +52,7 @@ export function CohortProView(props: CohortProViewProps) {
   >(null);
   const [activeTab, setActiveTab] = useState<'roster' | 'verifier' | 'access'>('roster');
   const cohortReqSeqRef = useRef(0);
+  const verifyReqSeqRef = useRef(0);
 
   const parsedCurrentCohort = parseCohortSeed(cohortInput);
   const effectiveSeed =
@@ -60,6 +61,8 @@ export function CohortProView(props: CohortProViewProps) {
       : 'NURS402-FALL26';
 
   useEffect(() => {
+    verifyReqSeqRef.current++;
+    setVerificationResult(null);
     const seq = ++cohortReqSeqRef.current;
     void fetchCohortSubmissions(effectiveSeed).then((res) => {
       if (cohortReqSeqRef.current === seq) {
@@ -112,12 +115,16 @@ export function CohortProView(props: CohortProViewProps) {
       if (cohortReqSeqRef.current === seq) {
         setRoster(res.roster);
         setSummary(res.summary);
+        if (!res.online) {
+          setCohortError('Server offline: submission saved locally only and not confirmed in shared ledger.');
+        }
       }
     });
   };
 
   const handleVerifyReceipt = (e: Event) => {
     e.preventDefault();
+    const verifySeq = ++verifyReqSeqRef.current;
     const rawVerdict = verifyCohortReceipt(receiptToVerify);
     const localVerdict: VerifiedCohortReceipt =
       rawVerdict.valid &&
@@ -127,6 +134,7 @@ export function CohortProView(props: CohortProViewProps) {
         : rawVerdict;
     setVerificationResult(localVerdict);
     void verifyReceiptRemote(receiptToVerify, effectiveSeed).then((remoteVerdict) => {
+      if (verifyReqSeqRef.current !== verifySeq) return;
       if (
         remoteVerdict.valid &&
         remoteVerdict.cohort &&
@@ -332,7 +340,11 @@ export function CohortProView(props: CohortProViewProps) {
                   autocomplete="off"
                   placeholder="TW-NURS402-FALL26-92-FD37"
                   value={receiptToVerify}
-                  onInput={(e) => setReceiptToVerify((e.target as HTMLInputElement).value)}
+                  onInput={(e) => {
+                    verifyReqSeqRef.current++;
+                    setVerificationResult(null);
+                    setReceiptToVerify((e.target as HTMLInputElement).value);
+                  }}
                   class="w-full h-10 px-3 rounded border tw-mono-vital text-sm tw-input"
                 />
               </div>

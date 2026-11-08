@@ -143,7 +143,9 @@ describe('Ticket 01: Full-Stack Telemetry, Cohort & Entitlement REST Backend (/a
     };
     expect(shortSimJson.intervention).toBe('defibrillation');
     expect(shortSimJson.interventionAtSec).toBe(5);
-    expect(shortSimJson.causalTimeline.some((e) => e.action === 'defibrillation')).toBe(true);
+    expect(
+      shortSimJson.causalTimeline.some((e) => e.action === 'defibrillation' && e.timeSec === 5)
+    ).toBe(true);
 
     // Verify atSec > durationSec returns 400
     const outOfRangeAtSecRes = await fetch(`${baseUrl}/api/sim`, {

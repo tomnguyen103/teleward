@@ -18,6 +18,7 @@ export interface ShiftStationViewProps {
   stationTitle: string;
   stationSubtitle?: string;
   hideStationHeader?: boolean;
+  disableHotkeys?: boolean;
   beds: readonly BedState[];
   selectedBedIndex: number;
   onSelectBed: (index: number) => void;
@@ -128,6 +129,7 @@ export function ShiftStationView(props: ShiftStationViewProps) {
   const {
     stationTitle,
     hideStationHeader = false,
+    disableHotkeys = false,
     beds,
     selectedBedIndex,
     onSelectBed,
@@ -158,7 +160,7 @@ export function ShiftStationView(props: ShiftStationViewProps) {
   const activeBed = beds[selectedBedIndex] ?? beds[0]!;
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || disableHotkeys) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
       const target = e.target as HTMLElement | null;
@@ -177,7 +179,7 @@ export function ShiftStationView(props: ShiftStationViewProps) {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [activeBed.bedIndex, onApplyIntervention]);
+  }, [activeBed.bedIndex, disableHotkeys, onApplyIntervention]);
 
   useEffect(() => {
     let rafId = 0;
@@ -227,34 +229,36 @@ export function ShiftStationView(props: ShiftStationViewProps) {
   return (
     <div class="flex flex-col gap-3">
       {/* Group 1: Station Command Bar */}
-      {!hideStationHeader ? (
-        <section class="tw-surface px-4 py-3 flex flex-wrap items-center justify-between gap-3">
-          <div>
+      <section class="tw-surface px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          {!hideStationHeader ? (
             <h1 class="m-0">{stationTitle}</h1>
+          ) : (
+            <span class="text-sm font-semibold tw-text-muted">Live Ward Telemetry</span>
+          )}
+        </div>
+
+        <div class="flex flex-wrap items-center gap-4">
+          <div class="hidden xl:flex items-center gap-2.5 text-xs tw-mono-vital px-2.5 py-1 rounded border tw-chip-muted">
+            <span class="tw-text-ecg">II 1.0mV</span>
+            <span class="tw-text-abp">ART mmHg</span>
+            <span class="tw-text-spo2">PLETH</span>
+            <span class="tw-text-etco2">CO2 mmHg</span>
+            <span class="tw-text-muted">25 mm/s</span>
           </div>
 
-          <div class="flex flex-wrap items-center gap-4">
-            <div class="hidden xl:flex items-center gap-2.5 text-xs tw-mono-vital px-2.5 py-1 rounded border tw-chip-muted">
-              <span class="tw-text-ecg">II 1.0mV</span>
-              <span class="tw-text-abp">ART mmHg</span>
-              <span class="tw-text-spo2">PLETH</span>
-              <span class="tw-text-etco2">CO2 mmHg</span>
-              <span class="tw-text-muted">25 mm/s</span>
+          <div class="text-right">
+            <div class="text-xs tw-text-muted">Stabilized Beds</div>
+            <div class="tw-mono-vital text-base font-semibold">
+              {scoreSummary.bedsStabilized} / 4 ({scoreSummary.scorePct}%)
             </div>
-
-            <div class="text-right">
-              <div class="text-xs tw-text-muted">Stabilized Beds</div>
-              <div class="tw-mono-vital text-base font-semibold">
-                {scoreSummary.bedsStabilized} / 4 ({scoreSummary.scorePct}%)
-              </div>
-            </div>
-
-            <button type="button" onClick={onResetShift} class="tw-btn-secondary">
-              Reset Shift
-            </button>
           </div>
-        </section>
-      ) : null}
+
+          <button type="button" onClick={onResetShift} class="tw-btn-secondary">
+            Reset Shift
+          </button>
+        </div>
+      </section>
 
       {/* Group 2: 2x2 HiDPI 60fps 2D Canvas ICU Bedside Monitor Matrix */}
       <section aria-label="4-Bed ICU Telemetry Monitors" class="grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -424,7 +428,7 @@ export function ShiftStationView(props: ShiftStationViewProps) {
                     onClick={() => onApplyIntervention(activeBed.bedIndex, item.id)}
                     class="tw-btn-secondary text-left flex flex-col justify-between p-2.5 gap-1"
                   >
-                    <div class="w-full flex items-center justify-between gap-1">
+                    <div class="w-full flex flex-wrap items-center justify-between gap-1">
                       <span class="font-semibold text-sm">{badge.shortTitle}</span>
                       <span
                         class="tw-mono-vital px-1.5 py-0.5 rounded text-xs font-semibold shrink-0"
@@ -455,7 +459,7 @@ export function ShiftStationView(props: ShiftStationViewProps) {
               <h3 class="m-0 text-sm font-semibold">ISO-26825 IV Pharmacology Bolus Rack</h3>
               <span class="tw-mono-vital text-xs tw-text-muted">Hotkeys 4–8</span>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-2">
               {PHARMACOLOGY_RACK_IDS.map((id) => {
                 const item = getMetadataById(id);
                 const badge = ISO_26825_DRUG_BADGES[id];
@@ -467,7 +471,7 @@ export function ShiftStationView(props: ShiftStationViewProps) {
                     onClick={() => onApplyIntervention(activeBed.bedIndex, item.id)}
                     class="tw-btn-secondary text-left flex flex-col justify-between p-2.5 gap-1"
                   >
-                    <div class="w-full flex items-center justify-between gap-1">
+                    <div class="w-full flex flex-wrap items-center justify-between gap-1">
                       <span class="font-semibold text-sm">{badge.shortTitle}</span>
                       <span
                         class="tw-mono-vital px-1.5 py-0.5 rounded text-xs font-semibold shrink-0"

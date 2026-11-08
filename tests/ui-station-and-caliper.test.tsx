@@ -235,14 +235,17 @@ describe('Ticket 02: Obsidian ICU Telemetry Cockpit, Unified 64px Header & 2-Bay
 
     const inspector = getByTestId('causal-timeline-inspector');
     expect(inspector.getAttribute('aria-hidden')).toBe('true');
+    expect(inspector.classList.contains('hidden')).toBe(true);
     fireEvent.click(getByTestId('toggle-causal-drawer-btn'));
     expect(inspector.getAttribute('aria-hidden')).toBe('false');
+    expect(inspector.classList.contains('flex')).toBe(true);
     fireEvent.click(getByTestId('toggle-causal-drawer-btn'));
     expect(inspector.getAttribute('aria-hidden')).toBe('true');
+    expect(inspector.classList.contains('hidden')).toBe(true);
 
     cleanup();
 
-    const { container: dailyContainer } = render(
+    const { container: dailyContainer, getByTestId: getDailyTestId } = render(
       <App initialPath="/daily" preloadedDataset={DATASET} initialSeed={101} />
     );
     expect(dailyContainer.querySelectorAll('h1').length).toBe(1);
@@ -251,6 +254,10 @@ describe('Ticket 02: Obsidian ICU Telemetry Cockpit, Unified 64px Header & 2-Bay
     )!;
     fireEvent.click(standingsTab);
     expect(standingsTab.getAttribute('aria-selected')).toBe('true');
+    const lbSection = getDailyTestId('daily-leaderboard-table').closest('section')!;
+    expect(lbSection.classList.contains('flex')).toBe(true);
+    const wardWrapper = getDailyTestId('bed-card-0').closest('div.hidden, div.block')!;
+    expect(wardWrapper.classList.contains('hidden')).toBe(true);
 
     cleanup();
 

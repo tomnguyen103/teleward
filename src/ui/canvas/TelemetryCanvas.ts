@@ -308,7 +308,7 @@ export function render12LeadCaliperCanvas(
     ctx.stroke();
   }
 
-  const colSamples = Math.max(1, Math.round(stripSamples / cols));
+  const colSamples = Math.max(1, stripSamples / cols);
 
   for (let l = 0; l < LEAD_NAMES.length; l++) {
     const leadName = LEAD_NAMES[l]!;
