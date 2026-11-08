@@ -8,6 +8,7 @@ import hashlib
 import json
 import math
 import os
+import shutil
 import struct
 import sys
 import time
@@ -554,10 +555,11 @@ def main() -> None:
     pid = os.getpid()
     bin_target = out_dir / "ptbxl_120.bin"
     bin_tmp = out_dir / f"ptbxl_120.bin.tmp.{pid}"
+    bin_bak = out_dir / f"ptbxl_120.bin.tmp.bak.{pid}"
     idx_target = out_dir / "ptbxl_index.json"
     idx_tmp = out_dir / f"ptbxl_index.json.tmp.{pid}"
 
-    for p in (bin_target, bin_tmp, idx_target, idx_tmp):
+    for p in (bin_target, bin_tmp, bin_bak, idx_target, idx_tmp):
         reject_if_symlink(p, str(p))
 
     try:
@@ -572,10 +574,19 @@ def main() -> None:
             f_idx.flush()
             os.fsync(f_idx.fileno())
 
+        if bin_target.exists():
+            shutil.copy2(bin_target, bin_bak)
+
         replace_with_retry(bin_tmp, bin_target)
-        replace_with_retry(idx_tmp, idx_target)
+        try:
+            replace_with_retry(idx_tmp, idx_target)
+        except Exception:
+            if bin_bak.exists():
+                replace_with_retry(bin_bak, bin_target)
+            raise
     finally:
         unlink_with_retry(bin_tmp, ignore_final_error=True)
+        unlink_with_retry(bin_bak, ignore_final_error=True)
         unlink_with_retry(idx_tmp, ignore_final_error=True)
 
     print(
