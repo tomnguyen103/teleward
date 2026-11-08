@@ -173,6 +173,9 @@ export const RHYTHM_PROFILES: Record<RhythmClass, RhythmTargetProfile> = {
   },
 };
 
+/**
+ * Clamps physiological vital parameters to valid clinical bounds and enforces zero heart rate during unpaced arrest rhythms.
+ */
 export function clampPhysiology(v: VitalState): VitalState {
   const isZeroHrArrest = (v.rhythm === 'ASYSTOLE' || v.rhythm === 'VFIB') && !v.paced;
   const hr = isZeroHrArrest

@@ -25,6 +25,7 @@
   --trace-ecg: #00E676;
   --trace-abp: #FF5252;
   --trace-spo2: #00E5FF;
+  --trace-spo2-text: #3898FF;
   --trace-etco2: #FFD740;
   --ecg-grid-minor: rgba(225, 29, 72, 0.14);
   --ecg-grid-major: rgba(225, 29, 72, 0.32);
@@ -234,7 +235,6 @@ h3 {
 .tw-chip-muted {
   background-color: var(--surface-muted);
   color: var(--text-muted);
-  border: 1px solid var(--border);
 }
 
 .tw-canvas-frame {
@@ -359,7 +359,7 @@ h3 {
 }
 
 .tw-text-spo2 {
-  color: #3898FF;
+  color: var(--trace-spo2-text);
 }
 
 [data-theme="light"] .tw-text-spo2 {

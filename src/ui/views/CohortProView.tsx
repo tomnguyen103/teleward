@@ -24,6 +24,9 @@ export interface CohortProViewProps {
   onLaunchCohortShift: (cohortSeed: string) => void;
 }
 
+/**
+ * Renders the Cohort Pro workspace with segmented tabs for Cohort Roster, Receipt Verifier, and Pro Access.
+ */
 export function CohortProView(props: CohortProViewProps) {
   const {
     entitlementTier,

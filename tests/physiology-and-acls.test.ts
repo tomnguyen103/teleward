@@ -82,6 +82,17 @@ describe('Ticket 01: Continuous-Phase Cardiac Synthesis & Coupled Hemodynamics',
       expect(bed.vitals.dbp).toBe(0);
       expect(bed.vitals.rr).toBe(0);
     }
+
+    // After a prohibited unsynchronized shock induces VFIB, advancing the shift keeps VFIB shockable until defibrillated
+    const rescueShift = new ShiftController(42);
+    const nonVfibBed = rescueShift.getBeds().find((b) => b.vitals.rhythm === 'SVT' || b.vitals.rhythm === 'AFIB') ?? rescueShift.getBeds()[1]!;
+    rescueShift.applyIntervention(nonVfibBed.bedIndex, 'defibrillation', 1000);
+    expect(rescueShift.getBeds()[nonVfibBed.bedIndex]!.vitals.rhythm).toBe('VFIB');
+    expect(rescueShift.getBeds()[nonVfibBed.bedIndex]!.arrested).toBe(true);
+    rescueShift.stepSeconds(4);
+    expect(rescueShift.getBeds()[nonVfibBed.bedIndex]!.vitals.rhythm).toBe('VFIB');
+    rescueShift.applyIntervention(nonVfibBed.bedIndex, 'defibrillation', 2000);
+    expect(rescueShift.getBeds()[nonVfibBed.bedIndex]!.vitals.rhythm).toBe('NSR');
   });
 });
 

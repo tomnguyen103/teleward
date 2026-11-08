@@ -23,6 +23,9 @@ export interface DailyChallengeViewProps {
   shiftResetKey?: string;
 }
 
+/**
+ * Renders the UTC-seeded Daily Telemetry Challenge view with segmented sub-views for Live Ward and Standings.
+ */
 export function DailyChallengeView(props: DailyChallengeViewProps) {
   const utcDateKey = getUtcDateKey();
   const [activeSubView, setActiveSubView] = useState<'ward' | 'standings'>('ward');

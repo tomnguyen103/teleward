@@ -162,6 +162,9 @@ function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
   });
 }
 
+/**
+ * Replays a sequence of timestamped ACLS interventions against a deterministic ShiftController to verify submitted shift scores.
+ */
 function verifyActionLogReplay(
   seed: number | string,
   actionLog: unknown
@@ -225,6 +228,9 @@ function verifyActionLogReplay(
   };
 }
 
+/**
+ * Creates the HTTP request handler middleware for all TeleWard /api/* endpoints.
+ */
 export function createTelewardApiMiddleware(
   options?: TelewardApiOptions
 ): (req: IncomingMessage, res: ServerResponse, next?: () => void) => void {

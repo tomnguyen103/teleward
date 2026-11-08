@@ -125,6 +125,9 @@ function getMetadataById(id: AclsInterventionId): InterventionMetadata {
   );
 }
 
+/**
+ * Renders the 4-bed central ICU telemetry monitor matrix and segmented ACLS crash cart intervention dock.
+ */
 export function ShiftStationView(props: ShiftStationViewProps) {
   const {
     stationTitle,

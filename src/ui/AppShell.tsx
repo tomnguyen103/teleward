@@ -30,6 +30,9 @@ export interface AppShellProps {
   children: ComponentChildren;
 }
 
+/**
+ * Renders the Calm 2-Region Default Shell with top command bar, collapsible scope rail, main canvas, and on-demand causal peek drawer.
+ */
 export function AppShell(props: AppShellProps) {
   const {
     activeArea,

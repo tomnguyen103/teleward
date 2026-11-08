@@ -33,6 +33,9 @@ export interface AppProps {
   initialSeed?: number;
 }
 
+/**
+ * Root TeleWard workbench component managing route state, PTB-XL binary dataset loading, ACLS simulation controllers, and entitlements.
+ */
 export function App(props: AppProps) {
   const [currentPath, setCurrentPath] = useState<string>(() => {
     if (props.initialPath) return props.initialPath;

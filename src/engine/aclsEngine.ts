@@ -793,7 +793,7 @@ export class ShiftController {
             expiredThisTick = true;
           }
         } else if (bed.arrested) {
-          nextRhythm = 'ASYSTOLE';
+          nextRhythm = bed.vitals.rhythm === 'VFIB' ? 'VFIB' : 'ASYSTOLE';
           nextPaced = false;
           nextState.hr = 0;
           nextState.rr = 0;

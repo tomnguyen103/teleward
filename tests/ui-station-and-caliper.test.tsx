@@ -217,16 +217,24 @@ describe('Ticket 02: Obsidian ICU Telemetry Cockpit, Unified 64px Header & 2-Bay
       <App initialPath="/caliper/ptbxl-001" preloadedDataset={DATASET} />
     );
     const autofillBtn = getByTestId('autofill-caliper-fiducials-btn');
+    const setQtBtn = getByTestId('set-caliper-qt-btn');
     const qtcField = container.querySelector('#input-qtc-ms') as HTMLInputElement;
+    const calCanvas = getByTestId('caliper-12lead-canvas') as HTMLCanvasElement;
     fireEvent.click(autofillBtn);
     expect(qtcField.value).toBe('894');
     fireEvent.click(autofillBtn);
     expect(qtcField.value).toBe('894');
-    // Manual typing into #input-qtc-ms must not double-divide live Bazett QTc when Apply Calipers is clicked again
-    fireEvent.input(qtcField, { target: { value: '425' } });
+
+    // Measure QT = 380 ms (T1 = 240 ms, T2 = 620 ms -> x = 59.52px on 960px 10000ms canvas), click Set QT, then restore T2 = 1040 ms (RR = 800 ms -> x = 99.84px)
+    fireEvent.click(calCanvas, { clientX: 59.52, clientY: 120 });
+    expect(getByTestId('caliper-t2-ms').textContent).toBe('620 ms');
+    fireEvent.click(setQtBtn);
+    fireEvent.click(calCanvas, { clientX: 99.84, clientY: 120 });
+    expect(getByTestId('caliper-t2-ms').textContent).toBe('1040 ms');
+    fireEvent.click(autofillBtn);
     expect(qtcField.value).toBe('425');
     fireEvent.click(autofillBtn);
-    expect(qtcField.value).toBe('894');
+    expect(qtcField.value).toBe('425');
 
     const sidebar = container.querySelector('#tw-scope-sidebar')!;
     const nsrBtn = Array.from(sidebar.querySelectorAll('button')).find(

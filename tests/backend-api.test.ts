@@ -453,5 +453,71 @@ describe('Ticket 01: Full-Stack Telemetry, Cohort & Entitlement REST Backend (/a
       }
     );
     expect(validEmptyLogCohortRes.status).toBe(200);
+
+    // Non-empty cohort actionLog replay (defibrillating Bed 0 VFIB)
+    const { ShiftController } = await import('../src/engine/aclsEngine.ts');
+    const { parseCohortSeed } = await import('../src/billing/cohortAndEntitlement.ts');
+    const replayCtrl = new ShiftController(parseCohortSeed('NURS402-FALL26').numericSeed!);
+    replayCtrl.stepSeconds(2);
+    replayCtrl.applyIntervention(0, 'defibrillation', 1000);
+    const replayScore = replayCtrl.computeShiftScore();
+    const nonEmptyLogCohortRes = await fetch(
+      `${baseUrl}/api/cohorts/NURS402-FALL26/submissions`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentAlias: 'NonEmpty Replay RN',
+          score: replayScore.scorePct,
+          stabilizedBeds: replayScore.bedsStabilized,
+          violations: replayScore.totalViolations,
+          actionLog: [{ dtSec: 2, bedIndex: 0, action: 'defibrillation' }],
+        }),
+      }
+    );
+    expect(nonEmptyLogCohortRes.status).toBe(200);
+
+    // Boundary 64 entries (valid) vs 65 entries (rejected 400 INVALID_ACTION_LOG)
+    const log64 = Array.from({ length: 64 }, () => ({ dtSec: 0.2 }));
+    const res64 = await fetch(`${baseUrl}/api/cohorts/NURS402-FALL26/submissions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentAlias: 'Boundary64 RN',
+        score: 0,
+        stabilizedBeds: 0,
+        violations: 0,
+        actionLog: log64,
+      }),
+    });
+    expect(res64.status).toBe(200);
+
+    const log65 = Array.from({ length: 65 }, () => ({ dtSec: 0.2 }));
+    const res65 = await fetch(`${baseUrl}/api/cohorts/NURS402-FALL26/submissions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentAlias: 'Boundary65 RN',
+        score: 0,
+        stabilizedBeds: 0,
+        violations: 0,
+        actionLog: log65,
+      }),
+    });
+    expect(res65.status).toBe(400);
+
+    // Daily submission actionLog replay verification and invalid entry rejection
+    const badDailyLogRes = await fetch(`${baseUrl}/api/daily/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clinicianAlias: 'Forged Daily RN',
+        scorePct: 100,
+        bedsStabilized: 4,
+        violations: 0,
+        actionLog: [{ dtSec: 1, bedIndex: 0, action: 'unknown_drug' }],
+      }),
+    });
+    expect(badDailyLogRes.status).toBe(400);
   });
 });

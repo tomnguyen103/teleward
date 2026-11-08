@@ -113,6 +113,9 @@ export interface VerifiedCohortReceipt {
   reason: 'OK' | 'MALFORMED_RECEIPT' | 'INVALID_COHORT' | 'CRC16_MISMATCH';
 }
 
+/**
+ * Verifies a 4-segment or 5-segment TeleWard cohort completion receipt and validates its cohort seed and CRC16-CCITT signature.
+ */
 export function verifyCohortReceipt(receipt: string): VerifiedCohortReceipt {
   const trimmed = (receipt ?? '').trim();
 

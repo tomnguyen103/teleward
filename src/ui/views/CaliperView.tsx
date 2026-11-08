@@ -85,6 +85,9 @@ export interface CaliperViewProps {
   onGradeUpdate?: (report: CaliperGradeReport | null, record: PtbxlCaseRecord | null) => void;
 }
 
+/**
+ * Renders the 12-lead PTB-XL diagnostic strip caliper view with interactive T1/T2/V1/V2 calipers and interval adjudication.
+ */
 export function CaliperView(props: CaliperViewProps) {
   const {
     dataset,
@@ -113,6 +116,7 @@ export function CaliperView(props: CaliperViewProps) {
   const [prInput, setPrInput] = useState('');
   const [qrsInput, setQrsInput] = useState('');
   const [qtcInput, setQtcInput] = useState('');
+  const [measuredQtMs, setMeasuredQtMs] = useState<number | null>(null);
   const [stInput, setStInput] = useState('');
   const [rhythmInput, setRhythmInput] = useState<RhythmClass>('NSR');
   const [formError, setFormError] = useState<string | null>(null);
@@ -135,6 +139,7 @@ export function CaliperView(props: CaliperViewProps) {
     setPrInput('');
     setQrsInput('');
     setQtcInput('');
+    setMeasuredQtMs(null);
     setStInput('');
     setFormError(null);
     setGradeReport(null);
@@ -143,13 +148,17 @@ export function CaliperView(props: CaliperViewProps) {
   }, [caseId, isUnlocked]);
 
   const rawCaliperDeltaMs = Math.max(1, Math.abs(caliper.t2Ms - caliper.t1Ms));
+  const qtForBazettMs =
+    measuredQtMs !== null && Number.isFinite(measuredQtMs) && measuredQtMs > 0
+      ? measuredQtMs
+      : rawCaliperDeltaMs;
 
   const metrics = computeCaliperMetrics(
     caliper.t1Ms,
     caliper.t2Ms,
     caliper.v1Mv,
     caliper.v2Mv,
-    rawCaliperDeltaMs
+    qtForBazettMs
   );
 
   useEffect(() => {
@@ -562,6 +571,17 @@ export function CaliperView(props: CaliperViewProps) {
               class="tw-btn-secondary text-sm"
             >
               Set QRS
+            </button>
+            <button
+              type="button"
+              data-testid="set-caliper-qt-btn"
+              onClick={() => {
+                setMeasuredQtMs(Math.round(metrics.deltaMs));
+                setFormError(null);
+              }}
+              class="tw-btn-secondary text-sm"
+            >
+              Set QT
             </button>
             <button
               type="button"
