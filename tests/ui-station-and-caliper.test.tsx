@@ -222,6 +222,11 @@ describe('Ticket 02: Obsidian ICU Telemetry Cockpit, Unified 64px Header & 2-Bay
     expect(qtcField.value).toBe('894');
     fireEvent.click(autofillBtn);
     expect(qtcField.value).toBe('894');
+    // Manual typing into #input-qtc-ms must not double-divide live Bazett QTc when Apply Calipers is clicked again
+    fireEvent.input(qtcField, { target: { value: '425' } });
+    expect(qtcField.value).toBe('425');
+    fireEvent.click(autofillBtn);
+    expect(qtcField.value).toBe('894');
 
     const sidebar = container.querySelector('#tw-scope-sidebar')!;
     const nsrBtn = Array.from(sidebar.querySelectorAll('button')).find(
@@ -254,6 +259,7 @@ describe('Ticket 02: Obsidian ICU Telemetry Cockpit, Unified 64px Header & 2-Bay
     )!;
     fireEvent.click(standingsTab);
     expect(standingsTab.getAttribute('aria-selected')).toBe('true');
+    expect(standingsTab.classList.contains('tw-seg-btn-active')).toBe(true);
     const lbSection = getDailyTestId('daily-leaderboard-table').closest('section')!;
     expect(lbSection.classList.contains('flex')).toBe(true);
     const wardWrapper = getDailyTestId('bed-card-0').closest('div.hidden, div.block')!;
@@ -277,6 +283,7 @@ describe('Ticket 02: Obsidian ICU Telemetry Cockpit, Unified 64px Header & 2-Bay
     )!;
     fireEvent.click(verifierTab);
     expect(verifierTab.getAttribute('aria-selected')).toBe('true');
+    expect(verifierTab.classList.contains('tw-seg-btn-active')).toBe(true);
     const receiptInput = getCohortTestId('cohort-receipt-input') as HTMLInputElement;
     fireEvent.input(receiptInput, { target: { value: mismatchedReceipt } });
     fireEvent.click(getCohortTestId('verify-cohort-receipt-btn'));

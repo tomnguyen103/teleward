@@ -374,5 +374,84 @@ describe('Ticket 01: Full-Stack Telemetry, Cohort & Entitlement REST Backend (/a
     // Verify CLI serve subcommand validation
     expect(executeCli(['serve', '--port', '0', '--once'])).toBe(0);
     expect(executeCli(['serve', '--port', 'invalid'])).toBe(2);
+
+    // Malformed receipt with expectedCohort must report MALFORMED_RECEIPT (not INVALID_COHORT)
+    const verifyMalformedWithCohort = await fetch(`${baseUrl}/api/receipts/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        receipt: 'NOT-A-VALID-RECEIPT',
+        expectedCohort: 'NURS402-FALL26',
+      }),
+    });
+    const malformedJson = (await verifyMalformedWithCohort.json()) as {
+      valid: boolean;
+      reason: string;
+    };
+    expect(malformedJson.valid).toBe(false);
+    expect(malformedJson.reason).toBe('MALFORMED_RECEIPT');
+
+    // Lowercase receipt and expectedCohort normalize cleanly
+    const verifyLower = await fetch(`${baseUrl}/api/receipts/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        receipt: subJson.submission.receipt.toLowerCase(),
+        expectedCohort: 'nurs402-fall26',
+      }),
+    });
+    const verifyLowerJson = (await verifyLower.json()) as {
+      valid: boolean;
+      cohort: string;
+    };
+    expect(verifyLowerJson.valid).toBe(true);
+    expect(verifyLowerJson.cohort).toBe('NURS402-FALL26');
+
+    // Reserved prototype-pollution cohort in receipt is rejected as INVALID_COHORT
+    const verifyProtoReceipt = await fetch(`${baseUrl}/api/receipts/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        receipt: 'TW-__PROTO__-92-BEEF',
+      }),
+    });
+    const verifyProtoJson = (await verifyProtoReceipt.json()) as {
+      valid: boolean;
+      reason: string;
+    };
+    expect(verifyProtoJson.valid).toBe(false);
+    expect(verifyProtoJson.reason).toBe('INVALID_COHORT');
+
+    // Server-side optional actionLog replay rejects forged scorePct on /api/cohorts/:seed/submissions and /api/daily/submit
+    const forgedCohortRes = await fetch(`${baseUrl}/api/cohorts/NURS402-FALL26/submissions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentAlias: 'Forged Score RN',
+        score: 100,
+        stabilizedBeds: 4,
+        violations: 0,
+        actionLog: [],
+      }),
+    });
+    expect(forgedCohortRes.status).toBe(400);
+    const forgedCohortJson = (await forgedCohortRes.json()) as { error: string };
+    expect(forgedCohortJson.error).toBe('INVALID_ACTION_LOG');
+
+    const validEmptyLogCohortRes = await fetch(
+      `${baseUrl}/api/cohorts/NURS402-FALL26/submissions`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentAlias: 'Verified Zero RN',
+          score: 0,
+          stabilizedBeds: 0,
+          violations: 0,
+          actionLog: [],
+        }),
+      }
+    );
+    expect(validEmptyLogCohortRes.status).toBe(200);
   });
 });

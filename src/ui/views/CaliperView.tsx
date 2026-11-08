@@ -113,7 +113,6 @@ export function CaliperView(props: CaliperViewProps) {
   const [prInput, setPrInput] = useState('');
   const [qrsInput, setQrsInput] = useState('');
   const [qtcInput, setQtcInput] = useState('');
-  const [measuredQtMs, setMeasuredQtMs] = useState<number | null>(null);
   const [stInput, setStInput] = useState('');
   const [rhythmInput, setRhythmInput] = useState<RhythmClass>('NSR');
   const [formError, setFormError] = useState<string | null>(null);
@@ -136,7 +135,6 @@ export function CaliperView(props: CaliperViewProps) {
     setPrInput('');
     setQrsInput('');
     setQtcInput('');
-    setMeasuredQtMs(null);
     setStInput('');
     setFormError(null);
     setGradeReport(null);
@@ -145,17 +143,13 @@ export function CaliperView(props: CaliperViewProps) {
   }, [caseId, isUnlocked]);
 
   const rawCaliperDeltaMs = Math.max(1, Math.abs(caliper.t2Ms - caliper.t1Ms));
-  const qtForBazettMs =
-    measuredQtMs !== null && Number.isFinite(measuredQtMs) && measuredQtMs > 0
-      ? measuredQtMs
-      : rawCaliperDeltaMs;
 
   const metrics = computeCaliperMetrics(
     caliper.t1Ms,
     caliper.t2Ms,
     caliper.v1Mv,
     caliper.v2Mv,
-    qtForBazettMs
+    rawCaliperDeltaMs
   );
 
   useEffect(() => {
@@ -416,7 +410,7 @@ export function CaliperView(props: CaliperViewProps) {
           <h1 class="m-0">Diagnostic Strip Calipers</h1>
           <span
             data-testid="active-caliper-case-id"
-            class="tw-mono-vital text-xs px-2 py-0.5 rounded border tw-chip-muted"
+            class="tw-mono-vital text-xs px-2 py-1 rounded tw-chip-muted"
           >
             {resolvedRecord.caseId} · {paperSpeedMmPerSec} mm/s · {gainMmPerMv} mm/mV
           </span>
@@ -538,7 +532,7 @@ export function CaliperView(props: CaliperViewProps) {
           onClick={handlePointerPlotClick}
           width={960}
           height={420}
-          class="w-full rounded border cursor-crosshair tw-border"
+          class="w-full rounded cursor-crosshair tw-canvas-frame"
           style={{ touchAction: 'none' }}
           aria-label={`12-lead ECG strip for ${resolvedRecord.caseId} at ${paperSpeedMmPerSec} mm/s and ${gainMmPerMv} mm/mV`}
         />
@@ -624,16 +618,7 @@ export function CaliperView(props: CaliperViewProps) {
               inputMode="numeric"
               autocomplete="off"
               value={qtcInput}
-              onInput={(e) => {
-                const rawVal = (e.target as HTMLInputElement).value;
-                setQtcInput(rawVal);
-                const parsedQt = Number(rawVal);
-                setMeasuredQtMs(
-                  rawVal.trim() !== '' && Number.isFinite(parsedQt) && parsedQt > 0
-                    ? parsedQt
-                    : null
-                );
-              }}
+              onInput={(e) => setQtcInput((e.target as HTMLInputElement).value)}
               class="w-full h-10 px-3 rounded tw-mono-vital text-sm tw-input"
             />
           </div>

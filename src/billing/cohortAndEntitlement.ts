@@ -117,9 +117,20 @@ export function verifyCohortReceipt(receipt: string): VerifiedCohortReceipt {
   const trimmed = (receipt ?? '').trim();
 
   // 1. Canonical 4-segment spec format: TW-<COHORT>-<SCORE>-<CRC16>
-  const match4 = /^TW-([a-zA-Z0-9_-]{1,64})-(\d{1,3})-([0-9A-Fa-f]{4})$/.exec(trimmed);
+  const match4 = /^TW-([a-zA-Z0-9_-]{1,64})-(\d{1,3})-([0-9A-Fa-f]{4})$/i.exec(trimmed);
   if (match4) {
-    const cohort = match4[1]!;
+    const parsedCohort = parseCohortSeed(match4[1]!);
+    if (!parsedCohort.valid || !parsedCohort.cohort) {
+      return {
+        valid: false,
+        cohort: null,
+        scorePct: null,
+        bedsStabilized: null,
+        violations: null,
+        reason: 'INVALID_COHORT',
+      };
+    }
+    const cohort = parsedCohort.cohort;
     const scorePct = Number(match4[2]!);
     const providedCrc = match4[3]!.toUpperCase();
 
@@ -187,7 +198,7 @@ export function verifyCohortReceipt(receipt: string): VerifiedCohortReceipt {
   }
 
   // 2. Extended 5-segment format: TW-<COHORT>-<SCORE>-<BEDS>B<VIOL>V-<CRC16>
-  const match5 = /^TW-([a-zA-Z0-9_-]{1,64})-(\d{1,3})-(\d)B(\d+)V-([0-9A-Fa-f]{4})$/.exec(
+  const match5 = /^TW-([a-zA-Z0-9_-]{1,64})-(\d{1,3})-(\d)[Bb](\d+)[Vv]-([0-9A-Fa-f]{4})$/i.exec(
     trimmed
   );
   if (!match5) {
@@ -201,7 +212,18 @@ export function verifyCohortReceipt(receipt: string): VerifiedCohortReceipt {
     };
   }
 
-  const cohort = match5[1]!;
+  const parsedCohort5 = parseCohortSeed(match5[1]!);
+  if (!parsedCohort5.valid || !parsedCohort5.cohort) {
+    return {
+      valid: false,
+      cohort: null,
+      scorePct: null,
+      bedsStabilized: null,
+      violations: null,
+      reason: 'INVALID_COHORT',
+    };
+  }
+  const cohort = parsedCohort5.cohort;
   const scorePct = Number(match5[2]!);
   const bedsStabilized = Number(match5[3]!);
   const violations = Number(match5[4]!);

@@ -246,7 +246,7 @@ export function evaluateAclsTransition(
       converted: false,
       ahaViolationCode: 'AHA_UNSYNC_SHOCK_ON_PERFUSING',
       rationale:
-        'Unsynchronized high-energy shock on a perfusing organized rhythm strikes the vulnerable T-wave (R-on-T) and precipitates Ventricular Fibrillation.',
+        'Unsynchronized high-energy shock on an organized rhythm with pulse strikes the vulnerable T-wave (R-on-T) and precipitates Ventricular Fibrillation.',
     };
   }
 
@@ -310,7 +310,7 @@ export function evaluateAclsTransition(
         converted: true,
         ahaViolationCode: null,
         rationale:
-          'Transcutaneous pacing captures the ventricles below the infranodal His-Purkinje block and restores cardiac output.',
+          'Transcutaneous pacer captures the ventricles below the infranodal His-Purkinje block and restores cardiac output.',
       };
     }
     if (action === 'atropine_1mg') {
@@ -457,7 +457,7 @@ export function evaluateAclsTransition(
         converted: true,
         ahaViolationCode: null,
         rationale:
-          'Prophylactic ischemic stabilization suppresses peri-infarct ventricular ectopy awaiting cath lab reperfusion.',
+          'Prophylactic ischemic stabilization suppresses peri-infarct ventricular ectopy prior to cath lab reperfusion.',
       };
     }
   }
@@ -792,6 +792,12 @@ export class ShiftController {
             bed.caseId = getCaseIdForRhythm('ASYSTOLE', bed.bedIndex);
             expiredThisTick = true;
           }
+        } else if (bed.arrested) {
+          nextRhythm = 'ASYSTOLE';
+          nextPaced = false;
+          nextState.hr = 0;
+          nextState.rr = 0;
+          this.continuousStates[i] = nextState;
         }
 
         bed.vitals = clampPhysiology({

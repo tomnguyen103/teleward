@@ -69,5 +69,19 @@ describe('Ticket 01: Continuous-Phase Cardiac Synthesis & Coupled Hemodynamics',
     const shift = new ShiftController(42);
     shift.stepSeconds(4);
     expect(shift.getBeds().length).toBe(4);
+
+    // Stepping 300s into unrescued arrest must clamp HR, SBP, DBP, and RR at 0 with zero PRNG jitter drift
+    for (let i = 0; i < 30; i++) {
+      shift.stepSeconds(10);
+    }
+    for (const bed of shift.getBeds()) {
+      expect(bed.arrested).toBe(true);
+      expect(bed.vitals.rhythm).toBe('ASYSTOLE');
+      expect(bed.vitals.hr).toBe(0);
+      expect(bed.vitals.sbp).toBe(0);
+      expect(bed.vitals.dbp).toBe(0);
+      expect(bed.vitals.rr).toBe(0);
+    }
   });
 });
+

@@ -260,7 +260,7 @@ export function AppShell(props: AppShellProps) {
             <label htmlFor="tw-global-search" class="sr-only">
               Search PTB-XL strips
             </label>
-            <div class="flex items-center px-2.5 h-10 rounded-md border tw-search-box">
+            <div class="flex items-center px-2.5 py-1 h-10 rounded-md tw-search-box">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" class="mr-2 shrink-0">
                 <circle cx="11" cy="11" r="8" />
                 <path d="m21 21-4.3-4.3" />
@@ -280,9 +280,9 @@ export function AppShell(props: AppShellProps) {
 
           <div
             data-testid="audio-arm-banner"
-            class="h-10 px-2 rounded-md border flex items-center gap-1.5 text-sm shrink-0 tw-search-box"
+            class="h-10 px-2.5 py-1 rounded-md flex items-center gap-1.5 text-sm shrink-0 tw-search-box"
           >
-            <span class={`tw-mono-vital px-2 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${beaconClass}`}>
+            <span class={`tw-mono-vital px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${beaconClass}`}>
               <span class="hidden md:inline">IEC 60601-1-8 · </span>
               {highestPriority}
             </span>
@@ -291,7 +291,7 @@ export function AppShell(props: AppShellProps) {
               type="button"
               data-testid="arm-audio-btn"
               onClick={handleManualAudioToggle}
-              class={`min-h-8 px-2 hidden md:inline-flex items-center text-xs font-semibold rounded border whitespace-nowrap ${
+              class={`min-h-8 px-2 hidden md:inline-flex items-center text-xs font-semibold rounded whitespace-nowrap ${
                 audioArmed && !audioMuted ? 'tw-audio-pill-armed' : 'tw-audio-pill'
               }`}
             >
@@ -302,7 +302,7 @@ export function AppShell(props: AppShellProps) {
               type="button"
               data-testid="alarm-silence-120s-btn"
               onClick={handleToggleSilence120s}
-              class={`min-h-8 px-2 inline-flex items-center tw-mono-vital text-xs font-semibold rounded border whitespace-nowrap ${
+              class={`min-h-8 px-2 inline-flex items-center tw-mono-vital text-xs font-semibold rounded whitespace-nowrap ${
                 silenceRemainingSec > 0 ? 'tw-silence-pill-active' : 'tw-silence-pill'
               }`}
               title="Silence IEC 60601-1-8 audible alarms for 120 seconds"
@@ -317,7 +317,7 @@ export function AppShell(props: AppShellProps) {
             </button>
 
             {cohortBannerText ? (
-              <span class="hidden sm:inline-flex px-2 py-0.5 rounded text-xs tw-mono-vital whitespace-nowrap tw-surface">
+              <span class="hidden sm:inline-flex px-2 py-1 rounded text-xs tw-mono-vital whitespace-nowrap tw-surface">
                 {cohortBannerText}
               </span>
             ) : null}

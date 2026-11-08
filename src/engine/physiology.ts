@@ -174,7 +174,10 @@ export const RHYTHM_PROFILES: Record<RhythmClass, RhythmTargetProfile> = {
 };
 
 export function clampPhysiology(v: VitalState): VitalState {
-  const hr = Math.max(0, Math.min(320, Math.round(Number.isFinite(v.hr) ? v.hr : 0)));
+  const isZeroHrArrest = (v.rhythm === 'ASYSTOLE' || v.rhythm === 'VFIB') && !v.paced;
+  const hr = isZeroHrArrest
+    ? 0
+    : Math.max(0, Math.min(320, Math.round(Number.isFinite(v.hr) ? v.hr : 0)));
   const sbp = Math.max(0, Math.min(260, Math.round(Number.isFinite(v.sbp) ? v.sbp : 0)));
   const dbp = Math.max(0, Math.min(160, Math.min(sbp, Math.round(Number.isFinite(v.dbp) ? v.dbp : 0))));
   const map = sbp > 0 ? Math.round(dbp + (sbp - dbp) / 3) : 0;
@@ -279,10 +282,14 @@ export function stepHemodynamicsRk4(
   const k3 = computeDerivatives(addScaled(current, k2, dtSec * 0.5), rhythm, elapsedUnrescuedSec + dtSec * 0.5, paced);
   const k4 = computeDerivatives(addScaled(current, k3, dtSec), rhythm, elapsedUnrescuedSec + dtSec, paced);
 
+  const target = RHYTHM_PROFILES[rhythm];
+  const targetHr = paced ? 70 : target.hr;
   const jitter = (jitterFn() - 0.5) * 0.12;
+  const hrJitter = targetHr === 0 ? 0 : jitter;
+  const sbpJitter = target.pulseless && current.sbp <= 0.5 ? 0 : jitter;
   return {
-    hr: Math.max(0, Math.min(320, current.hr + (dtSec / 6) * (k1.hr + 2 * k2.hr + 2 * k3.hr + k4.hr) + jitter)),
-    sbp: Math.max(0, Math.min(260, current.sbp + (dtSec / 6) * (k1.sbp + 2 * k2.sbp + 2 * k3.sbp + k4.sbp) + jitter)),
+    hr: Math.max(0, Math.min(320, current.hr + (dtSec / 6) * (k1.hr + 2 * k2.hr + 2 * k3.hr + k4.hr) + hrJitter)),
+    sbp: Math.max(0, Math.min(260, current.sbp + (dtSec / 6) * (k1.sbp + 2 * k2.sbp + 2 * k3.sbp + k4.sbp) + sbpJitter)),
     dbp: Math.max(0, Math.min(160, current.dbp + (dtSec / 6) * (k1.dbp + 2 * k2.dbp + 2 * k3.dbp + k4.dbp))),
     spo2: Math.max(0, Math.min(100, current.spo2 + (dtSec / 6) * (k1.spo2 + 2 * k2.spo2 + 2 * k3.spo2 + k4.spo2))),
     etco2: Math.max(0, Math.min(80, current.etco2 + (dtSec / 6) * (k1.etco2 + 2 * k2.etco2 + 2 * k3.etco2 + k4.etco2))),

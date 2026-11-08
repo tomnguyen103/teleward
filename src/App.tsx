@@ -111,7 +111,7 @@ export function App(props: AppProps) {
   useEffect(() => {
     if (checkoutParam === 'cancelled') {
       setCheckoutNotice(
-        'Checkout cancelled — your free starter tier (24 PTB-XL records) remains active with zero charges.'
+        'Checkout cancelled. Your free starter tier (24 PTB-XL records) remains active with zero charges.'
       );
     } else if (checkoutParam === 'success') {
       const tierParam = urlParams.get('tier');
@@ -123,12 +123,12 @@ export function App(props: AppProps) {
         const res = activateEntitlement(tierParam, tokenParam, { allowSandboxMint: false });
         if (res.valid) {
           setEntitlementTier(res.tier);
-          setCheckoutNotice(`Stripe Checkout verified — ${res.tier} unlocked.`);
+          setCheckoutNotice(`Stripe Checkout verified. ${res.tier} unlocked.`);
         } else {
-          setCheckoutNotice('Checkout token invalid or missing — entitlement remains free.');
+          setCheckoutNotice('Checkout token invalid or missing. Entitlement remains free.');
         }
       } else {
-        setCheckoutNotice('Checkout token invalid or missing — entitlement remains free.');
+        setCheckoutNotice('Checkout token invalid or missing. Entitlement remains free.');
       }
     }
   }, [checkoutParam, searchPart]);

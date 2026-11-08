@@ -247,7 +247,11 @@ export async function verifyReceiptRemote(
   }
 
   const local = verifyCohortReceipt(receipt);
-  if (expectedCohort && local.cohort && local.cohort !== expectedCohort) {
+  if (
+    expectedCohort &&
+    local.cohort &&
+    local.cohort.toUpperCase() !== expectedCohort.trim().toUpperCase()
+  ) {
     return {
       ...local,
       valid: false,

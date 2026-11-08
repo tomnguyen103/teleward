@@ -239,7 +239,7 @@ export function ShiftStationView(props: ShiftStationViewProps) {
         </div>
 
         <div class="flex flex-wrap items-center gap-4">
-          <div class="hidden xl:flex items-center gap-2.5 text-xs tw-mono-vital px-2.5 py-1 rounded border tw-chip-muted">
+          <div class="hidden xl:flex items-center gap-2.5 text-xs tw-mono-vital px-2.5 py-1 rounded tw-chip-muted">
             <span class="tw-text-ecg">II 1.0mV</span>
             <span class="tw-text-abp">ART mmHg</span>
             <span class="tw-text-spo2">PLETH</span>
@@ -288,7 +288,7 @@ export function ShiftStationView(props: ShiftStationViewProps) {
                   </h2>
                   <span
                     data-testid={`bed-rhythm-${idx}`}
-                    class={`tw-mono-vital px-2 py-0.5 rounded text-sm font-semibold ${alarmBadgeClass}`}
+                    class={`tw-mono-vital px-2 py-1 rounded text-xs font-semibold ${alarmBadgeClass}`}
                   >
                     {bed.vitals.rhythm}
                   </span>
@@ -308,7 +308,7 @@ export function ShiftStationView(props: ShiftStationViewProps) {
                       e.stopPropagation();
                       onOpenCaliperForCase(bed.caseId);
                     }}
-                    class="tw-btn-secondary text-xs py-1 px-2 whitespace-nowrap"
+                    class="tw-btn-secondary text-xs py-1.5 px-2.5 whitespace-nowrap"
                   >
                     Calipers <span class="hidden 2xl:inline">({bed.caseId})</span>
                   </button>
@@ -399,7 +399,7 @@ export function ShiftStationView(props: ShiftStationViewProps) {
 
           <span
             data-testid="acting-as-bed-guard"
-            class="px-3 py-1 rounded text-sm font-semibold tw-chip-muted"
+            class="px-3 py-1.5 rounded text-sm font-semibold tw-chip-muted"
           >
             Target: {activeBed.bedLabel} ({activeBed.vitals.rhythm} · {RHYTHM_PROFILES[activeBed.vitals.rhythm].label})
           </span>
