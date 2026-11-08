@@ -161,13 +161,34 @@ export function CaliperView(props: CaliperViewProps) {
     qtForBazettMs
   );
 
+  const [canvasLogicalWidth, setCanvasLogicalWidth] = useState(960);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || typeof window === 'undefined') return;
+    const updateWidth = () => {
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width > 0) {
+        setCanvasLogicalWidth(Math.max(240, Math.round(rect.width)));
+      }
+    };
+    updateWidth();
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(() => updateWidth());
+      observer.observe(canvas);
+      return () => observer.disconnect();
+    }
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, [caseId, isUnlocked]);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !resolvedRecord || !canAccessCase(resolvedRecord)) return;
     const ctx = getSafe2dContext(canvas);
     if (!ctx) return;
 
-    const { width, height } = syncCanvasHiDpi(canvas, 960, 420, ctx);
+    const { width, height } = syncCanvasHiDpi(canvas, canvasLogicalWidth, 420, ctx);
     const waveforms = getCaseWaveforms(dataset, resolvedRecord.caseId, 5000);
     render12LeadCaliperCanvas(
       ctx,
@@ -194,6 +215,7 @@ export function CaliperView(props: CaliperViewProps) {
     canAccessCase,
     paperSpeedMmPerSec,
     gainMmPerMv,
+    canvasLogicalWidth,
   ]);
 
   // Invalid Case ID Recovery Panel (US-04.3)
@@ -359,8 +381,10 @@ export function CaliperView(props: CaliperViewProps) {
     applyPointerCoordinate(e.clientX, e.clientY, activeHandle);
   };
 
+  const prExempt = resolvedRecord.fiducials.prMs === 0;
+
   const handleAutofillFromFiducials = () => {
-    setPrInput(String(Math.round(metrics.deltaMs)));
+    setPrInput(prExempt ? '0' : String(Math.round(metrics.deltaMs)));
     setQrsInput(String(Math.round(metrics.deltaMs)));
     setQtcInput(String(Math.round(metrics.qtcMs)));
     setStInput(metrics.deltaMv.toFixed(2));
@@ -369,13 +393,13 @@ export function CaliperView(props: CaliperViewProps) {
 
   const handleSubmitGrade = (e: Event) => {
     e.preventDefault();
-    const prVal = Number(prInput);
+    const prVal = prExempt && prInput.trim() === '' ? 0 : Number(prInput);
     const qrsVal = Number(qrsInput);
     const qtcVal = Number(qtcInput);
     const stVal = Number(stInput);
 
     if (
-      prInput.trim() === '' ||
+      (!prExempt && prInput.trim() === '') ||
       qrsInput.trim() === '' ||
       qtcInput.trim() === '' ||
       stInput.trim() === '' ||
@@ -427,12 +451,12 @@ export function CaliperView(props: CaliperViewProps) {
 
         <div class="flex flex-wrap items-center gap-3">
           {/* Paper Speed Selector (25 / 50 mm/s) */}
-          <div class="flex items-center gap-1" role="group" aria-label="ECG Paper Speed">
+          <div class="tw-seg-group" role="group" aria-label="ECG Paper Speed">
             <button
               type="button"
               data-testid="caliper-speed-25"
               onClick={() => setPaperSpeedMmPerSec(25)}
-              class={paperSpeedMmPerSec === 25 ? 'tw-btn-primary tw-mono-vital' : 'tw-btn-secondary tw-mono-vital'}
+              class={paperSpeedMmPerSec === 25 ? 'tw-seg-btn-active tw-mono-vital' : 'tw-seg-btn tw-mono-vital'}
             >
               25 mm/s
             </button>
@@ -440,21 +464,21 @@ export function CaliperView(props: CaliperViewProps) {
               type="button"
               data-testid="caliper-speed-50"
               onClick={() => setPaperSpeedMmPerSec(50)}
-              class={paperSpeedMmPerSec === 50 ? 'tw-btn-primary tw-mono-vital' : 'tw-btn-secondary tw-mono-vital'}
+              class={paperSpeedMmPerSec === 50 ? 'tw-seg-btn-active tw-mono-vital' : 'tw-seg-btn tw-mono-vital'}
             >
               50 mm/s
             </button>
           </div>
 
           {/* Gain Selector (5 / 10 / 20 mm/mV) */}
-          <div class="flex items-center gap-1" role="group" aria-label="ECG Amplitude Gain">
+          <div class="tw-seg-group" role="group" aria-label="ECG Amplitude Gain">
             {([5, 10, 20] as const).map((g) => (
               <button
                 key={g}
                 type="button"
                 data-testid={`caliper-gain-${g}`}
                 onClick={() => setGainMmPerMv(g)}
-                class={gainMmPerMv === g ? 'tw-btn-primary tw-mono-vital' : 'tw-btn-secondary tw-mono-vital'}
+                class={gainMmPerMv === g ? 'tw-seg-btn-active tw-mono-vital' : 'tw-seg-btn tw-mono-vital'}
               >
                 {g} mm/mV
               </button>
@@ -490,14 +514,14 @@ export function CaliperView(props: CaliperViewProps) {
       {/* Group 2: Interactive Caliper Toolbar & 12-Lead Paper Grid */}
       <section class="tw-surface p-4 flex flex-col gap-3">
         <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b tw-border">
-          <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Active Caliper Handle Selector">
+          <div class="tw-seg-group" role="group" aria-label="Active Caliper Handle Selector">
             {(['t1', 't2', 'v1', 'v2'] as const).map((h) => (
               <button
                 key={h}
                 type="button"
                 data-testid={`caliper-handle-btn-${h}`}
                 onClick={() => setActiveHandle(h)}
-                class={activeHandle === h ? 'tw-btn-primary' : 'tw-btn-secondary'}
+                class={activeHandle === h ? 'tw-seg-btn-active' : 'tw-seg-btn'}
               >
                 Handle {h.toUpperCase()}
               </button>
@@ -554,7 +578,9 @@ export function CaliperView(props: CaliperViewProps) {
           <div class="flex flex-wrap items-center gap-2">
             <button
               type="button"
+              disabled={prExempt}
               onClick={() => {
+                if (prExempt) return;
                 setPrInput(String(Math.round(metrics.deltaMs)));
                 setFormError(null);
               }}
@@ -597,7 +623,7 @@ export function CaliperView(props: CaliperViewProps) {
         <form onSubmit={handleSubmitGrade} class="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
           <div>
             <label htmlFor="input-pr-ms" class="block text-sm font-medium mb-1 w-fit">
-              PR Interval (ms) *
+              PR Interval (ms) {prExempt ? '(Exempt)' : '*'}
             </label>
             <input
               id="input-pr-ms"
@@ -605,6 +631,7 @@ export function CaliperView(props: CaliperViewProps) {
               type="text"
               inputMode="numeric"
               autocomplete="off"
+              placeholder={prExempt ? 'Exempt (No P)' : undefined}
               value={prInput}
               onInput={(e) => setPrInput((e.target as HTMLInputElement).value)}
               class="w-full h-10 px-3 rounded tw-mono-vital text-sm tw-input"
@@ -693,8 +720,11 @@ export function CaliperView(props: CaliperViewProps) {
           <div data-testid="caliper-grade-result" class="mt-4 pt-3 border-t text-sm tw-border">
             <strong>{gradeReport.overallPass ? 'OVERALL PASS' : 'NEEDS REVIEW'}</strong> · Ground Truth:{' '}
             <span class="tw-mono-vital">
-              PR {resolvedRecord.fiducials.prMs} ms ({gradeReport.prPass ? 'PASS' : 'FAIL'}) · QRS{' '}
-              {resolvedRecord.fiducials.qrsMs} ms ({gradeReport.qrsPass ? 'PASS' : 'FAIL'}) · QTc{' '}
+              PR{' '}
+              {gradeReport.prExempt
+                ? 'EXEMPT'
+                : `${resolvedRecord.fiducials.prMs} ms (${gradeReport.prPass ? 'PASS' : 'FAIL'})`}{' '}
+              · QRS {resolvedRecord.fiducials.qrsMs} ms ({gradeReport.qrsPass ? 'PASS' : 'FAIL'}) · QTc{' '}
               {resolvedRecord.fiducials.qtcMs} ms ({gradeReport.qtcPass ? 'PASS' : 'FAIL'}) · ST{' '}
               {resolvedRecord.fiducials.stMv} mV ({gradeReport.stPass ? 'PASS' : 'FAIL'}) ·{' '}
               {resolvedRecord.rhythmClass}

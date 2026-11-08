@@ -282,6 +282,8 @@ export function createSignedEntitlementToken(
   return `tw_pro_${tier}_${crc}`;
 }
 
+export const createEntitlementToken = createSignedEntitlementToken;
+
 export function verifyEntitlementToken(token: string | null | undefined): {
   valid: boolean;
   tier: EntitlementTier;
@@ -474,3 +476,41 @@ export function computeCohortSummary(
     fullStabilizationRate: Math.round((fullStabCount / roster.length) * 100),
   };
 }
+
+const CSV_FORMULA_PREFIXES = ['=', '+', '-', '@', '\t', '\r'] as const;
+
+export function sanitizeCsvCell(value: unknown): string {
+  const raw = String(value ?? '');
+  const trimmed = raw.trimStart();
+  const hasFormulaPrefix =
+    CSV_FORMULA_PREFIXES.some((p) => raw.startsWith(p)) ||
+    CSV_FORMULA_PREFIXES.some((p) => trimmed.startsWith(p));
+  const cleaned = raw.replace(/[\r\n]+/g, ' ');
+  const neutralized = hasFormulaPrefix ? `'${cleaned}` : cleaned;
+  if (/[",\r\n]/.test(neutralized)) {
+    return `"${neutralized.replace(/"/g, '""')}"`;
+  }
+  return neutralized;
+}
+
+export function exportCohortRosterCsv(
+  roster: readonly CohortSubmissionRecord[]
+): string {
+  const header =
+    'id,cohortSeed,studentAlias,score,stabilizedBeds,violations,receipt,submittedAt,verified';
+  const rows = roster.map((r) =>
+    [
+      sanitizeCsvCell(r.id),
+      sanitizeCsvCell(r.cohortSeed),
+      sanitizeCsvCell(r.studentAlias),
+      sanitizeCsvCell(r.score),
+      sanitizeCsvCell(r.stabilizedBeds),
+      sanitizeCsvCell(r.violations),
+      sanitizeCsvCell(r.receipt),
+      sanitizeCsvCell(r.submittedAt),
+      sanitizeCsvCell(r.verified),
+    ].join(',')
+  );
+  return [header, ...rows].join('\n');
+}
+

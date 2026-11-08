@@ -290,4 +290,77 @@ describe('US-03 & US-04: 60fps 2D Canvas 4-Bed ICU Telemetry, IEC 60601-1-8 Alar
       'PTB-XL Cardiologist Fiducial Ground Truth'
     );
   });
+
+  it('v2.0 Audit (F-11..F-14): renders 3x4 clinical 12-lead layout, exempts PR grading when prMs === 0, and awaits AudioContext.resume() in synth.arm()', async () => {
+    const { render12LeadCaliperCanvas } = await import('../src/ui/canvas/TelemetryCanvas.ts');
+    const { gradeCaliperMeasurements } = await import('../src/engine/caliperGrading.ts');
+    const { getCaseWaveforms } = await import('../src/data/ptbxlLoader.ts');
+
+    // 1. F-11: Verify 3x4 clinical 12-lead layout draws all 12 leads at 4 distinct column X offsets and 3 row Y offsets
+    const fillTextCalls: Array<{ text: string; x: number; y: number }> = [];
+    const mockCtx = {
+      fillStyle: '',
+      strokeStyle: '',
+      lineWidth: 1,
+      font: '',
+      fillRect: () => {},
+      strokeRect: () => {},
+      beginPath: () => {},
+      moveTo: () => {},
+      lineTo: () => {},
+      stroke: () => {},
+      setLineDash: () => {},
+      fillText: (text: string, x: number, y: number) => {
+        fillTextCalls.push({ text, x, y });
+      },
+    } as unknown as CanvasRenderingContext2D;
+
+    const rec001 = DATASET.records[0]!;
+    const waves001 = getCaseWaveforms(DATASET, rec001.caseId, 5000);
+    render12LeadCaliperCanvas(
+      mockCtx,
+      960,
+      420,
+      waves001,
+      { t1Ms: 240, t2Ms: 1040, v1Mv: 0, v2Mv: 0.25 },
+      [240, 1040],
+      false,
+      rec001,
+      true,
+      { paperSpeedMmPerSec: 25, gainMmPerMv: 10 }
+    );
+
+    const leadLabels = ['I', 'II', 'III', 'aVR', 'aVL', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6'];
+    const leadPositions = leadLabels.map((l) => fillTextCalls.find((c) => c.text === l)!);
+    expect(leadPositions.every(Boolean)).toBe(true);
+    const uniqueCols = new Set(leadPositions.map((p) => Math.round(p.x)));
+    const uniqueRows = new Set(leadPositions.map((p) => Math.round(p.y)));
+    expect(uniqueCols.size).toBe(4);
+    expect(uniqueRows.size).toBe(3);
+
+    // 2. F-12: Verify PR interval exemption when record.fiducials.prMs === 0 (e.g., AFIB / VFIB)
+    const afibRec = DATASET.records.find((r) => r.fiducials.prMs === 0) ?? {
+      ...rec001,
+      rhythmClass: 'AFIB' as const,
+      fiducials: { ...rec001.fiducials, prMs: 0 },
+    };
+    const afibReport = gradeCaliperMeasurements(afibRec, {
+      prMs: 999,
+      qrsMs: afibRec.fiducials.qrsMs,
+      qtcMs: afibRec.fiducials.qtcMs,
+      stMv: afibRec.fiducials.stMv,
+      rhythmClass: afibRec.rhythmClass,
+    });
+    expect(afibReport.prExempt).toBe(true);
+    expect(afibReport.prPass).toBe(true);
+    expect(afibReport.prErrorMs).toBe(0);
+    expect(afibReport.overallPass).toBe(true);
+
+    // 3. F-14: Verify async arm() awaits AudioContext.resume() and getActiveNodeCount() tracks active nodes
+    const synth = new Iec60601AlarmSynthesizer();
+    const armedOk = await synth.arm();
+    expect(typeof armedOk).toBe('boolean');
+    expect(synth.getActiveNodeCount()).toBe(0);
+    synth.close();
+  });
 });

@@ -1,11 +1,13 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import {
   buildBaselineCohortEntries,
   buildBaselineDailyEntries,
   computeCohortSummary,
   createSignedEntitlementToken,
+  exportCohortRosterCsv,
   formatDailyReceipt,
   generateCohortReceipt,
   parseCohortSeed,
@@ -18,6 +20,7 @@ import {
 } from '../billing/cohortAndEntitlement.ts';
 import {
   ACLS_INTERVENTIONS,
+  LEAD_NAMES,
   RHYTHM_CLASSES,
   type AclsInterventionId,
   type PtbxlCaseRecord,
@@ -26,6 +29,7 @@ import {
 } from '../types/teleward.ts';
 import { ShiftController, TelewardCliValidationError, runSimulation } from '../engine/aclsEngine.ts';
 import { getDailySeed, getUtcDateKey } from '../engine/prng.ts';
+import { getCaseWaveforms, loadPtbxlBinary, type LoadedPtbxlDataset } from '../data/ptbxlLoader.ts';
 
 export type {
   CohortSubmissionRecord,
@@ -48,14 +52,172 @@ export interface DailyChallengeSpec {
 export interface TelewardStoreData {
   cohortSubmissions: Record<string, CohortSubmissionRecord[]>;
   dailySubmissions: Record<string, DailyLeaderboardEntry[]>;
+  processedWebhookEvents?: string[];
+  entitlements?: Record<
+    string,
+    { tier: EntitlementTier; token: string; eventId: string; updatedAt: string }
+  >;
 }
 
 export interface TelewardApiOptions {
   storeFilePath?: string;
   indexJsonPath?: string;
+  binFilePath?: string;
+  webhookSecret?: string;
+  enforceProEntitlement?: boolean;
+  requireReplay?: boolean;
 }
 
 const MAX_BODY_BYTES = 64 * 1024;
+export const MAX_RATE_LIMIT_BUCKETS = 4096;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 240;
+
+const rateLimitBuckets = new Map<string, { count: number; resetAtMs: number }>();
+
+export function resolveClientIp(req: IncomingMessage): string {
+  if (process.env.TELEWARD_TRUST_PROXY === '1') {
+    const xff = req.headers['x-forwarded-for'];
+    const rawXff = Array.isArray(xff) ? xff.join(',') : xff;
+    if (typeof rawXff === 'string' && rawXff.trim() !== '') {
+      const hops = rawXff
+        .split(',')
+        .map((part) => part.trim())
+        .filter((part) => part !== '');
+      if (hops.length > 0) {
+        const trustedProxyHops = Math.max(
+          1,
+          Number(process.env.TELEWARD_TRUSTED_PROXY_HOPS ?? 1) || 1
+        );
+        const targetIdx = Math.max(0, hops.length - trustedProxyHops);
+        return hops[targetIdx]!;
+      }
+    }
+  }
+  return req.socket?.remoteAddress ?? '127.0.0.1';
+}
+
+export function checkRateLimit(
+  ipKey: string,
+  nowMs = Date.now(),
+  maxRequests = RATE_LIMIT_MAX_REQUESTS
+): { allowed: boolean; bucketCount: number } {
+  const existing = rateLimitBuckets.get(ipKey);
+  if (existing && existing.resetAtMs > nowMs) {
+    existing.count += 1;
+    return { allowed: existing.count <= maxRequests, bucketCount: rateLimitBuckets.size };
+  }
+
+  if (rateLimitBuckets.size >= MAX_RATE_LIMIT_BUCKETS && !rateLimitBuckets.has(ipKey)) {
+    for (const [k, v] of rateLimitBuckets.entries()) {
+      if (v.resetAtMs <= nowMs) {
+        rateLimitBuckets.delete(k);
+      }
+      if (rateLimitBuckets.size < MAX_RATE_LIMIT_BUCKETS) break;
+    }
+    if (rateLimitBuckets.size >= MAX_RATE_LIMIT_BUCKETS) {
+      let evicted = false;
+      for (const [k, v] of rateLimitBuckets.entries()) {
+        if (v.count < maxRequests) {
+          rateLimitBuckets.delete(k);
+          evicted = true;
+          break;
+        }
+      }
+      if (!evicted) {
+        return { allowed: false, bucketCount: rateLimitBuckets.size };
+      }
+    }
+  }
+
+  rateLimitBuckets.set(ipKey, { count: 1, resetAtMs: nowMs + RATE_LIMIT_WINDOW_MS });
+  return { allowed: true, bucketCount: rateLimitBuckets.size };
+}
+
+export function resetRateLimitBuckets(): void {
+  rateLimitBuckets.clear();
+}
+
+let storeMutexQueue: Promise<void> = Promise.resolve();
+
+export async function withStoreLock<T>(fn: () => T | Promise<T>): Promise<T> {
+  let release!: () => void;
+  const next = new Promise<void>((res) => {
+    release = res;
+  });
+  const prev = storeMutexQueue;
+  storeMutexQueue = prev.then(() => next, () => next);
+  await prev;
+  try {
+    return await fn();
+  } finally {
+    release();
+  }
+}
+
+function sleepSync(ms: number): void {
+  if (ms <= 0) return;
+  try {
+    const sab = new SharedArrayBuffer(4);
+    Atomics.wait(new Int32Array(sab), 0, 0, ms);
+  } catch {
+    const end = Date.now() + ms;
+    while (Date.now() < end) {
+      // fallback spin if SharedArrayBuffer is unavailable
+    }
+  }
+}
+
+export function renameWithRetrySync(
+  tmpFile: string,
+  targetFile: string,
+  maxRetries = 5,
+  baseDelayMs = 15,
+  renameImpl: (oldPath: string, newPath: string) => void = renameSync
+): void {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      renameImpl(tmpFile, targetFile);
+      return;
+    } catch (err: unknown) {
+      lastErr = err;
+      const code = (err as { code?: string })?.code;
+      if ((code === 'EPERM' || code === 'EACCES') && attempt < maxRetries - 1) {
+        sleepSync(baseDelayMs * Math.pow(2, attempt));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr;
+}
+
+export async function renameWithRetryAsync(
+  tmpFile: string,
+  targetFile: string,
+  maxRetries = 5,
+  baseDelayMs = 15,
+  renameImpl: (oldPath: string, newPath: string) => void = renameSync
+): Promise<void> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      renameImpl(tmpFile, targetFile);
+      return;
+    } catch (err: unknown) {
+      lastErr = err;
+      const code = (err as { code?: string })?.code;
+      if ((code === 'EPERM' || code === 'EACCES') && attempt < maxRetries - 1) {
+        const delayMs = baseDelayMs * Math.pow(2, attempt);
+        await new Promise((resolveDelay) => setTimeout(resolveDelay, delayMs));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr;
+}
 
 function safeDecodeUriComponent(raw: string): string | null {
   try {
@@ -82,11 +244,16 @@ export function getDailyChallengeSpec(date: Date = new Date()): DailyChallengeSp
   };
 }
 
-function readStore(storeFilePath: string): TelewardStoreData {
+function readStore(storeFilePath: string, failOnReadError = false): TelewardStoreData {
+  if (!existsSync(storeFilePath)) {
+    return {
+      cohortSubmissions: {},
+      dailySubmissions: {},
+      processedWebhookEvents: [],
+      entitlements: {},
+    };
+  }
   try {
-    if (!existsSync(storeFilePath)) {
-      return { cohortSubmissions: {}, dailySubmissions: {} };
-    }
     const raw = readFileSync(storeFilePath, 'utf-8');
     const parsed = JSON.parse(raw) as Partial<TelewardStoreData>;
     return {
@@ -98,15 +265,77 @@ function readStore(storeFilePath: string): TelewardStoreData {
         parsed.dailySubmissions && typeof parsed.dailySubmissions === 'object'
           ? parsed.dailySubmissions
           : {},
+      processedWebhookEvents: Array.isArray(parsed.processedWebhookEvents)
+        ? parsed.processedWebhookEvents
+        : [],
+      entitlements:
+        parsed.entitlements && typeof parsed.entitlements === 'object'
+          ? parsed.entitlements
+          : {},
     };
-  } catch {
-    return { cohortSubmissions: {}, dailySubmissions: {} };
+  } catch (err) {
+    if (failOnReadError) {
+      throw err;
+    }
+    return {
+      cohortSubmissions: {},
+      dailySubmissions: {},
+      processedWebhookEvents: [],
+      entitlements: {},
+    };
   }
 }
 
-function writeStore(storeFilePath: string, data: TelewardStoreData): void {
+async function writeStoreAsync(storeFilePath: string, data: TelewardStoreData): Promise<void> {
   mkdirSync(dirname(storeFilePath), { recursive: true });
-  writeFileSync(storeFilePath, JSON.stringify(data, null, 2), 'utf-8');
+  const tmpFile = `${storeFilePath}.${process.pid}.${Date.now()}.${Math.random()
+    .toString(36)
+    .slice(2, 8)}.tmp`;
+  try {
+    writeFileSync(tmpFile, JSON.stringify(data, null, 2), 'utf-8');
+    await renameWithRetryAsync(tmpFile, storeFilePath);
+  } finally {
+    try {
+      if (existsSync(tmpFile)) {
+        unlinkSync(tmpFile);
+      }
+    } catch {
+      // Ignore cleanup errors on temp file
+    }
+  }
+}
+
+export function verifyStripeWebhookSignature(
+  rawBody: string,
+  signatureHeader: string | null | undefined,
+  secret: string,
+  toleranceSec = 300,
+  nowUnixSec = Math.floor(Date.now() / 1000)
+): boolean {
+  if (!signatureHeader || typeof signatureHeader !== 'string' || !secret) {
+    return false;
+  }
+  let timestampStr = '';
+  const signatures: string[] = [];
+  for (const part of signatureHeader.split(',')) {
+    const [k, v] = part.trim().split('=');
+    if (k === 't' && v) timestampStr = v;
+    if (k === 'v1' && v) signatures.push(v);
+  }
+  const timestamp = Number(timestampStr);
+  if (!Number.isInteger(timestamp) || signatures.length === 0) {
+    return false;
+  }
+  if (Math.abs(nowUnixSec - timestamp) > toleranceSec) {
+    return false;
+  }
+  const signedPayload = `${timestamp}.${rawBody}`;
+  const expectedHex = createHmac('sha256', secret).update(signedPayload, 'utf-8').digest('hex');
+  const expectedBuf = Buffer.from(expectedHex, 'utf-8');
+  return signatures.some((sig) => {
+    const sigBuf = Buffer.from(sig, 'utf-8');
+    return sigBuf.length === expectedBuf.length && timingSafeEqual(sigBuf, expectedBuf);
+  });
 }
 
 function sendJson(res: ServerResponse, status: number, payload: unknown): void {
@@ -117,7 +346,7 @@ function sendJson(res: ServerResponse, status: number, payload: unknown): void {
   res.end(body);
 }
 
-function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
+function readRawBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolvePromise, rejectPromise) => {
     const chunks: Buffer[] = [];
     let totalBytes = 0;
@@ -137,21 +366,7 @@ function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
 
     req.on('end', () => {
       if (aborted) return;
-      const raw = Buffer.concat(chunks).toString('utf-8').trim();
-      if (raw === '') {
-        resolvePromise({});
-        return;
-      }
-      try {
-        const parsed = JSON.parse(raw) as unknown;
-        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-          rejectPromise(new Error('MALFORMED_JSON'));
-          return;
-        }
-        resolvePromise(parsed as Record<string, unknown>);
-      } catch {
-        rejectPromise(new Error('MALFORMED_JSON'));
-      }
+      resolvePromise(Buffer.concat(chunks).toString('utf-8'));
     });
 
     req.on('error', (err) => {
@@ -162,19 +377,36 @@ function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
   });
 }
 
+async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
+  const raw = (await readRawBody(req)).trim();
+  if (raw === '') {
+    return {};
+  }
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new Error('MALFORMED_JSON');
+    }
+    return parsed as Record<string, unknown>;
+  } catch {
+    throw new Error('MALFORMED_JSON');
+  }
+}
+
 /**
  * Replays a sequence of timestamped ACLS interventions against a deterministic ShiftController to verify submitted shift scores.
  */
-function verifyActionLogReplay(
+export function verifyShiftReplay(
   seed: number | string,
-  actionLog: unknown
+  interventions: unknown,
+  finalElapsedSec?: number
 ):
   | { valid: true; scorePct: number; bedsStabilized: number; violations: number }
   | { valid: false; detail: string } {
-  if (!Array.isArray(actionLog) || actionLog.length > 64) {
+  if (!Array.isArray(interventions) || interventions.length > 64) {
     return {
       valid: false,
-      detail: 'actionLog must be an array of at most 64 intervention steps.',
+      detail: 'interventions must be an array of at most 64 intervention steps.',
     };
   }
   const numericSeed =
@@ -184,23 +416,46 @@ function verifyActionLogReplay(
   const validInterventionIds = new Set<string>(ACLS_INTERVENTIONS);
   const controller = new ShiftController(numericSeed);
 
+  let currentSec = 0;
   let stepIdx = 0;
-  for (const item of actionLog) {
+  for (const item of interventions) {
     stepIdx += 1;
     if (!item || typeof item !== 'object') {
-      return { valid: false, detail: 'Each actionLog entry must be an object.' };
+      return { valid: false, detail: 'Each intervention entry must be an object.' };
     }
     const entry = item as Record<string, unknown>;
-    const dtSec = typeof entry.dtSec === 'number' ? entry.dtSec : 0;
-    if (!Number.isFinite(dtSec) || dtSec < 0 || dtSec > 300) {
-      return { valid: false, detail: 'actionLog dtSec must be within 0..300 seconds.' };
+    if (entry.atSec !== undefined) {
+      const atSec = Number(entry.atSec);
+      if (!Number.isFinite(atSec) || atSec < 0 || atSec > 300 || atSec < currentSec) {
+        return {
+          valid: false,
+          detail: 'intervention atSec must be monotonically non-decreasing within 0..300 seconds.',
+        };
+      }
+      let delta = atSec - currentSec;
+      while (delta > 0) {
+        const chunk = Math.min(10, delta);
+        controller.stepSeconds(chunk);
+        delta -= chunk;
+      }
+      currentSec = atSec;
+    } else {
+      const dtSec = typeof entry.dtSec === 'number' ? entry.dtSec : 0;
+      if (!Number.isFinite(dtSec) || dtSec < 0 || currentSec + dtSec > 300) {
+        return {
+          valid: false,
+          detail: 'Cumulative actionLog time must be within 0..300 seconds.',
+        };
+      }
+      let remaining = dtSec;
+      while (remaining > 0) {
+        const chunk = Math.min(10, remaining);
+        controller.stepSeconds(chunk);
+        remaining -= chunk;
+      }
+      currentSec += dtSec;
     }
-    let remaining = dtSec;
-    while (remaining > 0) {
-      const chunk = Math.min(10, remaining);
-      controller.stepSeconds(chunk);
-      remaining -= chunk;
-    }
+
     if (entry.action !== undefined) {
       const bedIndex = Number(entry.bedIndex ?? 0);
       const action = String(entry.action);
@@ -212,10 +467,29 @@ function verifyActionLogReplay(
       ) {
         return {
           valid: false,
-          detail: 'actionLog entry requires bedIndex (0..3) and a valid ACLS intervention id.',
+          detail: 'Intervention entry requires bedIndex (0..3) and a valid ACLS intervention id.',
         };
       }
-      controller.applyIntervention(bedIndex, action as AclsInterventionId, stepIdx * 1000);
+      const attemptedAtMs =
+        typeof entry.attemptedAtMs === 'number' && Number.isFinite(entry.attemptedAtMs)
+          ? entry.attemptedAtMs
+          : stepIdx * 1000;
+      controller.applyIntervention(bedIndex, action as AclsInterventionId, attemptedAtMs);
+    }
+  }
+
+  if (typeof finalElapsedSec === 'number' && Number.isFinite(finalElapsedSec)) {
+    if (finalElapsedSec < currentSec || finalElapsedSec > 300) {
+      return {
+        valid: false,
+        detail: 'elapsedSec must be within currentSec..300 seconds.',
+      };
+    }
+    let tailDelta = finalElapsedSec - currentSec;
+    while (tailDelta > 0) {
+      const chunk = Math.min(10, tailDelta);
+      controller.stepSeconds(chunk);
+      tailDelta -= chunk;
     }
   }
 
@@ -227,6 +501,8 @@ function verifyActionLogReplay(
     violations: summary.totalViolations,
   };
 }
+
+const verifyActionLogReplay = verifyShiftReplay;
 
 /**
  * Creates the HTTP request handler middleware for all TeleWard /api/* endpoints.
@@ -240,14 +516,89 @@ export function createTelewardApiMiddleware(
     resolve(process.cwd(), '.teleward-data/store.json');
   const indexJsonPath =
     options?.indexJsonPath ?? resolve(process.cwd(), 'public/data/ptbxl_index.json');
+  const binFilePath =
+    options?.binFilePath ?? resolve(process.cwd(), 'public/data/ptbxl_120.bin');
+  const webhookSecret =
+    options?.webhookSecret ??
+    process.env.STRIPE_WEBHOOK_SECRET ??
+    (process.env.NODE_ENV === 'production' ? '' : 'whsec_teleward_test_secret');
 
+  let cachedManifest: PtbxlIndexManifest | null = null;
   let cachedCases: PtbxlCaseRecord[] | null = null;
+  let cachedDataset: LoadedPtbxlDataset | null = null;
+
+  const getManifest = (): PtbxlIndexManifest => {
+    if (cachedManifest) return cachedManifest;
+    const raw = readFileSync(indexJsonPath, 'utf-8');
+    cachedManifest = JSON.parse(raw) as PtbxlIndexManifest;
+    cachedCases = cachedManifest.records;
+    return cachedManifest;
+  };
+
   const getCasesCatalog = (): PtbxlCaseRecord[] => {
     if (cachedCases) return cachedCases;
-    const raw = readFileSync(indexJsonPath, 'utf-8');
-    const manifest = JSON.parse(raw) as PtbxlIndexManifest;
-    cachedCases = manifest.records;
-    return cachedCases;
+    return getManifest().records;
+  };
+
+  const getLoadedDataset = (): LoadedPtbxlDataset => {
+    if (cachedDataset) return cachedDataset;
+    try {
+      const manifest = getManifest();
+      const binBuf = readFileSync(binFilePath);
+      const ab = binBuf.buffer.slice(binBuf.byteOffset, binBuf.byteOffset + binBuf.byteLength);
+      cachedDataset = loadPtbxlBinary(ab, manifest);
+      return cachedDataset;
+    } catch (err) {
+      cachedManifest = null;
+      cachedCases = null;
+      cachedDataset = null;
+      throw err;
+    }
+  };
+
+  const extractEntitlementState = (
+    req: IncomingMessage,
+    parsedUrl: URL
+  ): {
+    hasExplicitToken: boolean;
+    validProToken: boolean;
+    tier: EntitlementTier;
+    validCohort: boolean;
+    requireEntitlement: boolean;
+  } => {
+    const authHeader = req.headers.authorization;
+    const customTokenHeader = req.headers['x-teleward-entitlement'];
+    const queryToken = parsedUrl.searchParams.get('token');
+    let rawToken = '';
+    if (typeof authHeader === 'string' && authHeader.trim() !== '') {
+      rawToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+    } else if (typeof customTokenHeader === 'string' && customTokenHeader.trim() !== '') {
+      rawToken = customTokenHeader.trim();
+    } else if (typeof queryToken === 'string' && queryToken.trim() !== '') {
+      rawToken = queryToken.trim();
+    }
+    const hasExplicitToken = rawToken !== '';
+    const check = verifyEntitlementToken(rawToken);
+    const cohortHeader = req.headers['x-teleward-cohort'];
+    const cohortQuery = parsedUrl.searchParams.get('cohort');
+    const rawCohort =
+      typeof cohortHeader === 'string' && cohortHeader.trim() !== ''
+        ? cohortHeader.trim()
+        : typeof cohortQuery === 'string'
+          ? cohortQuery.trim()
+          : '';
+    const validCohort = rawCohort !== '' && parseCohortSeed(rawCohort).valid;
+    const requireEntitlement =
+      options?.enforceProEntitlement === true ||
+      req.headers['x-teleward-require-entitlement'] === '1';
+
+    return {
+      hasExplicitToken,
+      validProToken: check.valid,
+      tier: check.tier,
+      validCohort,
+      requireEntitlement,
+    };
   };
 
   const getMergedCohortRoster = (cohortSeed: string, store: TelewardStoreData): CohortSubmissionRecord[] => {
@@ -278,6 +629,17 @@ export function createTelewardApiMiddleware(
 
     void (async () => {
       try {
+        const clientIp = resolveClientIp(req);
+        const rl = checkRateLimit(clientIp);
+        if (!rl.allowed) {
+          sendJson(res, 429, {
+            error: 'RATE_LIMIT_EXCEEDED',
+            status: 429,
+            detail: 'Rate limit exceeded. Wait 60 seconds and retry.',
+          });
+          return;
+        }
+
         // 1. GET /api/health
         if (method === 'GET' && pathname === '/api/health') {
           const cases = getCasesCatalog();
@@ -309,6 +671,20 @@ export function createTelewardApiMiddleware(
             return;
           }
 
+          const ent = extractEntitlementState(req, parsedUrl);
+          const unentitledProAccess =
+            (ent.hasExplicitToken && !ent.validProToken) ||
+            (ent.requireEntitlement && !ent.validProToken && !ent.validCohort);
+
+          if (tierFilterRaw === 'pro' && unentitledProAccess) {
+            sendJson(res, 403, {
+              error: 'FORBIDDEN_ENTITLEMENT',
+              status: 403,
+              detail: 'Pro Exam Pass or Instructor Cohort entitlement required for Pro cases.',
+            });
+            return;
+          }
+
           const filtered = allCases.filter((c) => {
             if (rhythmFilterRaw && rhythmFilterRaw !== 'ALL' && c.rhythmClass !== rhythmFilterRaw) {
               return false;
@@ -317,6 +693,9 @@ export function createTelewardApiMiddleware(
               return false;
             }
             if (tierFilterRaw === 'pro' && c.freeStarter) {
+              return false;
+            }
+            if (unentitledProAccess && !c.freeStarter) {
               return false;
             }
             return true;
@@ -329,7 +708,56 @@ export function createTelewardApiMiddleware(
           return;
         }
 
-        // 3. GET /api/cases/:caseId
+        // 3a. GET /api/cases/:caseId/waveforms
+        const waveformsMatch = /^\/api\/cases\/([^/]+)\/waveforms$/.exec(pathname);
+        if (method === 'GET' && waveformsMatch) {
+          const caseId = safeDecodeUriComponent(waveformsMatch[1]!);
+          if (caseId === null) {
+            sendJson(res, 400, {
+              error: 'INVALID_URI_PARAM',
+              status: 400,
+              detail: 'Malformed URI component in caseId.',
+            });
+            return;
+          }
+          const found = getCasesCatalog().find((c) => c.caseId === caseId);
+          if (!found) {
+            sendJson(res, 404, {
+              error: 'CASE_NOT_FOUND',
+              status: 404,
+              detail: `PTB-XL case "${caseId}" not found.`,
+            });
+            return;
+          }
+          if (!found.freeStarter) {
+            const ent = extractEntitlementState(req, parsedUrl);
+            if (!ent.validProToken && !ent.validCohort) {
+              sendJson(res, 403, {
+                error: 'FORBIDDEN_ENTITLEMENT',
+                status: 403,
+                detail: 'Pro Exam Pass or Instructor Cohort entitlement required for this case.',
+              });
+              return;
+            }
+          }
+          const dataset = getLoadedDataset();
+          const waveforms = getCaseWaveforms(dataset, found.caseId, 1250);
+          const leadsJson: Record<string, number[]> = {};
+          for (const lead of LEAD_NAMES) {
+            leadsJson[lead] = Array.from(waveforms[lead]).map((v) => Number(v.toFixed(4)));
+          }
+          sendJson(res, 200, {
+            caseId: found.caseId,
+            freeStarter: found.freeStarter,
+            leadCount: LEAD_NAMES.length,
+            sampleRateHz: 500,
+            samplesPerLead: 1250,
+            leads: leadsJson,
+          });
+          return;
+        }
+
+        // 3b. GET /api/cases/:caseId
         const caseMatch = /^\/api\/cases\/([^/]+)$/.exec(pathname);
         if (method === 'GET' && caseMatch) {
           const caseId = safeDecodeUriComponent(caseMatch[1]!);
@@ -349,6 +777,20 @@ export function createTelewardApiMiddleware(
               detail: `PTB-XL case "${caseId}" not found.`,
             });
             return;
+          }
+          if (!found.freeStarter) {
+            const ent = extractEntitlementState(req, parsedUrl);
+            if (
+              (ent.hasExplicitToken && !ent.validProToken) ||
+              (ent.requireEntitlement && !ent.validProToken && !ent.validCohort)
+            ) {
+              sendJson(res, 403, {
+                error: 'FORBIDDEN_ENTITLEMENT',
+                status: 403,
+                detail: 'Pro Exam Pass or Instructor Cohort entitlement required for this case.',
+              });
+              return;
+            }
           }
           sendJson(res, 200, found);
           return;
@@ -521,7 +963,35 @@ export function createTelewardApiMiddleware(
           return;
         }
 
-        // 5. GET & POST /api/cohorts/:seed/submissions
+        // 5a. GET /api/cohorts/:seed/export.csv
+        const cohortCsvMatch = /^\/api\/cohorts\/([^/]+)\/export\.csv$/.exec(pathname);
+        if (method === 'GET' && cohortCsvMatch) {
+          const decodedSeed = safeDecodeUriComponent(cohortCsvMatch[1]!);
+          const parsedSeed = decodedSeed ? parseCohortSeed(decodedSeed) : null;
+          if (!parsedSeed || !parsedSeed.valid || !parsedSeed.cohort) {
+            sendJson(res, 400, {
+              error: 'INVALID_COHORT_SEED',
+              status: 400,
+              detail: 'Cohort seed must be 1..64 alphanumeric, hyphen, or underscore characters.',
+            });
+            return;
+          }
+          const rawSeed = parsedSeed.cohort.toUpperCase();
+          const store = readStore(storeFilePath);
+          const roster = getMergedCohortRoster(rawSeed, store);
+          const csvBody = exportCohortRosterCsv(roster);
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+          res.setHeader(
+            'Content-Disposition',
+            `attachment; filename="teleward-cohort-${rawSeed}.csv"`
+          );
+          res.setHeader('Cache-Control', 'no-store');
+          res.end(csvBody);
+          return;
+        }
+
+        // 5b. GET & POST /api/cohorts/:seed/submissions
         const cohortMatch = /^\/api\/cohorts\/([^/]+)\/submissions$/.exec(pathname);
         if (cohortMatch) {
           const decodedSeed = safeDecodeUriComponent(cohortMatch[1]!);
@@ -549,9 +1019,8 @@ export function createTelewardApiMiddleware(
           }
           const rawSeed = parsedSeed.cohort.toUpperCase();
 
-          const store = readStore(storeFilePath);
-
           if (method === 'GET') {
+            const store = readStore(storeFilePath);
             const roster = getMergedCohortRoster(rawSeed, store);
             const summary = computeCohortSummary(roster);
             sendJson(res, 200, {
@@ -565,14 +1034,78 @@ export function createTelewardApiMiddleware(
           if (method === 'POST') {
             const body = await readJsonBody(req);
             const studentAlias =
-              typeof body.studentAlias === 'string' ? body.studentAlias.trim() : '';
-            const scoreRaw = typeof body.score === 'number' ? body.score : Number(body.scorePct);
-            const bedsRaw =
+              typeof body.studentAlias === 'string'
+                ? body.studentAlias.replace(/[\r\n]+/g, ' ').trim()
+                : '';
+
+            const requireReplay =
+              options?.requireReplay === true ||
+              req.headers['x-teleward-require-replay'] === '1';
+
+            if (
+              requireReplay &&
+              body.interventions === undefined &&
+              body.actionLog === undefined
+            ) {
+              sendJson(res, 422, {
+                valid: false,
+                error: 'MISSING_INTERVENTION_LOG',
+                status: 422,
+                detail: 'Shift submission requires an interventions replay log.',
+              });
+              return;
+            }
+
+            let scoreRaw =
+              typeof body.score === 'number'
+                ? body.score
+                : typeof body.scorePct === 'number'
+                  ? body.scorePct
+                  : Number.NaN;
+            let bedsRaw =
               typeof body.stabilizedBeds === 'number'
                 ? body.stabilizedBeds
-                : Number(body.bedsStabilized);
-            const violationsRaw =
+                : typeof body.bedsStabilized === 'number'
+                  ? body.bedsStabilized
+                  : Number.NaN;
+            let violationsRaw =
               typeof body.violations === 'number' ? body.violations : Number(body.violations ?? 0);
+            const elapsedSecRaw =
+              typeof body.elapsedSec === 'number' ? body.elapsedSec : undefined;
+
+            if (body.interventions !== undefined) {
+              const replay = verifyShiftReplay(rawSeed, body.interventions, elapsedSecRaw);
+              if (!replay.valid) {
+                sendJson(res, 422, {
+                  valid: false,
+                  error: 'REPLAY_VERIFICATION_FAILED',
+                  status: 422,
+                  detail: replay.detail,
+                });
+                return;
+              }
+              if (Number.isFinite(scoreRaw) && Math.round(scoreRaw) !== replay.scorePct) {
+                sendJson(res, 422, {
+                  valid: false,
+                  error: 'SCORE_REPLAY_MISMATCH',
+                  status: 422,
+                  detail: 'Submitted score does not match server replay.',
+                });
+                return;
+              }
+              if (Number.isInteger(bedsRaw) && bedsRaw !== replay.bedsStabilized) {
+                sendJson(res, 422, {
+                  valid: false,
+                  error: 'SCORE_REPLAY_MISMATCH',
+                  status: 422,
+                  detail: 'Submitted stabilizedBeds does not match server replay.',
+                });
+                return;
+              }
+              scoreRaw = replay.scorePct;
+              bedsRaw = replay.bedsStabilized;
+              violationsRaw = replay.violations;
+            }
 
             if (
               studentAlias.length < 1 ||
@@ -599,7 +1132,7 @@ export function createTelewardApiMiddleware(
 
             const score = Math.round(scoreRaw);
             if (body.actionLog !== undefined) {
-              const replay = verifyActionLogReplay(rawSeed, body.actionLog);
+              const replay = verifyActionLogReplay(rawSeed, body.actionLog, elapsedSecRaw);
               if (
                 !replay.valid ||
                 replay.scorePct !== score ||
@@ -612,7 +1145,7 @@ export function createTelewardApiMiddleware(
                   status: 400,
                   detail: !replay.valid
                     ? replay.detail
-                    : `Action log replay produced score ${replay.scorePct}% (${replay.bedsStabilized} beds, ${replay.violations} violations) instead of ${score}%.`,
+                    : 'Submitted score does not match server replay.',
                 });
                 return;
               }
@@ -633,43 +1166,47 @@ export function createTelewardApiMiddleware(
                 check.scorePct !== score ||
                 body.receipt.trim().toUpperCase() !== expectedReceipt.toUpperCase()
               ) {
-                sendJson(res, 400, {
+                const status = body.interventions !== undefined ? 422 : 400;
+                sendJson(res, status, {
                   valid: false,
                   error: 'CRC16_MISMATCH',
-                  status: 400,
+                  status,
                   detail: 'Submitted cohort receipt failed CRC16 signature verification.',
                 });
                 return;
               }
             }
 
-            const submission: CohortSubmissionRecord = {
-              id: `sub-${rawSeed}-${Date.now()}`,
-              cohortSeed: rawSeed,
-              studentAlias,
-              score,
-              stabilizedBeds: bedsRaw,
-              violations: violationsRaw,
-              receipt: expectedReceipt,
-              submittedAt: new Date().toISOString(),
-              verified: true,
-            };
+            const persisted = await withStoreLock(async () => {
+              const store = readStore(storeFilePath, true);
+              const existing =
+                Object.hasOwn(store.cohortSubmissions, rawSeed) &&
+                Array.isArray(store.cohortSubmissions[rawSeed])
+                  ? store.cohortSubmissions[rawSeed]!
+                  : [];
+              const submission: CohortSubmissionRecord = {
+                id: `sub-${rawSeed}-${Date.now()}-${existing.length + 1}`,
+                cohortSeed: rawSeed,
+                studentAlias,
+                score,
+                stabilizedBeds: bedsRaw,
+                violations: violationsRaw,
+                receipt: expectedReceipt,
+                submittedAt: new Date().toISOString(),
+                verified: true,
+              };
+              store.cohortSubmissions[rawSeed] = [submission, ...existing].slice(0, 250);
+              await writeStoreAsync(storeFilePath, store);
+              const roster = getMergedCohortRoster(rawSeed, store);
+              const summary = computeCohortSummary(roster);
+              return { submission, roster, summary };
+            });
 
-            const existing =
-              Object.hasOwn(store.cohortSubmissions, rawSeed) &&
-              Array.isArray(store.cohortSubmissions[rawSeed])
-                ? store.cohortSubmissions[rawSeed]!
-                : [];
-            store.cohortSubmissions[rawSeed] = [submission, ...existing].slice(0, 250);
-            writeStore(storeFilePath, store);
-
-            const roster = getMergedCohortRoster(rawSeed, store);
-            const summary = computeCohortSummary(roster);
             sendJson(res, 200, {
               valid: true,
-              submission,
-              summary,
-              roster,
+              submission: persisted.submission,
+              summary: persisted.summary,
+              roster: persisted.roster,
             });
             return;
           }
@@ -717,7 +1254,7 @@ export function createTelewardApiMiddleware(
           return;
         }
 
-        // 7. GET /api/daily & POST /api/daily/submit
+        // 7. GET /api/daily & POST /api/daily/submit (plus POST /api/daily/:dateKey/submissions)
         if (method === 'GET' && pathname === '/api/daily') {
           const spec = getDailyChallengeSpec();
           const store = readStore(storeFilePath);
@@ -740,26 +1277,97 @@ export function createTelewardApiMiddleware(
           return;
         }
 
-        if (method === 'POST' && pathname === '/api/daily/submit') {
+        const dailySubMatch = /^\/api\/daily\/(\d{4}-\d{2}-\d{2})\/submissions$/.exec(pathname);
+        if (
+          method === 'POST' &&
+          (pathname === '/api/daily/submit' || dailySubMatch !== null)
+        ) {
           const body = await readJsonBody(req);
           const spec = getDailyChallengeSpec();
+          const targetDateKey = dailySubMatch ? dailySubMatch[1]! : spec.dateKey;
+          if (dailySubMatch) {
+            const parsedDate = new Date(`${targetDateKey}T00:00:00.000Z`);
+            if (
+              Number.isNaN(parsedDate.getTime()) ||
+              getUtcDateKey(parsedDate) !== targetDateKey
+            ) {
+              sendJson(res, 400, {
+                error: 'INVALID_DATE_KEY',
+                status: 400,
+                detail: `Invalid calendar date "${targetDateKey}".`,
+              });
+              return;
+            }
+          }
+          const targetSeed =
+            targetDateKey === spec.dateKey
+              ? spec.seed
+              : getDailySeed(new Date(`${targetDateKey}T00:00:00.000Z`));
+
+          const requireReplay =
+            options?.requireReplay === true ||
+            req.headers['x-teleward-require-replay'] === '1';
+
+          if (
+            requireReplay &&
+            body.interventions === undefined &&
+            body.actionLog === undefined
+          ) {
+            sendJson(res, 422, {
+              valid: false,
+              error: 'MISSING_INTERVENTION_LOG',
+              status: 422,
+              detail: 'Daily shift submission requires an interventions replay log.',
+            });
+            return;
+          }
+
           const aliasRaw =
             typeof body.clinicianAlias === 'string' && body.clinicianAlias.trim() !== ''
-              ? body.clinicianAlias.trim()
-              : 'ICU Operator';
-          const scoreRaw =
+              ? body.clinicianAlias.replace(/[\r\n]+/g, ' ').trim()
+              : typeof body.studentAlias === 'string' && body.studentAlias.trim() !== ''
+                ? body.studentAlias.replace(/[\r\n]+/g, ' ').trim()
+                : 'ICU Operator';
+          let scoreRaw =
             typeof body.scorePct === 'number'
               ? body.scorePct
               : typeof body.score === 'number'
                 ? body.score
                 : Number.NaN;
-          const bedsRaw =
+          let bedsRaw =
             typeof body.bedsStabilized === 'number'
               ? body.bedsStabilized
               : typeof body.stabilizedBeds === 'number'
                 ? body.stabilizedBeds
                 : 0;
-          const violationsRaw = typeof body.violations === 'number' ? body.violations : 0;
+          let violationsRaw = typeof body.violations === 'number' ? body.violations : 0;
+          const elapsedSecRaw =
+            typeof body.elapsedSec === 'number' ? body.elapsedSec : undefined;
+
+          if (body.interventions !== undefined) {
+            const replay = verifyShiftReplay(targetSeed, body.interventions, elapsedSecRaw);
+            if (!replay.valid) {
+              sendJson(res, 422, {
+                valid: false,
+                error: 'REPLAY_VERIFICATION_FAILED',
+                status: 422,
+                detail: replay.detail,
+              });
+              return;
+            }
+            if (Number.isFinite(scoreRaw) && Math.round(scoreRaw) !== replay.scorePct) {
+              sendJson(res, 422, {
+                valid: false,
+                error: 'SCORE_REPLAY_MISMATCH',
+                status: 422,
+                detail: 'Submitted daily score does not match server replay.',
+              });
+              return;
+            }
+            scoreRaw = replay.scorePct;
+            bedsRaw = replay.bedsStabilized;
+            violationsRaw = replay.violations;
+          }
 
           if (
             aliasRaw.length > 32 ||
@@ -781,7 +1389,7 @@ export function createTelewardApiMiddleware(
           const violations = Math.max(0, Math.min(15, Math.round(violationsRaw)));
 
           if (body.actionLog !== undefined) {
-            const replay = verifyActionLogReplay(spec.seed, body.actionLog);
+            const replay = verifyActionLogReplay(targetSeed, body.actionLog, elapsedSecRaw);
             if (
               !replay.valid ||
               replay.scorePct !== scorePct ||
@@ -794,45 +1402,173 @@ export function createTelewardApiMiddleware(
                 status: 400,
                 detail: !replay.valid
                   ? replay.detail
-                  : `Action log replay produced score ${replay.scorePct}% (${replay.bedsStabilized} beds, ${replay.violations} violations) instead of ${scorePct}%.`,
+                  : 'Submitted daily score does not match server replay.',
               });
               return;
             }
           }
-          const receipt = formatDailyReceipt(spec.dateKey, scorePct, bedsStabilized);
+          const receipt = formatDailyReceipt(targetDateKey, scorePct, bedsStabilized);
 
-          const entry: DailyLeaderboardEntry = {
-            clinicianAlias: aliasRaw,
-            dateKey: spec.dateKey,
-            scorePct,
-            bedsStabilized,
-            violations,
-            receipt,
-            submittedAt: new Date().toISOString(),
-          };
+          const persisted = await withStoreLock(async () => {
+            const store = readStore(storeFilePath, true);
+            const existing =
+              Object.hasOwn(store.dailySubmissions, targetDateKey) &&
+              Array.isArray(store.dailySubmissions[targetDateKey])
+                ? store.dailySubmissions[targetDateKey]!
+                : [];
+            const entry: DailyLeaderboardEntry = {
+              clinicianAlias: aliasRaw,
+              dateKey: targetDateKey,
+              scorePct,
+              bedsStabilized,
+              violations,
+              receipt,
+              submittedAt: new Date().toISOString(),
+            };
+            store.dailySubmissions[targetDateKey] = [entry, ...existing].slice(0, 100);
+            await writeStoreAsync(storeFilePath, store);
 
-          const store = readStore(storeFilePath);
-          const existing =
-            Object.hasOwn(store.dailySubmissions, spec.dateKey) &&
-            Array.isArray(store.dailySubmissions[spec.dateKey])
-              ? store.dailySubmissions[spec.dateKey]!
-              : [];
-          store.dailySubmissions[spec.dateKey] = [entry, ...existing].slice(0, 100);
-          writeStore(storeFilePath, store);
-
-          const leaderboard = [...store.dailySubmissions[spec.dateKey]!, ...buildBaselineDailyEntries(spec.dateKey)]
-            .sort((a, b) => b.scorePct - a.scorePct)
-            .map((item, idx) => ({ ...item, rank: idx + 1 }));
+            const leaderboard = [
+              ...store.dailySubmissions[targetDateKey]!,
+              ...buildBaselineDailyEntries(targetDateKey),
+            ]
+              .sort((a, b) => b.scorePct - a.scorePct)
+              .map((item, idx) => ({ ...item, rank: idx + 1 }));
+            return { entry, leaderboard };
+          });
 
           sendJson(res, 200, {
-            dateKey: spec.dateKey,
-            entry,
-            leaderboard,
+            dateKey: targetDateKey,
+            entry: persisted.entry,
+            leaderboard: persisted.leaderboard,
           });
           return;
         }
 
-        // 8. POST /api/entitlement/checkout & POST /api/entitlement/verify
+        // 8a. POST /api/billing/webhook (Stripe Webhook Signature & Idempotency)
+        if (method === 'POST' && pathname === '/api/billing/webhook') {
+          const rawBody = await readRawBody(req);
+          const sigHeader = req.headers['stripe-signature'];
+          const sigStr = Array.isArray(sigHeader) ? sigHeader[0] : sigHeader;
+          if (!webhookSecret || !verifyStripeWebhookSignature(rawBody, sigStr, webhookSecret)) {
+            sendJson(res, 400, {
+              error: 'INVALID_WEBHOOK_SIGNATURE',
+              status: 400,
+              detail: 'Stripe webhook signature verification failed.',
+            });
+            return;
+          }
+          let eventObj: {
+            id?: unknown;
+            type?: unknown;
+            data?: {
+              object?: {
+                payment_status?: unknown;
+                metadata?: { tier?: unknown; clientId?: unknown };
+              };
+            };
+          };
+          try {
+            eventObj = JSON.parse(rawBody) as typeof eventObj;
+          } catch {
+            sendJson(res, 400, {
+              error: 'MALFORMED_JSON',
+              status: 400,
+              detail: 'Malformed webhook JSON payload.',
+            });
+            return;
+          }
+          const eventId = typeof eventObj?.id === 'string' ? eventObj.id.trim() : '';
+          if (!eventId) {
+            sendJson(res, 400, {
+              error: 'MISSING_EVENT_ID',
+              status: 400,
+              detail: 'Stripe webhook event requires a string id.',
+            });
+            return;
+          }
+
+          const eventType = typeof eventObj.type === 'string' ? eventObj.type.trim() : '';
+          const paymentStatus =
+            typeof eventObj.data?.object?.payment_status === 'string'
+              ? eventObj.data.object.payment_status.trim().toLowerCase()
+              : '';
+          if (
+            eventType.endsWith('payment_failed') ||
+            paymentStatus === 'unpaid' ||
+            (eventType !== '' &&
+              eventType !== 'checkout.session.completed' &&
+              eventType !== 'checkout.session.async_payment_succeeded')
+          ) {
+            sendJson(res, 400, {
+              error: 'PAYMENT_NOT_COMPLETED',
+              status: 400,
+              detail: 'Webhook event does not represent a completed payment.',
+            });
+            return;
+          }
+
+          const rawTier = String(
+            eventObj.data?.object?.metadata?.tier ?? 'exam_pass'
+          ).toLowerCase();
+          const tier: Exclude<EntitlementTier, 'free'> =
+            rawTier === 'instructor_cohort' ? 'instructor_cohort' : 'exam_pass';
+          const clientId = String(eventObj.data?.object?.metadata?.clientId ?? eventId).trim();
+          if (
+            !clientId ||
+            ['__PROTO__', 'CONSTRUCTOR', 'PROTOTYPE'].includes(clientId.toUpperCase())
+          ) {
+            sendJson(res, 400, {
+              error: 'INVALID_CLIENT_ID',
+              status: 400,
+              detail: 'Invalid clientId in webhook metadata.',
+            });
+            return;
+          }
+
+          const result = await withStoreLock(async () => {
+            const store = readStore(storeFilePath, true);
+            const processed = store.processedWebhookEvents ?? [];
+            if (processed.includes(eventId)) {
+              const existingEnt = Object.hasOwn(store.entitlements ?? {}, clientId)
+                ? store.entitlements?.[clientId]
+                : undefined;
+              return {
+                duplicate: true,
+                eventId,
+                token: existingEnt?.token ?? createSignedEntitlementToken(tier),
+                tier: (existingEnt?.tier as Exclude<EntitlementTier, 'free'> | undefined) ?? tier,
+              };
+            }
+            const token = createSignedEntitlementToken(tier);
+            store.processedWebhookEvents = [eventId, ...processed].slice(0, 10000);
+            store.entitlements = store.entitlements ?? {};
+            Object.defineProperty(store.entitlements, clientId, {
+              value: {
+                tier,
+                token,
+                eventId,
+                updatedAt: new Date().toISOString(),
+              },
+              writable: true,
+              enumerable: true,
+              configurable: true,
+            });
+            await writeStoreAsync(storeFilePath, store);
+            return { duplicate: false, eventId, token, tier };
+          });
+
+          sendJson(res, 200, {
+            received: true,
+            duplicate: result.duplicate,
+            eventId: result.eventId,
+            tier: result.tier,
+            token: result.token,
+          });
+          return;
+        }
+
+        // 8b. POST /api/entitlement/checkout & POST /api/entitlement/verify
         if (method === 'POST' && pathname === '/api/entitlement/checkout') {
           const body = await readJsonBody(req);
           const rawTier = typeof body.tier === 'string' ? body.tier.trim().toLowerCase() : '';

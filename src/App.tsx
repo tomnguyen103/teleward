@@ -22,6 +22,7 @@ import type { CaliperGradeReport } from './engine/caliperGrading.ts';
 import { requestEntitlementCheckout } from './ui/apiClient.ts';
 import { AppShell, type ActiveRouteArea } from './ui/AppShell.tsx';
 import { Iec60601AlarmSynthesizer } from './ui/audio/iec60601Alarms.ts';
+import { buildCohortSubPath, parseTelewardRoute } from './ui/router.ts';
 import { CaliperView } from './ui/views/CaliperView.tsx';
 import { CohortProView } from './ui/views/CohortProView.tsx';
 import { DailyChallengeView } from './ui/views/DailyChallengeView.tsx';
@@ -69,6 +70,20 @@ export function App(props: AppProps) {
     report: CaliperGradeReport | null;
     record: PtbxlCaseRecord | null;
   }>({ report: null, record: null });
+  const [sessionCohortSeed, setSessionCohortSeed] = useState<string | null>(() => {
+    if (typeof window === 'undefined' || props.initialPath) return null;
+    try {
+      const fromHistory = (window.history?.state as { cohortSeed?: string | null } | null)
+        ?.cohortSeed;
+      if (typeof fromHistory === 'string' && fromHistory.trim() !== '') {
+        return fromHistory;
+      }
+      const fromStorage = window.sessionStorage?.getItem('teleward_active_cohort_seed_v1');
+      return typeof fromStorage === 'string' && fromStorage.trim() !== '' ? fromStorage : null;
+    } catch {
+      return null;
+    }
+  });
 
   const alarmSynthRef = useRef<Iec60601AlarmSynthesizer | null>(null);
   if (!alarmSynthRef.current) {
@@ -78,22 +93,12 @@ export function App(props: AppProps) {
   const [audioMuted, setAudioMuted] = useState(false);
   const checkoutSeqRef = useRef(0);
 
-  // Parse path and optional ?cohort= or ?checkout= query parameters
-  const [pathnamePart, searchPart = ''] = currentPath.split('?');
-  const pathname = pathnamePart || '/shift';
-  const urlParams = new URLSearchParams(searchPart);
-  const rawCohortParam = urlParams.get('cohort');
-  const parsedCohort = parseCohortSeed(rawCohortParam);
-  const validCohortSeed = parsedCohort.valid ? parsedCohort.cohort : null;
-  const checkoutParam = urlParams.get('checkout');
-
-  const activeArea: ActiveRouteArea = pathname.startsWith('/daily')
-    ? 'daily'
-    : pathname.startsWith('/caliper')
-      ? 'caliper'
-      : pathname.startsWith('/cohort')
-        ? 'cohort'
-        : 'shift';
+  const parsedRoute = parseTelewardRoute(currentPath);
+  const activeArea: ActiveRouteArea = parsedRoute.area;
+  const validCohortSeed = parsedRoute.invalidCohortParam
+    ? null
+    : parsedRoute.cohortSeed ?? sessionCohortSeed;
+  const parsedCohort = parseCohortSeed(validCohortSeed);
 
   const shiftSeed =
     (props.initialSeed ??
@@ -112,13 +117,22 @@ export function App(props: AppProps) {
   }
 
   useEffect(() => {
-    if (checkoutParam === 'cancelled') {
-      setCheckoutNotice(
-        'Checkout cancelled. Your free starter tier (24 PTB-XL records) remains active with zero charges.'
-      );
-    } else if (checkoutParam === 'success') {
-      const tierParam = urlParams.get('tier');
-      const tokenParam = urlParams.get('token')?.trim() ?? '';
+    if (parsedRoute.cohortSeed) {
+      setSessionCohortSeed(parsedRoute.cohortSeed);
+      try {
+        window.sessionStorage?.setItem('teleward_active_cohort_seed_v1', parsedRoute.cohortSeed);
+      } catch {
+        // Ignore storage restrictions
+      }
+    }
+  }, [parsedRoute.cohortSeed]);
+
+  useEffect(() => {
+    if (parsedRoute.checkoutStatus === 'cancelled') {
+      setCheckoutNotice('Checkout cancelled. Free starter access stays active.');
+    } else if (parsedRoute.checkoutStatus === 'success') {
+      const tierParam = parsedRoute.checkoutTier;
+      const tokenParam = parsedRoute.checkoutToken?.trim() ?? '';
       if (
         (tierParam === 'exam_pass' || tierParam === 'instructor_cohort') &&
         tokenParam !== ''
@@ -128,18 +142,32 @@ export function App(props: AppProps) {
           setEntitlementTier(res.tier);
           setCheckoutNotice(`Stripe Checkout verified. ${res.tier} unlocked.`);
         } else {
-          setCheckoutNotice('Checkout token invalid or missing. Entitlement remains free.');
+          setCheckoutNotice('Checkout token invalid or missing. Free tier stays active.');
         }
       } else {
-        setCheckoutNotice('Checkout token invalid or missing. Entitlement remains free.');
+        setCheckoutNotice('Checkout token invalid or missing. Free tier stays active.');
       }
     }
-  }, [checkoutParam, searchPart]);
+  }, [parsedRoute.checkoutStatus, parsedRoute.checkoutTier, parsedRoute.checkoutToken]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const onPopState = () => {
-      setCurrentPath(window.location.pathname + window.location.search);
+    const onPopState = (e: PopStateEvent) => {
+      const nextUrl = window.location.pathname + window.location.search;
+      const poppedRoute = parseTelewardRoute(nextUrl);
+      const stateSeed = (e.state as { cohortSeed?: string | null } | null)?.cohortSeed;
+      const resolvedSeed = poppedRoute.cohortSeed ?? (stateSeed !== undefined ? stateSeed : null);
+      setSessionCohortSeed(resolvedSeed);
+      try {
+        if (resolvedSeed) {
+          window.sessionStorage?.setItem('teleward_active_cohort_seed_v1', resolvedSeed);
+        } else {
+          window.sessionStorage?.removeItem('teleward_active_cohort_seed_v1');
+        }
+      } catch {
+        // Ignore storage restrictions
+      }
+      setCurrentPath(nextUrl);
     };
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -202,14 +230,15 @@ export function App(props: AppProps) {
     }
   }, [darkTheme]);
 
-  const navigate = (nextPath: string) => {
-    const resolvedPath =
-      validCohortSeed !== null && !nextPath.includes('?')
-        ? `${nextPath}?cohort=${encodeURIComponent(validCohortSeed)}`
-        : nextPath;
-    setCurrentPath(resolvedPath);
+  const navigate = (nextPath: string, explicitCohortSeed?: string | null) => {
+    const nextRoute = parseTelewardRoute(nextPath);
+    const seedToStore =
+      explicitCohortSeed !== undefined
+        ? explicitCohortSeed
+        : nextRoute.cohortSeed ?? validCohortSeed;
+    setCurrentPath(nextPath);
     if (typeof window !== 'undefined' && !props.initialPath) {
-      window.history.pushState({}, '', resolvedPath);
+      window.history.pushState({ cohortSeed: seedToStore }, '', nextPath);
     }
   };
 
@@ -217,6 +246,20 @@ export function App(props: AppProps) {
   const beds = controller.getBeds();
   const activeBed = beds[selectedBedIndex] ?? beds[0]!;
   const scoreSummary = controller.computeShiftScore();
+  const shiftInterventionsLog = shiftRef.current
+    .getBeds()
+    .flatMap((b) =>
+      b.causalTimeline
+        .filter((ev) => ev.action !== 'SCENARIO_START' && ev.action !== 'ISCHEMIC_ARREST')
+        .map((ev) => ({
+          bedIndex: b.bedIndex,
+          action: String(ev.action),
+          atSec: ev.timeSec,
+          tick: ev.tick,
+        }))
+    )
+    .sort((a, b) => a.tick - b.tick)
+    .map(({ bedIndex, action, atSec }) => ({ bedIndex, action, atSec }));
 
   const handleApplyIntervention = (bedIndex: number, action: AclsInterventionId) => {
     controller.applyIntervention(bedIndex, action);
@@ -258,6 +301,9 @@ export function App(props: AppProps) {
       const ok = synth.armAudio();
       setAudioArmed(ok);
       setAudioMuted(false);
+      void synth.arm().then((armed) => {
+        setAudioArmed(armed);
+      });
       const priorities = controller.getBeds().map((b) => b.alarmPriority);
       synth.arbitratePriority(priorities);
       synth.triggerBurstIfDue(activeBed.vitals.spo2);
@@ -411,13 +457,11 @@ export function App(props: AppProps) {
 
   const shiftResetKey = `${controller.getSeed()}:${resetCount}`;
 
-  const caseIdFromRoute = pathname.startsWith('/caliper/')
-    ? pathname.slice('/caliper/'.length) || 'ptbxl-001'
-    : 'ptbxl-001';
+  const caseIdFromRoute = parsedRoute.caseId;
 
   const cohortBanner = validCohortSeed
     ? `Cohort Mode Active: ${validCohortSeed}`
-    : rawCohortParam !== null && !parsedCohort.valid
+    : parsedRoute.invalidCohortParam
       ? 'Invalid cohort parameter ignored. Default shift is active.'
       : null;
 
@@ -498,7 +542,7 @@ export function App(props: AppProps) {
           caseId={caseIdFromRoute}
           onSelectCaseId={(cid) => navigate(`/caliper/${cid}`)}
           canAccessCase={canAccessCase}
-          onNavigateCohortUnlock={() => navigate('/cohort')}
+          onNavigateCohortUnlock={() => navigate('/cohort/billing')}
           darkTheme={darkTheme}
           onGradeUpdate={(report, record) => setLastCaliperGrade({ report, record })}
         />
@@ -508,10 +552,23 @@ export function App(props: AppProps) {
         <CohortProView
           entitlementTier={entitlementTier}
           activeCohortSeed={validCohortSeed}
+          cohortSubRoute={parsedRoute.cohortSubRoute}
+          onSelectSubRoute={(sub, seed) =>
+            navigate(buildCohortSubPath(sub, seed ?? validCohortSeed), seed ?? validCohortSeed)
+          }
           checkoutNotice={checkoutNotice}
           scoreSummary={scoreSummary}
+          interventionsLog={shiftInterventionsLog}
           onActivateTier={handleActivateTier}
-          onLaunchCohortShift={(seed) => navigate(`/shift?cohort=${seed}`)}
+          onLaunchCohortShift={(seed) => {
+            setSessionCohortSeed(seed);
+            try {
+              window.sessionStorage?.setItem('teleward_active_cohort_seed_v1', seed);
+            } catch {
+              // Ignore storage restrictions
+            }
+            navigate(`/shift/cohort/${encodeURIComponent(seed)}`, seed);
+          }}
         />
       ) : null}
     </AppShell>

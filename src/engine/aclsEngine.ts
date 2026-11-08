@@ -476,6 +476,24 @@ export function getAlarmPriorityForRhythm(rhythm: RhythmClass): AlarmPriority {
   return RHYTHM_PROFILES[rhythm].alarmPriority;
 }
 
+export const SHIFT_DURATION_SEC = 300;
+
+export function isBedStabilized(
+  vitals: VitalState,
+  rescued = true,
+  ahaViolations: readonly string[] = []
+): boolean {
+  const rhythmOk =
+    vitals.rhythm === 'NSR' || (vitals.rhythm === 'AVB3' && Boolean(vitals.paced));
+  return Boolean(
+    rescued &&
+      rhythmOk &&
+      vitals.sbp >= 90 &&
+      vitals.map >= 65 &&
+      ahaViolations.length === 0
+  );
+}
+
 const DT_SEC = 0.05; // 20 Hz RK4 integration ticks
 
 export function runSimulation(rawOptions: SimulationOptions): SimulationResult {
@@ -601,7 +619,7 @@ export function runSimulation(rawOptions: SimulationOptions): SimulationResult {
     finalVitals.sbp < 40
   ) {
     outcome = 'ARREST';
-  } else if (finalVitals.rhythm === 'NSR' && finalVitals.sbp >= 95 && ahaViolations.length === 0) {
+  } else if (isBedStabilized(finalVitals, true, ahaViolations)) {
     outcome = 'STABILIZED';
   }
 
@@ -709,7 +727,7 @@ export class ShiftController {
         vitals: initVitals,
         alarmPriority: getAlarmPriorityForRhythm(rhythm),
         countdownSec: 60,
-        stabilized: rhythm === 'NSR',
+        stabilized: isBedStabilized(initVitals, rhythm === 'NSR'),
         arrested: false,
         lastInterventionMs: -1000,
         ahaViolations: [],
@@ -737,6 +755,10 @@ export class ShiftController {
     return this.elapsedSec;
   }
 
+  public isShiftComplete(): boolean {
+    return this.elapsedSec >= SHIFT_DURATION_SEC;
+  }
+
   public getBeds(): readonly BedState[] {
     return this.beds;
   }
@@ -751,13 +773,25 @@ export class ShiftController {
   }
 
   public stepSeconds(deltaSec: number): void {
-    const clampedSec = Math.max(0, Math.min(10, deltaSec));
+    if (this.elapsedSec >= SHIFT_DURATION_SEC) {
+      this.fractionalSec = 0;
+      return;
+    }
+    const remainingHorizon = Math.max(0, SHIFT_DURATION_SEC - this.elapsedSec);
+    const clampedSec = Math.max(0, Math.min(10, deltaSec, remainingHorizon));
     this.fractionalSec += clampedSec;
     const steps = Math.floor((this.fractionalSec + 1e-9) / DT_SEC);
     this.fractionalSec = Math.max(0, this.fractionalSec - steps * DT_SEC);
     for (let s = 0; s < steps; s++) {
+      if (this.elapsedSec >= SHIFT_DURATION_SEC) {
+        this.fractionalSec = 0;
+        break;
+      }
       this.tickCount += 1;
-      this.elapsedSec = Number((this.tickCount * DT_SEC).toFixed(2));
+      this.elapsedSec = Math.min(
+        SHIFT_DURATION_SEC,
+        Number((this.tickCount * DT_SEC).toFixed(2))
+      );
       for (let i = 0; i < 4; i++) {
         const bed = this.beds[i]!;
         const cState = this.continuousStates[i]!;
@@ -806,7 +840,11 @@ export class ShiftController {
           map: 0,
           paced: nextPaced,
         });
-        bed.stabilized = Boolean(this.rescuedFlags[i] && !bed.arrested && bed.vitals.sbp >= 40);
+        bed.stabilized = isBedStabilized(
+          bed.vitals,
+          Boolean(this.rescuedFlags[i] && !bed.arrested),
+          bed.ahaViolations
+        );
         bed.alarmPriority =
           bed.ahaViolations.length > 0
             ? 'CRISIS'
@@ -876,7 +914,11 @@ export class ShiftController {
       map: 0,
       paced: nextPaced,
     });
-    bed.stabilized = Boolean(this.rescuedFlags[bedIndex] && !bed.arrested && bed.vitals.sbp >= 40);
+    bed.stabilized = isBedStabilized(
+      bed.vitals,
+      Boolean(this.rescuedFlags[bedIndex] && !bed.arrested),
+      bed.ahaViolations
+    );
     bed.alarmPriority =
       bed.ahaViolations.length > 0
         ? 'CRISIS'
@@ -904,7 +946,13 @@ export class ShiftController {
     let bedsStabilized = 0;
     let totalViolations = 0;
     for (const b of this.beds) {
-      if (b.vitals.rhythm === 'NSR') {
+      if (
+        isBedStabilized(
+          b.vitals,
+          Boolean(this.rescuedFlags[b.bedIndex] && !b.arrested),
+          b.ahaViolations
+        )
+      ) {
         bedsStabilized += 1;
       }
       totalViolations += b.ahaViolations.length;

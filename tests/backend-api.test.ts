@@ -520,4 +520,250 @@ describe('Ticket 01: Full-Stack Telemetry, Cohort & Entitlement REST Backend (/a
     });
     expect(badDailyLogRes.status).toBe(400);
   });
+
+  it('v2.0 Audit (F-01..F-08): serializes 10-way concurrent cohort writes, retries EPERM rename, enforces 422 replay without expectedReceipt leak, sanitizes CSV export, gates Pro waveforms, verifies Stripe webhooks, and caps rate-limit buckets', async () => {
+    const {
+      renameWithRetrySync,
+      verifyShiftReplay,
+      checkRateLimit,
+      resetRateLimitBuckets,
+      resolveClientIp,
+    } = await import('../src/server/apiServer.ts');
+    const {
+      createEntitlementToken,
+      sanitizeCsvCell,
+      parseCohortSeed,
+    } = await import('../src/billing/cohortAndEntitlement.ts');
+    const { createHmac } = await import('node:crypto');
+
+    // 1. F-01: 10-way concurrent POST /api/cohorts/:seed/submissions must persist all 10 entries without race loss
+    const seed = 'CONCURRENT-2026';
+    const initialRes = await fetch(`${baseUrl}/api/cohorts/${seed}/submissions`);
+    const initialJson = (await initialRes.json()) as { summary: { totalSubmissions: number } };
+    const baselineCount = initialJson.summary.totalSubmissions;
+
+    const concurrentPosts = Array.from({ length: 10 }, (_, idx) =>
+      fetch(`${baseUrl}/api/cohorts/${seed}/submissions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentAlias: `Concurrent RN ${idx + 1}`,
+          score: 75,
+          stabilizedBeds: 3,
+          violations: 0,
+        }),
+      })
+    );
+    const responses = await Promise.all(concurrentPosts);
+    expect(responses.every((r) => r.status === 200)).toBe(true);
+
+    const afterConcurrent = await fetch(`${baseUrl}/api/cohorts/${seed}/submissions`);
+    const afterConcurrentJson = (await afterConcurrent.json()) as {
+      summary: { totalSubmissions: number };
+      roster: Array<{ studentAlias: string }>;
+    };
+    expect(afterConcurrentJson.summary.totalSubmissions).toBe(baselineCount + 10);
+
+    // 2. F-01: renameWithRetrySync retries transient EPERM / EACCES / EBUSY errors before succeeding
+    let attempts = 0;
+    renameWithRetrySync(
+      'src.tmp',
+      'dst.json',
+      5,
+      1,
+      () => {
+        attempts++;
+        if (attempts < 3) {
+          const err = new Error('Simulated Windows AV lock') as NodeJS.ErrnoException;
+          err.code = 'EPERM';
+          throw err;
+        }
+      }
+    );
+    expect(attempts).toBe(3);
+
+    // 3. F-02 & F-08: verifyShiftReplay supports atSec interventions, returns 422 on forged score, and never leaks expectedReceipt
+    const { ShiftController } = await import('../src/engine/aclsEngine.ts');
+    const numericSeed = parseCohortSeed(seed).numericSeed!;
+    const refCtrl = new ShiftController(numericSeed);
+    refCtrl.stepSeconds(2);
+    refCtrl.applyIntervention(0, 'defibrillation', 1000);
+    const refScore = refCtrl.computeShiftScore();
+    const replayCheck = verifyShiftReplay(numericSeed, [
+      { atSec: 2, bedIndex: 0, action: 'defibrillation' },
+    ]);
+    expect(replayCheck.valid).toBe(true);
+    if (replayCheck.valid) {
+      expect(replayCheck.scorePct).toBe(refScore.scorePct);
+      expect(replayCheck.bedsStabilized).toBe(refScore.bedsStabilized);
+      expect(replayCheck.violations).toBe(refScore.totalViolations);
+    }
+
+    const overHorizonReplay = verifyShiftReplay(numericSeed, [
+      { dtSec: 200, bedIndex: 0, action: 'defibrillation' },
+      { dtSec: 150, bedIndex: 1, action: 'epinephrine_1mg' },
+    ]);
+    expect(overHorizonReplay.valid).toBe(false);
+
+    const forgedInterventionsRes = await fetch(`${baseUrl}/api/cohorts/${seed}/submissions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentAlias: 'Tampered Replay RN',
+        score: 100,
+        stabilizedBeds: 4,
+        violations: 0,
+        receipt: 'TW-CONCURRENT-2026-100-DEAD',
+        interventions: [{ atSec: 2, bedIndex: 0, action: 'defibrillation' }],
+      }),
+    });
+    expect(forgedInterventionsRes.status).toBe(422);
+
+    const expectedValidReceipt = generateCohortReceipt({
+      cohort: seed,
+      scorePct: refScore.scorePct,
+      bedsStabilized: refScore.bedsStabilized,
+      violations: refScore.totalViolations,
+    });
+    const receiptMismatchRes = await fetch(`${baseUrl}/api/cohorts/${seed}/submissions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentAlias: 'Bad Receipt RN',
+        score: refScore.scorePct,
+        stabilizedBeds: refScore.bedsStabilized,
+        violations: refScore.totalViolations,
+        receipt: `TW-${seed}-${refScore.scorePct}-DEAD`,
+        interventions: [{ atSec: 2, bedIndex: 0, action: 'defibrillation' }],
+      }),
+    });
+    expect(receiptMismatchRes.status).toBe(422);
+    const receiptMismatchText = await receiptMismatchRes.text();
+    expect(receiptMismatchText).toContain('CRC16_MISMATCH');
+    expect(receiptMismatchText).not.toContain('expectedReceipt');
+    expect(receiptMismatchText).not.toContain(expectedValidReceipt);
+
+    const badCalendarDateRes = await fetch(`${baseUrl}/api/daily/2026-02-30/submissions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clinicianAlias: 'Calendar Tester',
+        scorePct: 50,
+        bedsStabilized: 2,
+        violations: 0,
+      }),
+    });
+    expect(badCalendarDateRes.status).toBe(400);
+
+    // 4. F-03: CSV export neutralizes leading formula characters (=, +, -, @, \t, \r), leading whitespace, and CR/LF
+    expect(sanitizeCsvCell('=cmd|\'/C calc\'!A0')).toBe("'=cmd|'/C calc'!A0");
+    expect(sanitizeCsvCell('   +SUM(A1:A2)')).toBe("'   +SUM(A1:A2)");
+    expect(sanitizeCsvCell('Dr. Smith\r\n=1+1')).toBe('Dr. Smith =1+1');
+
+    await fetch(`${baseUrl}/api/cohorts/${seed}/submissions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentAlias: '=1+1',
+        score: 50,
+        stabilizedBeds: 2,
+        violations: 1,
+      }),
+    });
+    const csvRes = await fetch(`${baseUrl}/api/cohorts/${seed}/export.csv`);
+    expect(csvRes.status).toBe(200);
+    expect(csvRes.headers.get('content-type')).toContain('text/csv');
+    const csvText = await csvRes.text();
+    expect(csvText).toContain(",'=1+1,");
+
+    // 5. F-04: GET /api/cases/:caseId/waveforms blocks Pro cases (ptbxl-051) without token/cohort and unlocks with Bearer token
+    const freeWaveRes = await fetch(`${baseUrl}/api/cases/ptbxl-001/waveforms`);
+    expect(freeWaveRes.status).toBe(200);
+
+    const lockedWaveRes = await fetch(`${baseUrl}/api/cases/ptbxl-051/waveforms`);
+    expect(lockedWaveRes.status).toBe(403);
+    const lockedWaveJson = (await lockedWaveRes.json()) as { error: string };
+    expect(lockedWaveJson.error).toBe('FORBIDDEN_ENTITLEMENT');
+
+    const proToken = createEntitlementToken('exam_pass');
+    const unlockedWaveRes = await fetch(`${baseUrl}/api/cases/ptbxl-051/waveforms`, {
+      headers: { Authorization: `Bearer ${proToken}` },
+    });
+    expect(unlockedWaveRes.status).toBe(200);
+    const unlockedWaveJson = (await unlockedWaveRes.json()) as {
+      leadCount: number;
+      leads: Record<string, number[]>;
+    };
+    expect(unlockedWaveJson.leadCount).toBe(12);
+    expect(Object.keys(unlockedWaveJson.leads).length).toBe(12);
+
+    // 6. F-05: POST /api/billing/webhook verifies Stripe-Signature HMAC-SHA256 and deduplicates replayed event IDs
+    const webhookPayload = JSON.stringify({
+      id: 'evt_teleward_v2_001',
+      type: 'checkout.session.completed',
+      data: { object: { metadata: { tier: 'exam_pass' } } },
+    });
+    const ts = Math.floor(Date.now() / 1000);
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_teleward_test_secret';
+    const sigHex = createHmac('sha256', webhookSecret)
+      .update(`${ts}.${webhookPayload}`)
+      .digest('hex');
+
+    const badWebhookRes = await fetch(`${baseUrl}/api/billing/webhook`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Stripe-Signature': `t=${ts},v1=0000000000000000000000000000000000000000000000000000000000000000`,
+      },
+      body: webhookPayload,
+    });
+    expect(badWebhookRes.status).toBe(400);
+
+    const goodWebhookRes1 = await fetch(`${baseUrl}/api/billing/webhook`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Stripe-Signature': `t=${ts},v1=${sigHex}`,
+      },
+      body: webhookPayload,
+    });
+    expect(goodWebhookRes1.status).toBe(200);
+    const goodWebhookJson1 = (await goodWebhookRes1.json()) as { duplicate: boolean; token: string };
+    expect(goodWebhookJson1.duplicate).toBe(false);
+    expect(goodWebhookJson1.token).toContain('tw_pro_exam_pass_');
+
+    const goodWebhookRes2 = await fetch(`${baseUrl}/api/billing/webhook`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Stripe-Signature': `t=${ts},v1=${sigHex}`,
+      },
+      body: webhookPayload,
+    });
+    expect(goodWebhookRes2.status).toBe(200);
+    const goodWebhookJson2 = (await goodWebhookRes2.json()) as { duplicate: boolean };
+    expect(goodWebhookJson2.duplicate).toBe(true);
+
+    // 7. F-07: Rate limiter caps bucket size at 4096 and ignores X-Forwarded-For unless TELEWARD_TRUST_PROXY === '1'
+    resetRateLimitBuckets();
+    for (let i = 0; i < 4200; i++) {
+      const rl = checkRateLimit(`10.0.${Math.floor(i / 256)}.${i % 256}`, 1000 + i);
+      expect(rl.allowed).toBe(true);
+      expect(rl.bucketCount).toBeLessThanOrEqual(4096);
+    }
+    const prevTrust = process.env.TELEWARD_TRUST_PROXY;
+    delete process.env.TELEWARD_TRUST_PROXY;
+    const fakeReq = {
+      headers: { 'x-forwarded-for': '203.0.113.99' },
+      socket: { remoteAddress: '127.0.0.1' },
+    } as unknown as import('node:http').IncomingMessage;
+    expect(resolveClientIp(fakeReq)).toBe('127.0.0.1');
+    process.env.TELEWARD_TRUST_PROXY = '1';
+    expect(resolveClientIp(fakeReq)).toBe('203.0.113.99');
+    if (prevTrust === undefined) {
+      delete process.env.TELEWARD_TRUST_PROXY;
+    } else {
+      process.env.TELEWARD_TRUST_PROXY = prevTrust;
+    }
+  });
 });

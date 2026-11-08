@@ -15,24 +15,38 @@ import {
   type CohortSummaryMetrics,
 } from '../apiClient.ts';
 
+import type { CohortSubRoute } from '../router.ts';
+
 export interface CohortProViewProps {
   entitlementTier: EntitlementTier;
   activeCohortSeed: string | null;
+  cohortSubRoute?: CohortSubRoute;
+  onSelectSubRoute?: (subRoute: CohortSubRoute, seed?: string) => void;
   checkoutNotice: string | null;
   scoreSummary: { scorePct: number; bedsStabilized: number; totalViolations: number };
+  interventionsLog?: Array<{ bedIndex: number; action: string; atSec?: number }>;
   onActivateTier: (tier: 'exam_pass' | 'instructor_cohort') => void;
   onLaunchCohortShift: (cohortSeed: string) => void;
 }
 
+function mapSubRouteToTab(subRoute?: CohortSubRoute): 'roster' | 'verifier' | 'access' {
+  if (subRoute === 'assign') return 'verifier';
+  if (subRoute === 'billing') return 'access';
+  return 'roster';
+}
+
 /**
- * Renders the Cohort Pro workspace with segmented tabs for Cohort Roster, Receipt Verifier, and Pro Access.
+ * Renders the Cohort Pro workspace with clean sub-routes and segmented tabs for Cohort Roster, Receipt Verifier, and Pro Access.
  */
 export function CohortProView(props: CohortProViewProps) {
   const {
     entitlementTier,
     activeCohortSeed,
+    cohortSubRoute,
+    onSelectSubRoute,
     checkoutNotice,
     scoreSummary,
+    interventionsLog,
     onActivateTier,
     onLaunchCohortShift,
   } = props;
@@ -53,9 +67,23 @@ export function CohortProView(props: CohortProViewProps) {
   const [verificationResult, setVerificationResult] = useState<
     (VerifiedCohortReceipt & { registeredInLedger?: boolean; online?: boolean }) | null
   >(null);
-  const [activeTab, setActiveTab] = useState<'roster' | 'verifier' | 'access'>('roster');
+  const [activeTab, setActiveTab] = useState<'roster' | 'verifier' | 'access'>(() =>
+    mapSubRouteToTab(cohortSubRoute)
+  );
   const cohortReqSeqRef = useRef(0);
   const verifyReqSeqRef = useRef(0);
+
+  useEffect(() => {
+    if (cohortSubRoute) {
+      setActiveTab(mapSubRouteToTab(cohortSubRoute));
+    }
+  }, [cohortSubRoute]);
+
+  useEffect(() => {
+    if (activeCohortSeed) {
+      setCohortInput(activeCohortSeed);
+    }
+  }, [activeCohortSeed]);
 
   const parsedCurrentCohort = parseCohortSeed(cohortInput);
   const effectiveSeed =
@@ -104,7 +132,7 @@ export function CohortProView(props: CohortProViewProps) {
     e.preventDefault();
     const check = parseCohortSeed(cohortInput.trim());
     if (!check.valid || !check.cohort) {
-      setCohortError('Enter a valid cohort seed before you submit a student run.');
+      setCohortError('Cohort seed is invalid. Enter a valid seed.');
       return;
     }
     setCohortError(null);
@@ -114,12 +142,13 @@ export function CohortProView(props: CohortProViewProps) {
       score: scoreSummary.scorePct,
       stabilizedBeds: scoreSummary.bedsStabilized,
       violations: scoreSummary.totalViolations,
+      ...(interventionsLog !== undefined ? { interventions: interventionsLog } : {}),
     }).then((res) => {
       if (cohortReqSeqRef.current === seq) {
         setRoster(res.roster);
         setSummary(res.summary);
         if (!res.online) {
-          setCohortError('Server offline: submission saved locally only and not confirmed in shared ledger.');
+          setCohortError('Server is offline. Score stays in local storage.');
         }
       }
     });
@@ -150,6 +179,17 @@ export function CohortProView(props: CohortProViewProps) {
     });
   };
 
+  const selectTabAndRoute = (tab: 'roster' | 'verifier' | 'access') => {
+    setActiveTab(tab);
+    if (tab === 'roster') {
+      onSelectSubRoute?.('roster', effectiveSeed);
+    } else if (tab === 'verifier') {
+      onSelectSubRoute?.('assign', effectiveSeed);
+    } else {
+      onSelectSubRoute?.('billing', effectiveSeed);
+    }
+  };
+
   return (
     <div class="flex flex-col gap-4 max-w-5xl mx-auto">
       {checkoutNotice ? (
@@ -169,7 +209,7 @@ export function CohortProView(props: CohortProViewProps) {
                 role="tab"
                 aria-selected={activeTab === 'roster'}
                 data-active={activeTab === 'roster' ? 'true' : 'false'}
-                onClick={() => setActiveTab('roster')}
+                onClick={() => selectTabAndRoute('roster')}
                 class={activeTab === 'roster' ? 'tw-seg-btn-active' : 'tw-seg-btn'}
               >
                 Cohort Roster
@@ -179,7 +219,7 @@ export function CohortProView(props: CohortProViewProps) {
                 role="tab"
                 aria-selected={activeTab === 'verifier'}
                 data-active={activeTab === 'verifier' ? 'true' : 'false'}
-                onClick={() => setActiveTab('verifier')}
+                onClick={() => selectTabAndRoute('verifier')}
                 class={activeTab === 'verifier' ? 'tw-seg-btn-active' : 'tw-seg-btn'}
               >
                 Receipt Verifier
@@ -189,7 +229,7 @@ export function CohortProView(props: CohortProViewProps) {
                 role="tab"
                 aria-selected={activeTab === 'access'}
                 data-active={activeTab === 'access' ? 'true' : 'false'}
-                onClick={() => setActiveTab('access')}
+                onClick={() => selectTabAndRoute('access')}
                 class={activeTab === 'access' ? 'tw-seg-btn-active' : 'tw-seg-btn'}
               >
                 Pro Access
@@ -282,10 +322,18 @@ export function CohortProView(props: CohortProViewProps) {
             <div class="flex flex-wrap items-center justify-between gap-4">
               <h2 class="mt-2 mb-1">Cohort Roster ({effectiveSeed})</h2>
 
-              <div class="flex flex-wrap items-center gap-6 text-sm tw-mono-vital">
+              <div class="flex flex-wrap items-center gap-4 text-sm tw-mono-vital">
                 <span>Runs: <strong>{summary.totalSubmissions}</strong></span>
                 <span>Mean: <strong>{summary.meanScore}%</strong></span>
                 <span>4/4 Rate: <strong>{summary.fullStabilizationRate}%</strong></span>
+                <a
+                  href={`/api/cohorts/${encodeURIComponent(effectiveSeed)}/export.csv`}
+                  download={`teleward-cohort-${effectiveSeed}.csv`}
+                  data-testid="export-cohort-csv-link"
+                  class="tw-btn-secondary text-xs px-3 no-underline"
+                >
+                  Export CSV
+                </a>
               </div>
             </div>
 

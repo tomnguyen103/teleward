@@ -160,6 +160,7 @@ export async function submitCohortRun(
     stabilizedBeds: number;
     violations: number;
     receipt?: string;
+    interventions?: Array<{ bedIndex: number; action: string; atSec?: number; dtSec?: number }>;
   },
   baseUrl?: string
 ): Promise<{
@@ -200,7 +201,7 @@ export async function submitCohortRun(
   const submission: CohortSubmissionRecord = {
     id: `local-${cleanSeed}-${Date.now()}`,
     cohortSeed: cleanSeed,
-    studentAlias: input.studentAlias.trim() || 'ICU Student',
+    studentAlias: input.studentAlias.replace(/[\r\n]+/g, ' ').trim() || 'ICU Student',
     score,
     stabilizedBeds,
     violations,
@@ -335,6 +336,7 @@ export async function submitDailyChallenge(
     scorePct: number;
     bedsStabilized: number;
     violations: number;
+    interventions?: Array<{ bedIndex: number; action: string; atSec?: number; dtSec?: number }>;
   },
   baseUrl?: string
 ): Promise<{
@@ -367,7 +369,7 @@ export async function submitDailyChallenge(
   const violations = Math.max(0, Math.min(15, Math.round(input.violations)));
   const receipt = formatDailyReceipt(dateKey, scorePct, bedsStabilized);
   const entry: DailyLeaderboardEntry = {
-    clinicianAlias: input.clinicianAlias.trim() || 'ICU Operator',
+    clinicianAlias: input.clinicianAlias.replace(/[\r\n]+/g, ' ').trim() || 'ICU Operator',
     dateKey,
     scorePct,
     bedsStabilized,

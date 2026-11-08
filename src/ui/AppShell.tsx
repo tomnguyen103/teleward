@@ -189,6 +189,21 @@ export function AppShell(props: AppShellProps) {
     { area: 'cohort', label: 'Cohort Pro', shortLabel: 'PRO', href: '/cohort' },
   ];
 
+  const COMPACT_RHYTHM_ABBREV: Record<RhythmClass, string> = {
+    NSR: 'NSR',
+    SB: 'SBR',
+    SVT: 'SVT',
+    AFIB: 'AFB',
+    AFLT: 'AFL',
+    AVB3: 'AV3',
+    VT_MONO: 'VTM',
+    TORSADES: 'TDP',
+    VFIB: 'VFB',
+    ASYSTOLE: 'ASY',
+    PEA: 'PEA',
+    STEMI_ANT: 'STM',
+  };
+
   const isRailExpanded = isMobileViewport ? mobileDrawerOpen : !sidebarCollapsed;
   const showFullRailLabels = isRailExpanded;
 
@@ -207,7 +222,7 @@ export function AppShell(props: AppShellProps) {
             onClick={handleToggleRailOrDrawer}
             aria-expanded={isRailExpanded}
             aria-controls="tw-scope-sidebar"
-            aria-label={isRailExpanded ? 'Collapse ICU Scope Rail (Ctrl+B)' : 'Expand ICU Scope Rail (Ctrl+B)'}
+            aria-label={isRailExpanded ? 'Collapse Scope Rail (Ctrl+B)' : 'Expand Scope Rail (Ctrl+B)'}
             title="Toggle Scope Rail (Ctrl+B)"
             class="tw-icon-btn shrink-0"
           >
@@ -283,7 +298,7 @@ export function AppShell(props: AppShellProps) {
 
           <div
             data-testid="audio-arm-banner"
-            class="h-10 px-2.5 py-1 rounded-md flex items-center gap-1.5 text-sm shrink-0 tw-search-box"
+            class="min-h-10 px-2.5 py-1 rounded-md flex items-center gap-1.5 text-sm shrink-0 tw-search-box"
           >
             <span class={`tw-mono-vital px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${beaconClass}`}>
               <span class="hidden md:inline">IEC 60601-1-8 · </span>
@@ -294,7 +309,7 @@ export function AppShell(props: AppShellProps) {
               type="button"
               data-testid="arm-audio-btn"
               onClick={handleManualAudioToggle}
-              class={`min-h-8 px-2 hidden md:inline-flex items-center text-xs font-semibold rounded whitespace-nowrap ${
+              class={`min-h-10 px-2.5 hidden md:inline-flex items-center text-xs font-semibold rounded whitespace-nowrap ${
                 audioArmed && !audioMuted ? 'tw-audio-pill-armed' : 'tw-audio-pill'
               }`}
             >
@@ -305,7 +320,7 @@ export function AppShell(props: AppShellProps) {
               type="button"
               data-testid="alarm-silence-120s-btn"
               onClick={handleToggleSilence120s}
-              class={`min-h-8 px-2 inline-flex items-center tw-mono-vital text-xs font-semibold rounded whitespace-nowrap ${
+              class={`min-h-10 px-2.5 inline-flex items-center tw-mono-vital text-xs font-semibold rounded whitespace-nowrap ${
                 silenceRemainingSec > 0 ? 'tw-silence-pill-active' : 'tw-silence-pill'
               }`}
               title="Silence IEC 60601-1-8 audible alarms for 120 seconds"
@@ -382,7 +397,7 @@ export function AppShell(props: AppShellProps) {
 
           <button
             type="button"
-            onClick={() => onNavigate('/cohort')}
+            onClick={() => onNavigate('/cohort/roster')}
             class="tw-icon-btn"
             aria-label="Open Cohort Pro settings"
             title="Cohort Pro"
@@ -440,125 +455,160 @@ export function AppShell(props: AppShellProps) {
             </ul>
           </div>
 
-          {/* Active Ward Beds */}
-          <div class="border-t pt-3 tw-border">
-            {showFullRailLabels ? (
-              <h2 class="text-sm font-semibold mb-2 tw-sidebar-heading">Ward Beds</h2>
-            ) : null}
-            <ul class="list-none p-0 m-0 flex flex-col gap-1">
-              {beds.map((bed) => {
-                const isSelected = bed.bedIndex === selectedBedIndex;
-                const badgeClass =
-                  bed.alarmPriority === 'CRISIS'
-                    ? 'tw-beacon-crisis'
-                    : bed.alarmPriority === 'WARNING'
-                      ? 'tw-beacon-warning'
-                      : 'tw-beacon-normal';
-                return (
-                  <li key={bed.bedIndex}>
-                    <button
-                      type="button"
-                      title={`${bed.bedLabel} (${bed.vitals.rhythm} · ${bed.vitals.hr} bpm)`}
-                      onClick={() => {
-                        onSelectBed(bed.bedIndex);
-                        if (activeArea !== 'shift' && activeArea !== 'daily') {
-                          onNavigate('/shift');
-                        }
-                      }}
-                      class={`w-full min-h-10 text-left ${
-                        showFullRailLabels ? 'px-2.5 justify-between' : 'px-1 justify-center'
-                      } py-2 rounded-md flex items-center text-sm ${
-                        isSelected ? 'tw-sidebar-item-active' : 'tw-sidebar-item'
-                      }`}
-                    >
-                      <span class="font-medium">
-                        {showFullRailLabels ? bed.bedLabel : `B${bed.bedIndex + 1}`}
-                      </span>
-                      {showFullRailLabels ? (
-                        <span class="flex items-center gap-1.5">
-                          <span class={`tw-mono-vital px-1.5 py-0.5 rounded text-xs font-semibold ${badgeClass}`}>
-                            {bed.vitals.rhythm}
-                          </span>
-                          <span class="tw-mono-vital text-xs tw-sidebar-muted">
-                            {bed.vitals.hr}
-                          </span>
+          {/* Active Ward Beds (Shift & Daily routes only) */}
+          {activeArea === 'shift' || activeArea === 'daily' ? (
+            <div class="border-t pt-3 tw-border">
+              {showFullRailLabels ? (
+                <h2 class="text-sm font-semibold mb-2 tw-sidebar-heading">Ward Beds</h2>
+              ) : null}
+              <ul class="list-none p-0 m-0 flex flex-col gap-1">
+                {beds.map((bed) => {
+                  const isSelected = bed.bedIndex === selectedBedIndex;
+                  const badgeClass =
+                    bed.alarmPriority === 'CRISIS'
+                      ? 'tw-beacon-crisis'
+                      : bed.alarmPriority === 'WARNING'
+                        ? 'tw-beacon-warning'
+                        : 'tw-beacon-normal';
+                  return (
+                    <li key={bed.bedIndex}>
+                      <button
+                        type="button"
+                        title={`${bed.bedLabel} (${bed.vitals.rhythm} · ${bed.vitals.hr} bpm)`}
+                        onClick={() => {
+                          onSelectBed(bed.bedIndex);
+                        }}
+                        class={`w-full min-h-10 text-left ${
+                          showFullRailLabels ? 'px-2.5 justify-between' : 'px-1 justify-center'
+                        } py-2 rounded-md flex items-center text-sm ${
+                          isSelected ? 'tw-sidebar-item-active' : 'tw-sidebar-item'
+                        }`}
+                      >
+                        <span class="font-medium">
+                          {showFullRailLabels ? bed.bedLabel : `B${bed.bedIndex + 1}`}
                         </span>
-                      ) : null}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+                        {showFullRailLabels ? (
+                          <span class="flex items-center gap-1.5">
+                            <span class={`tw-mono-vital px-1.5 py-0.5 rounded text-xs font-semibold ${badgeClass}`}>
+                              {bed.vitals.rhythm}
+                            </span>
+                            <span class="tw-mono-vital text-xs tw-sidebar-muted">
+                              {bed.vitals.hr}
+                            </span>
+                          </span>
+                        ) : null}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
 
-          {/* PTB-XL 12-Rhythm Bank */}
-          <div class="border-t pt-3 tw-border">
-            {showFullRailLabels ? (
-              <h2 class="text-sm font-semibold mb-2 tw-sidebar-heading">Rhythm Bank</h2>
-            ) : null}
-            <ul class="list-none p-0 m-0 flex flex-col gap-1">
-              <li>
-                <button
-                  type="button"
-                  title="All Curated Strips"
-                  onClick={() => onSelectRhythmFilter('ALL')}
-                  class={`w-full min-h-10 text-left ${
-                    showFullRailLabels ? 'px-3 justify-between' : 'px-1 justify-center'
-                  } py-1.5 rounded-md flex items-center text-sm ${
-                    activeRhythmFilter === 'ALL' ? 'tw-sidebar-item-active' : 'tw-sidebar-item'
-                  }`}
-                >
-                  <span>{showFullRailLabels ? 'All Strips' : 'ALL'}</span>
-                  {showFullRailLabels ? (
-                    <span class="tw-mono-vital text-xs tw-sidebar-muted">
-                      {(() => {
-                        const unlockedCount = records.filter((r) => !canAccessCase || canAccessCase(r)).length;
-                        return unlockedCount === records.length
-                          ? String(records.length)
-                          : `${unlockedCount}/${records.length}`;
-                      })()}
-                    </span>
-                  ) : null}
-                </button>
-              </li>
-              {RHYTHM_CLASSES.map((rClass) => {
-                const totalForClass = records.filter((r) => r.rhythmClass === rClass).length;
-                const count = records.filter(
-                  (r) => (!canAccessCase || canAccessCase(r)) && r.rhythmClass === rClass
-                ).length;
-                const active = activeRhythmFilter === rClass;
-                return (
-                  <li key={rClass}>
-                    <button
-                      type="button"
-                      title={`${rClass} (${count} of ${totalForClass} strips unlocked)`}
-                      onClick={() => {
-                        onSelectRhythmFilter(rClass);
-                        const firstMatch = records.find(
-                          (r) => (!canAccessCase || canAccessCase(r)) && r.rhythmClass === rClass
-                        );
-                        if (firstMatch && activeArea === 'caliper') {
-                          onNavigate(`/caliper/${firstMatch.caseId}`);
-                        }
+          {/* PTB-XL 12-Rhythm Bank (Caliper route only) */}
+          {activeArea === 'caliper' ? (
+            <div class="border-t pt-3 tw-border">
+              {showFullRailLabels ? (
+                <h2 class="text-sm font-semibold mb-2 tw-sidebar-heading">Rhythm Bank</h2>
+              ) : null}
+              <ul class="list-none p-0 m-0 flex flex-col gap-1">
+                <li>
+                  <button
+                    type="button"
+                    title="All Curated Strips"
+                    onClick={() => onSelectRhythmFilter('ALL')}
+                    class={`w-full min-h-10 text-left ${
+                      showFullRailLabels ? 'px-3 justify-between' : 'px-1 justify-center'
+                    } py-1.5 rounded-md flex items-center text-sm ${
+                      activeRhythmFilter === 'ALL' ? 'tw-sidebar-item-active' : 'tw-sidebar-item'
+                    }`}
+                  >
+                    <span>{showFullRailLabels ? 'All Strips' : 'ALL'}</span>
+                    {showFullRailLabels ? (
+                      <span class="tw-mono-vital text-xs tw-sidebar-muted">
+                        {(() => {
+                          const unlockedCount = records.filter((r) => !canAccessCase || canAccessCase(r)).length;
+                          return unlockedCount === records.length
+                            ? String(records.length)
+                            : `${unlockedCount}/${records.length}`;
+                        })()}
+                      </span>
+                    ) : null}
+                  </button>
+                </li>
+                {RHYTHM_CLASSES.map((rClass) => {
+                  const totalForClass = records.filter((r) => r.rhythmClass === rClass).length;
+                  const count = records.filter(
+                    (r) => (!canAccessCase || canAccessCase(r)) && r.rhythmClass === rClass
+                  ).length;
+                  const active = activeRhythmFilter === rClass;
+                  return (
+                    <li key={rClass}>
+                      <button
+                        type="button"
+                        title={`${rClass} (${count} of ${totalForClass} strips unlocked)`}
+                        onClick={() => {
+                          onSelectRhythmFilter(rClass);
+                          const firstMatch = records.find(
+                            (r) => (!canAccessCase || canAccessCase(r)) && r.rhythmClass === rClass
+                          );
+                          if (firstMatch) {
+                            onNavigate(`/caliper/${firstMatch.caseId}`);
+                          }
+                        }}
+                        class={`w-full min-h-10 text-left ${
+                          showFullRailLabels ? 'px-3 justify-between' : 'px-1 justify-center'
+                        } py-1.5 rounded-md flex items-center text-sm ${
+                          active ? 'tw-sidebar-item-active' : 'tw-sidebar-item'
+                        }`}
+                      >
+                        <span>{showFullRailLabels ? rClass : COMPACT_RHYTHM_ABBREV[rClass]}</span>
+                        {showFullRailLabels ? (
+                          <span class="tw-mono-vital text-xs tw-sidebar-muted">
+                            {count === totalForClass ? count : `${count}/${totalForClass}`}
+                          </span>
+                        ) : null}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
+
+          {/* Cohort Views (Cohort route only) */}
+          {activeArea === 'cohort' ? (
+            <div class="border-t pt-3 tw-border">
+              {showFullRailLabels ? (
+                <h2 class="text-sm font-semibold mb-2 tw-sidebar-heading">Cohort Views</h2>
+              ) : null}
+              <ul class="list-none p-0 m-0 flex flex-col gap-1">
+                {[
+                  { label: 'Overview', short: 'OV', href: '/cohort/overview' },
+                  { label: 'Cohort Roster', short: 'RS', href: '/cohort/roster' },
+                  { label: 'Receipt Verifier', short: 'VF', href: '/cohort/assign' },
+                  { label: 'Pro Access', short: 'PA', href: '/cohort/billing' },
+                ].map((sub) => (
+                  <li key={sub.href}>
+                    <a
+                      href={sub.href}
+                      title={sub.label}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onNavigate(sub.href);
+                        setMobileDrawerOpen(false);
                       }}
-                      class={`w-full min-h-10 text-left ${
-                        showFullRailLabels ? 'px-3 justify-between' : 'px-1 justify-center'
-                      } py-1.5 rounded-md flex items-center text-sm ${
-                        active ? 'tw-sidebar-item-active' : 'tw-sidebar-item'
-                      }`}
+                      class={`w-full min-h-10 no-underline ${
+                        showFullRailLabels ? 'px-2.5 justify-between' : 'px-1 justify-center'
+                      } py-2 rounded-md flex items-center text-sm font-medium tw-sidebar-item`}
                     >
-                      <span>{showFullRailLabels ? rClass : rClass.slice(0, 3)}</span>
-                      {showFullRailLabels ? (
-                        <span class="tw-mono-vital text-xs tw-sidebar-muted">
-                          {count === totalForClass ? count : `${count}/${totalForClass}`}
-                        </span>
-                      ) : null}
-                    </button>
+                      <span>{showFullRailLabels ? sub.label : sub.short}</span>
+                    </a>
                   </li>
-                );
-              })}
-            </ul>
-          </div>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </aside>
 
         {/* Region 2: Focused Main Canvas Area */}
@@ -579,7 +629,7 @@ export function AppShell(props: AppShellProps) {
             <button
               type="button"
               onClick={() => setInspectorOpen(false)}
-              class="tw-btn-secondary text-xs py-1 px-2"
+              class="tw-btn-secondary min-h-10 text-xs px-3"
             >
               Close Log
             </button>

@@ -112,9 +112,15 @@ export class Iec60601AlarmSynthesizer {
         this.audioCtx = new AudioContextCtor();
       }
       if (this.audioCtx.state === 'suspended') {
-        void Promise.resolve(this.audioCtx.resume()).catch(() => {
-          this.armed = false;
-        });
+        void Promise.resolve(this.audioCtx.resume())
+          .then(() => {
+            if (this.audioCtx && this.audioCtx.state === 'suspended') {
+              this.armed = false;
+            }
+          })
+          .catch(() => {
+            this.armed = false;
+          });
       }
       this.armed = true;
       return true;
@@ -122,6 +128,35 @@ export class Iec60601AlarmSynthesizer {
       this.armed = false;
       return false;
     }
+  }
+
+  public async arm(): Promise<boolean> {
+    try {
+      const AudioContextCtor =
+        typeof window !== 'undefined'
+          ? window.AudioContext ||
+            (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+          : undefined;
+      if (!AudioContextCtor) {
+        this.armed = false;
+        return false;
+      }
+      if (!this.audioCtx) {
+        this.audioCtx = new AudioContextCtor();
+      }
+      if (this.audioCtx.state === 'suspended' && typeof this.audioCtx.resume === 'function') {
+        await this.audioCtx.resume();
+      }
+      this.armed = this.audioCtx.state !== 'suspended';
+      return this.armed;
+    } catch {
+      this.armed = false;
+      return false;
+    }
+  }
+
+  public getActiveNodeCount(): number {
+    return this.activeOscillators.size;
   }
 
   public triggerBurstIfDue(spo2Pct = 98, nowMs = Date.now()): void {

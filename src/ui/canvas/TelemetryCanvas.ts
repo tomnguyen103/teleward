@@ -258,8 +258,8 @@ export function render12LeadCaliperCanvas(
   ctx.strokeStyle = 'rgba(225, 29, 72, 0.14)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  const minorStepX = Math.max(2, width / 250);
-  const minorStepY = Math.max(2, ((height - stripTop) * 0.34) / 10);
+  const minorStepX = width > 0 ? width / 250 : 1;
+  const minorStepY = height > stripTop ? ((height - stripTop) * 0.34) / 10 : 1;
   for (let x = 0; x <= width; x += minorStepX) {
     ctx.moveTo(x, 0);
     ctx.lineTo(x, height);
@@ -284,9 +284,9 @@ export function render12LeadCaliperCanvas(
   }
   ctx.stroke();
 
-  // Render 4 rows x 3 columns for the 12 leads + bottom Lead II rhythm strip
-  const rows = 4;
-  const cols = 3;
+  // Render standard clinical 3 rows x 4 columns (I/II/III, aVR/aVL/aVF, V1/V2/V3, V4/V5/V6) + bottom Lead II rhythm strip
+  const rows = 3;
+  const cols = 4;
   const cellW = width / cols;
   const cellH = (height * 0.75) / rows;
   const mvPxCell = stripScale;
@@ -294,7 +294,7 @@ export function render12LeadCaliperCanvas(
   ctx.strokeStyle = darkTheme ? '#00E676' : '#0F172A';
   ctx.lineWidth = 1.4;
 
-  // Draw 1 mV square calibration step pulse at the start of each of the 4 rows
+  // Draw 1 mV square calibration step pulse at the start of each of the 3 rows
   for (let r = 0; r < rows; r++) {
     const yMid = r * cellH + cellH * 0.52;
     const yTop = yMid - mvPxCell;
@@ -308,7 +308,7 @@ export function render12LeadCaliperCanvas(
     ctx.stroke();
   }
 
-  const colSamples = Math.max(1, stripSamples / cols);
+  const colSamples = Math.max(1, Math.floor(stripSamples / cols));
 
   for (let l = 0; l < LEAD_NAMES.length; l++) {
     const leadName = LEAD_NAMES[l]!;
@@ -317,11 +317,13 @@ export function render12LeadCaliperCanvas(
     const x0 = col * cellW;
     const yMid = row * cellH + cellH * 0.52;
     const samples = waveforms[leadName];
+    const sampleOffset = col * colSamples;
 
     ctx.beginPath();
     for (let s = 0; s < colSamples; s += 2) {
       const px = x0 + (s / colSamples) * cellW;
-      const py = yMid - (samples[s] ?? 0) * mvPxCell;
+      const sampleVal = samples[sampleOffset + s] ?? samples[s] ?? 0;
+      const py = yMid - sampleVal * mvPxCell;
       if (s === 0) ctx.moveTo(px, py);
       else ctx.lineTo(px, py);
     }

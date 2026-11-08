@@ -66,6 +66,16 @@ def periodic_gauss(s: int, center: float, width: float, period: float) -> float:
     return math.exp(-0.5 * (diff / width) ** 2)
 
 
+def validate_finite_samples(samples: list[float], case_id: str) -> None:
+    """Ensure every synthesized float sample is finite and within [-5.0, +5.0] mV before binary packing."""
+    for idx, val in enumerate(samples):
+        if not math.isfinite(val) or val < -5.0 or val > 5.0:
+            raise ValueError(
+                f"ERR_NONFINITE_SAMPLE: Record {case_id} sample index {idx} has invalid value {val!r}"
+            )
+
+
+
 def synthesize_12lead_record(rhythm: str, rec_offset: int, seed: int) -> tuple[list[float], dict]:
     """Synthesize a 12-lead 500 Hz tile and ground-truth fiducials for a rhythm class."""
     rng = mulberry32(seed + rec_offset * 7919)
@@ -512,6 +522,7 @@ def main() -> None:
             rec_idx * 10 + within_class_idx,
             args.seed,
         )
+        validate_finite_samples(samples_f32, case_id)
         packed_floats = struct.pack(f"<{LEAD_COUNT * SAMPLES_PER_TILE}f", *samples_f32)
         payload_chunks.append(packed_floats)
 

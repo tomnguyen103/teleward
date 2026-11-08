@@ -145,6 +145,7 @@ export function ShiftStationView(props: ShiftStationViewProps) {
   } = props;
 
   const [activeDockBay, setActiveDockBay] = useState<'all' | 'electrical' | 'pharmacology'>('all');
+  const [codeCartOpen, setCodeCartOpen] = useState(false);
   const canvasRefs = useRef<Array<HTMLCanvasElement | null>>([null, null, null, null]);
   const ringBuffersRef = useRef<TelemetryRingBuffer[] | null>(null);
   const lastResetKeyRef = useRef<string | undefined>(undefined);
@@ -210,7 +211,9 @@ export function ShiftStationView(props: ShiftStationViewProps) {
             stepTelemetryFrame(rb, bed.vitals, clampedDelta);
             const ctx = getSafe2dContext(canvas);
             if (ctx) {
-              const { width, height } = syncCanvasHiDpi(canvas, 460, 152, ctx, true);
+              const rect = canvas.getBoundingClientRect();
+              const logicalWidth = rect.width >= 200 ? Math.round(rect.width) : 460;
+              const { width, height } = syncCanvasHiDpi(canvas, logicalWidth, 152, ctx, true);
               renderTelemetryBedCanvas(
                 ctx,
                 width,
@@ -241,12 +244,13 @@ export function ShiftStationView(props: ShiftStationViewProps) {
           )}
         </div>
 
-        <div class="flex flex-wrap items-center gap-4">
+        <div class="flex flex-wrap items-center gap-3">
           <div class="hidden xl:flex items-center gap-2.5 text-xs tw-mono-vital px-2.5 py-1 rounded tw-chip-muted">
             <span class="tw-text-ecg">II 1.0mV</span>
             <span class="tw-text-abp">ART mmHg</span>
             <span class="tw-text-spo2">PLETH</span>
             <span class="tw-text-etco2">CO2 mmHg</span>
+            <span class="tw-text-muted">RR /min</span>
             <span class="tw-text-muted">25 mm/s</span>
           </div>
 
@@ -257,13 +261,23 @@ export function ShiftStationView(props: ShiftStationViewProps) {
             </div>
           </div>
 
+          <button
+            type="button"
+            data-testid="open-code-cart-btn"
+            onClick={() => setCodeCartOpen((o) => !o)}
+            aria-expanded={codeCartOpen}
+            class={hideStationHeader ? 'tw-btn-secondary' : 'tw-btn-primary'}
+          >
+            {codeCartOpen ? 'Close Cart' : 'Code Cart'}
+          </button>
+
           <button type="button" onClick={onResetShift} class="tw-btn-secondary">
             Reset Shift
           </button>
         </div>
       </section>
 
-      {/* Group 2: 2x2 HiDPI 60fps 2D Canvas ICU Bedside Monitor Matrix */}
+      {/* Group 2: 2x2 HiDPI 60fps 2D Canvas ICU Bedside Monitor Matrix (4-Field Ceiling per Bed Tile) */}
       <section aria-label="4-Bed ICU Telemetry Monitors" class="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {beds.map((bed, idx) => {
           const isSelected = idx === selectedBedIndex;
@@ -278,12 +292,15 @@ export function ShiftStationView(props: ShiftStationViewProps) {
             <div
               key={bed.bedIndex}
               data-testid={`bed-card-${idx}`}
-              onClick={() => onSelectBed(idx)}
-              class={`tw-well p-2.5 flex flex-col gap-2 cursor-pointer ${
+              onClick={() => {
+                onSelectBed(idx);
+                setCodeCartOpen(true);
+              }}
+              class={`tw-well p-3 flex flex-col gap-2 cursor-pointer ${
                 isSelected ? 'ring-2 ring-emerald-500' : ''
               }`}
             >
-              {/* Bed Header Row */}
+              {/* Field 1: Bed Identifier & Rhythm / Status */}
               <div class="flex items-center justify-between gap-2 pb-1.5 border-b tw-border">
                 <div class="flex items-center gap-2">
                   <h2 class="m-0 text-base font-semibold">
@@ -311,14 +328,14 @@ export function ShiftStationView(props: ShiftStationViewProps) {
                       e.stopPropagation();
                       onOpenCaliperForCase(bed.caseId);
                     }}
-                    class="tw-btn-secondary text-xs py-1.5 px-2.5 whitespace-nowrap"
+                    class="tw-btn-secondary min-h-10 text-xs px-2.5 whitespace-nowrap"
                   >
                     Calipers <span class="hidden 2xl:inline">({bed.caseId})</span>
                   </button>
                 </div>
               </div>
 
-              {/* Canvas + Right-Hand Bedside Parameter Readout Column */}
+              {/* Canvas + 3-Item Bedside Readout Column (Total 4 Data Fields per Card) */}
               <div class="grid grid-cols-[minmax(0,1fr)_116px] 2xl:grid-cols-[minmax(0,1fr)_140px] gap-2.5 items-center">
                 <canvas
                   ref={(el) => {
@@ -330,7 +347,7 @@ export function ShiftStationView(props: ShiftStationViewProps) {
                   aria-label={`${bed.bedLabel} 500 Hz ECG (II 1.0mV), ABP (ART mmHg), SpO2 (PLETH), and EtCO2 (CO2 mmHg) waveform monitor`}
                 />
 
-                <dl class="m-0 grid grid-cols-1 gap-1 text-right">
+                <dl class="m-0 grid grid-cols-1 gap-1.5 text-right">
                   <div>
                     <dt class="text-xs tw-text-muted">HR (bpm)</dt>
                     <dd class="m-0 tw-mono-vital text-2xl font-semibold tw-text-ecg">
@@ -338,30 +355,16 @@ export function ShiftStationView(props: ShiftStationViewProps) {
                     </dd>
                   </div>
                   <div>
-                    <dt class="text-xs tw-text-muted">ABP (mmHg)</dt>
+                    <dt class="text-xs tw-text-muted">ABP / MAP</dt>
                     <dd class="m-0 tw-mono-vital text-sm font-semibold tw-text-abp">
                       {bed.vitals.sbp}/{bed.vitals.dbp} ({bed.vitals.map})
                     </dd>
                   </div>
-                  <div class="flex justify-between gap-2">
-                    <div>
-                      <dt class="text-xs tw-text-muted">SpO2</dt>
-                      <dd class="m-0 tw-mono-vital text-sm font-semibold tw-text-spo2">
-                        {bed.vitals.spo2}%
-                      </dd>
-                    </div>
-                    <div>
-                      <dt class="text-xs tw-text-muted">EtCO2</dt>
-                      <dd class="m-0 tw-mono-vital text-sm font-semibold tw-text-etco2">
-                        {bed.vitals.etco2}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt class="text-xs tw-text-muted">RR</dt>
-                      <dd class="m-0 tw-mono-vital text-sm font-semibold">
-                        {bed.vitals.rr}
-                      </dd>
-                    </div>
+                  <div>
+                    <dt class="text-xs tw-text-muted">SpO2 · EtCO2</dt>
+                    <dd class="m-0 tw-mono-vital text-sm font-semibold tw-text-spo2">
+                      {bed.vitals.spo2}% · <span class="tw-text-etco2">{bed.vitals.etco2}</span>
+                    </dd>
                   </div>
                 </dl>
               </div>
@@ -370,8 +373,15 @@ export function ShiftStationView(props: ShiftStationViewProps) {
         })}
       </section>
 
-      {/* Group 3: Segmented 2-Bay ACLS Crash Cart Dock */}
-      <section aria-label="ACLS Crash Cart Interventions" class="tw-surface divide-y tw-border">
+      {/* On-Demand ACLS Code Cart Drawer (Closed at rest to preserve >=30% open canvas whitespace; opens on bed click or Code Cart CTA) */}
+      <section
+        data-testid="code-cart-drawer"
+        aria-label="ACLS Crash Cart Interventions"
+        aria-hidden={codeCartOpen ? 'false' : 'true'}
+        class={`${
+          codeCartOpen ? 'block sticky bottom-2 z-20 max-h-[75vh] overflow-y-auto' : 'hidden'
+        } tw-surface divide-y tw-border`}
+      >
         <div class="px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
           <div class="flex flex-wrap items-center gap-3">
             <h2 class="m-0">ACLS Crash Cart</h2>
@@ -400,12 +410,21 @@ export function ShiftStationView(props: ShiftStationViewProps) {
             </div>
           </div>
 
-          <span
-            data-testid="acting-as-bed-guard"
-            class="px-3 py-1.5 rounded text-sm font-semibold tw-chip-muted"
-          >
-            Target: {activeBed.bedLabel} ({activeBed.vitals.rhythm} · {RHYTHM_PROFILES[activeBed.vitals.rhythm].label})
-          </span>
+          <div class="flex items-center gap-2">
+            <span
+              data-testid="acting-as-bed-guard"
+              class="px-3 py-1.5 rounded text-sm font-semibold tw-chip-muted"
+            >
+              Target: {activeBed.bedLabel} ({activeBed.vitals.rhythm} · {RHYTHM_PROFILES[activeBed.vitals.rhythm].label} · RR {activeBed.vitals.rr})
+            </span>
+            <button
+              type="button"
+              onClick={() => setCodeCartOpen(false)}
+              class="tw-btn-secondary min-h-10 text-xs px-3"
+            >
+              Hide Cart
+            </button>
+          </div>
         </div>
 
         <div class="grid grid-cols-1 2xl:grid-cols-12 divide-y 2xl:divide-y-0 2xl:divide-x tw-border">
@@ -416,7 +435,7 @@ export function ShiftStationView(props: ShiftStationViewProps) {
             } ${activeDockBay === 'electrical' ? '2xl:col-span-12' : '2xl:col-span-5'} p-3 flex-col gap-2`}
           >
             <div class="flex items-center justify-between">
-              <h3 class="m-0 text-sm font-semibold">Electrical Therapy Bay (Biphasic Defibrillator / Pacer)</h3>
+              <h3 class="m-0 text-sm font-semibold">Electrical Therapy Bay</h3>
               <span class="tw-mono-vital text-xs tw-text-muted">Hotkeys 1–3</span>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
