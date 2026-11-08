@@ -101,4 +101,50 @@ describe('Ticket 02: Obsidian ICU Telemetry Cockpit, Unified 64px Header & 2-Bay
     fireEvent.keyDown(window, { key: keyToPress });
     expect(getByTestId('bed-rhythm-1').textContent).toContain('NSR');
   });
+
+  it('US-03.1 & US-03.2: supports direct canvas pointer hit-testing on T1/T2/V1/V2 hairlines and 25/50 mm/s speed & 5/10/20 mm/mV gain toggles', () => {
+    const { getByTestId, container } = render(
+      <App initialPath="/caliper/ptbxl-001" preloadedDataset={DATASET} />
+    );
+
+    // Verify paper speed (25 / 50 mm/s) and gain (5 / 10 / 20 mm/mV) toggles preserve physiological ms/mV readings
+    const speed50Btn = getByTestId('caliper-speed-50');
+    const speed25Btn = getByTestId('caliper-speed-25');
+    const gain20Btn = getByTestId('caliper-gain-20');
+    const gain5Btn = getByTestId('caliper-gain-5');
+    const gain10Btn = getByTestId('caliper-gain-10');
+
+    expect(getByTestId('caliper-t1-ms').textContent).toBe('240 ms');
+    expect(getByTestId('caliper-t2-ms').textContent).toBe('1040 ms');
+
+    fireEvent.click(speed50Btn);
+    expect(container.textContent).toContain('50 mm/s');
+    expect(getByTestId('caliper-t1-ms').textContent).toBe('240 ms');
+    expect(getByTestId('caliper-t2-ms').textContent).toBe('1040 ms');
+
+    fireEvent.click(gain20Btn);
+    expect(container.textContent).toContain('20 mm/mV');
+    expect(getByTestId('caliper-v2-mv').textContent).toBe('0.25 mV');
+
+    fireEvent.click(speed25Btn);
+    fireEvent.click(gain5Btn);
+    expect(container.textContent).toContain('5 mm/mV');
+    fireEvent.click(gain10Btn);
+
+    // Direct canvas pointer hit-testing: T1 is at 240ms -> x = (240/10000)*960 = ~23px.
+    // Without clicking caliper-handle-btn-t1 first (activeHandle starts as 't2'), pressing near x=23 grabs T1 directly!
+    const canvasEl = getByTestId('caliper-12lead-canvas');
+    fireEvent.pointerDown(canvasEl, { clientX: 23, clientY: 120 });
+    fireEvent.pointerMove(canvasEl, { clientX: 192, clientY: 120 });
+    fireEvent.pointerUp(canvasEl);
+
+    expect(getByTestId('caliper-t1-ms').textContent).toBe('2000 ms');
+    expect(getByTestId('caliper-t2-ms').textContent).toBe('1040 ms');
+
+    // Direct canvas pointer hit-testing on V1 (v1Mv = 0.0 -> y = 367.5px on 420px canvas)
+    fireEvent.pointerDown(canvasEl, { clientX: 500, clientY: 368 });
+    fireEvent.pointerMove(canvasEl, { clientX: 500, clientY: 332 });
+    fireEvent.pointerUp(canvasEl);
+    expect(getByTestId('caliper-v1-mv').textContent).not.toBe('0 mV');
+  });
 });

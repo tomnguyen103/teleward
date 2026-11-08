@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import {
   generateCohortReceipt,
   parseCohortSeed,
@@ -6,6 +6,14 @@ import {
   type EntitlementTier,
   type VerifiedCohortReceipt,
 } from '../../billing/cohortAndEntitlement.ts';
+import {
+  fetchCohortSubmissions,
+  getFallbackBaselineCohortRoster,
+  submitCohortRun,
+  verifyReceiptRemote,
+  type CohortSubmissionRecord,
+  type CohortSummaryMetrics,
+} from '../apiClient.ts';
 
 export interface CohortProViewProps {
   entitlementTier: EntitlementTier;
@@ -26,14 +34,39 @@ export function CohortProView(props: CohortProViewProps) {
     onLaunchCohortShift,
   } = props;
 
-  const [cohortInput, setCohortInput] = useState(activeCohortSeed ?? 'NURS402-FALL26');
+  const initialSeed = activeCohortSeed ?? 'NURS402-FALL26';
+  const [cohortInput, setCohortInput] = useState(initialSeed);
   const [cohortError, setCohortError] = useState<string | null>(null);
-  const [receiptToVerify, setReceiptToVerify] = useState('');
-  const [verificationResult, setVerificationResult] = useState<VerifiedCohortReceipt | null>(
-    null
+  const [studentAlias, setStudentAlias] = useState('K. Resident, PGY-2');
+  const [roster, setRoster] = useState<CohortSubmissionRecord[]>(() =>
+    getFallbackBaselineCohortRoster(initialSeed)
   );
+  const [summary, setSummary] = useState<CohortSummaryMetrics>({
+    totalSubmissions: 3,
+    meanScore: 89,
+    fullStabilizationRate: 67,
+  });
+  const [receiptToVerify, setReceiptToVerify] = useState('');
+  const [verificationResult, setVerificationResult] = useState<
+    (VerifiedCohortReceipt & { registeredInLedger?: boolean }) | null
+  >(null);
 
   const parsedCurrentCohort = parseCohortSeed(cohortInput);
+  const effectiveSeed = parsedCurrentCohort.valid && parsedCurrentCohort.cohort ? parsedCurrentCohort.cohort : 'NURS402-FALL26';
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchCohortSubmissions(effectiveSeed).then((res) => {
+      if (!cancelled) {
+        setRoster(res.roster);
+        setSummary(res.summary);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [effectiveSeed]);
+
   const currentStudentReceipt = parsedCurrentCohort.valid
     ? generateCohortReceipt({
         cohort: parsedCurrentCohort.cohort!,
@@ -56,9 +89,32 @@ export function CohortProView(props: CohortProViewProps) {
     onLaunchCohortShift(check.cohort);
   };
 
+  const handleSubmitCohortRun = (e: Event) => {
+    e.preventDefault();
+    const check = parseCohortSeed(cohortInput.trim());
+    if (!check.valid || !check.cohort) {
+      setCohortError('Enter a valid cohort seed before submitting a student run.');
+      return;
+    }
+    setCohortError(null);
+    void submitCohortRun(check.cohort, {
+      studentAlias: studentAlias.trim() || 'ICU Student',
+      score: scoreSummary.scorePct,
+      stabilizedBeds: scoreSummary.bedsStabilized,
+      violations: scoreSummary.totalViolations,
+    }).then((res) => {
+      setRoster(res.roster);
+      setSummary(res.summary);
+    });
+  };
+
   const handleVerifyReceipt = (e: Event) => {
     e.preventDefault();
-    setVerificationResult(verifyCohortReceipt(receiptToVerify));
+    const localVerdict = verifyCohortReceipt(receiptToVerify);
+    setVerificationResult(localVerdict);
+    void verifyReceiptRemote(receiptToVerify).then((remoteVerdict) => {
+      setVerificationResult(remoteVerdict);
+    });
   };
 
   return (
@@ -93,7 +149,7 @@ export function CohortProView(props: CohortProViewProps) {
           </div>
         </div>
 
-        {/* Section A: Stateless ?cohort=<seed> Classroom Synchronizer */}
+        {/* Section A: Stateless ?cohort=<seed> Classroom Synchronizer & Run Submission */}
         <div class="p-5 grid grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)] gap-6">
           <div>
             <h2>Classroom Cohort Synchronizer</h2>
@@ -129,6 +185,37 @@ export function CohortProView(props: CohortProViewProps) {
               </button>
             </form>
 
+            <form onSubmit={handleSubmitCohortRun} class="flex flex-wrap items-end gap-3 pt-2">
+              <div class="flex-1 min-w-60">
+                <label htmlFor="cohort-student-alias-input" class="block text-sm font-medium mb-1 w-fit">
+                  Student Clinician Alias *
+                </label>
+                <input
+                  id="cohort-student-alias-input"
+                  name="studentAlias"
+                  data-testid="cohort-student-alias-input"
+                  type="text"
+                  autocomplete="off"
+                  value={studentAlias}
+                  onInput={(e) => setStudentAlias((e.target as HTMLInputElement).value)}
+                  class="w-full h-10 px-3 rounded border text-sm"
+                  style={{
+                    backgroundColor: 'var(--surface-muted)',
+                    borderColor: 'var(--border)',
+                    color: 'var(--text)',
+                  }}
+                />
+              </div>
+
+              <button
+                type="submit"
+                data-testid="submit-cohort-run-btn"
+                class="tw-btn-secondary"
+              >
+                Submit Shift Receipt to Cohort Roster
+              </button>
+            </form>
+
             {cohortError ? (
               <p class="m-0 text-sm" style={{ color: 'var(--trace-abp)' }}>
                 {cohortError}
@@ -136,7 +223,7 @@ export function CohortProView(props: CohortProViewProps) {
             ) : null}
 
             {currentStudentReceipt ? (
-              <div class="text-sm pt-2">
+              <div class="text-sm pt-1">
                 <span>Current Shift Completion Receipt: </span>
                 <strong data-testid="generated-cohort-receipt" class="tw-mono-vital">
                   {currentStudentReceipt}
@@ -146,12 +233,62 @@ export function CohortProView(props: CohortProViewProps) {
           </div>
         </div>
 
-        {/* Section B: Instructor CRC16 Receipt Verifier */}
+        {/* Section B: Live Classroom Cohort Roster Table */}
+        <div class="p-5 flex flex-col gap-3">
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 class="m-0">Live Classroom Cohort Roster ({effectiveSeed})</h2>
+              <p class="text-sm m-0" style={{ color: 'var(--text-muted)' }}>
+                Server-persisted student resuscitation submissions signed with CRC16-CCITT verification codes.
+              </p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-6 text-sm tw-mono-vital">
+              <span>Submissions: <strong>{summary.totalSubmissions}</strong></span>
+              <span>Mean Score: <strong>{summary.meanScore}%</strong></span>
+              <span>4/4 Stabilization Rate: <strong>{summary.fullStabilizationRate}%</strong></span>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table
+              data-testid="cohort-roster-table"
+              class="w-full text-left border-collapse text-sm"
+            >
+              <thead>
+                <tr class="border-b" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+                  <th class="py-2 pr-3 font-medium">Student Clinician</th>
+                  <th class="py-2 pr-3 font-medium">Score</th>
+                  <th class="py-2 pr-3 font-medium">Beds Stabilized</th>
+                  <th class="py-2 pr-3 font-medium">AHA Violations</th>
+                  <th class="py-2 font-medium">CRC16 Receipt Code</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y" style={{ borderColor: 'var(--border)' }}>
+                {roster.map((row) => (
+                  <tr key={row.id}>
+                    <td class="py-2 pr-3 font-medium">{row.studentAlias}</td>
+                    <td class="py-2 pr-3 tw-mono-vital font-semibold" style={{ color: 'var(--trace-ecg)' }}>
+                      {row.score}%
+                    </td>
+                    <td class="py-2 pr-3 tw-mono-vital">{row.stabilizedBeds} / 4</td>
+                    <td class="py-2 pr-3 tw-mono-vital">{row.violations}</td>
+                    <td class="py-2 tw-mono-vital text-xs" style={{ color: 'var(--text-muted)' }}>
+                      {row.receipt}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Section C: Instructor CRC16 Receipt Verifier */}
         <div class="p-5 grid grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)] gap-6">
           <div>
             <h2>Instructor Receipt Verifier</h2>
             <p class="text-sm m-0" style={{ color: 'var(--text-muted)' }}>
-              Paste a student completion code (TW-COHORT-SCORE-CRC16) to verify score integrity without a backend database.
+              Paste a student completion code (TW-COHORT-SCORE-CRC16) to verify score integrity and cohort ledger registration.
             </p>
           </div>
 
@@ -204,7 +341,7 @@ export function CohortProView(props: CohortProViewProps) {
           </div>
         </div>
 
-        {/* Section C: Stripe Checkout Pro Exam Pass ($19) & Instructor Tier ($49/mo) */}
+        {/* Section D: Stripe Checkout Pro Exam Pass ($19) & Instructor Tier ($49/mo) */}
         <div class="p-5 grid grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)] gap-6">
           <div>
             <h2>Self-Serve Exam Pass &amp; Licensing</h2>

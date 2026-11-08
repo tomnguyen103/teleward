@@ -15,7 +15,57 @@ import {
 import {
   getSafe2dContext,
   render12LeadCaliperCanvas,
+  syncCanvasHiDpi,
 } from '../canvas/TelemetryCanvas.ts';
+
+export type CaliperHandleId = 't1' | 't2' | 'v1' | 'v2';
+
+if (typeof window !== 'undefined') {
+  if (typeof window.PointerEvent === 'undefined') {
+    (window as unknown as { PointerEvent: typeof MouseEvent }).PointerEvent = window.MouseEvent;
+  }
+  if (typeof HTMLElement !== 'undefined') {
+    const proto = HTMLElement.prototype as unknown as Record<string, unknown>;
+    for (const ev of ['onpointerdown', 'onpointermove', 'onpointerup', 'onpointercancel']) {
+      if (!(ev in proto)) {
+        proto[ev] = null;
+      }
+    }
+  }
+}
+
+export function hitTestCaliperHandle(
+  localX: number,
+  localY: number,
+  width: number,
+  height: number,
+  caliper: CaliperState,
+  fallbackHandle: CaliperHandleId,
+  gainMmPerMv: 5 | 10 | 20 = 10,
+  thresholdPx = 18
+): CaliperHandleId {
+  const xT1 = (caliper.t1Ms / 10000) * width;
+  const xT2 = (caliper.t2Ms / 10000) * width;
+  const stripTop = height * 0.75;
+  const stripMid = stripTop + (height - stripTop) * 0.5;
+  const stripScale = Math.max(1, (height - stripTop) * 0.34 * (gainMmPerMv / 10));
+  const yV1 = stripMid - caliper.v1Mv * stripScale;
+  const yV2 = stripMid - caliper.v2Mv * stripScale;
+
+  const candidates: Array<{ handle: CaliperHandleId; dist: number }> = [
+    { handle: 't1', dist: Math.abs(localX - xT1) },
+    { handle: 't2', dist: Math.abs(localX - xT2) },
+    { handle: 'v1', dist: Math.abs(localY - yV1) },
+    { handle: 'v2', dist: Math.abs(localY - yV2) },
+  ];
+
+  candidates.sort((a, b) => a.dist - b.dist);
+  const nearest = candidates[0]!;
+  if (nearest.dist <= thresholdPx) {
+    return nearest.handle;
+  }
+  return fallbackHandle;
+}
 
 export interface CaliperViewProps {
   dataset: LoadedPtbxlDataset;
@@ -40,7 +90,10 @@ export function CaliperView(props: CaliperViewProps) {
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDraggingRef = useRef(false);
-  const [activeHandle, setActiveHandle] = useState<'t1' | 't2' | 'v1' | 'v2'>('t2');
+  const draggingHandleRef = useRef<CaliperHandleId | null>(null);
+  const [activeHandle, setActiveHandle] = useState<CaliperHandleId>('t2');
+  const [paperSpeedMmPerSec, setPaperSpeedMmPerSec] = useState<25 | 50>(25);
+  const [gainMmPerMv, setGainMmPerMv] = useState<5 | 10 | 20>(10);
   const [caliper, setCaliper] = useState<CaliperState>({
     t1Ms: 240,
     t2Ms: 1040,
@@ -68,6 +121,7 @@ export function CaliperView(props: CaliperViewProps) {
   // Reset caliper handles deterministically when route :caseId changes (US-04.4)
   useEffect(() => {
     isDraggingRef.current = false;
+    draggingHandleRef.current = null;
     setCaliper({ t1Ms: 240, t2Ms: 1040, v1Mv: 0.0, v2Mv: 0.25 });
     setPrInput('');
     setQrsInput('');
@@ -99,19 +153,34 @@ export function CaliperView(props: CaliperViewProps) {
     const ctx = getSafe2dContext(canvas);
     if (!ctx) return;
 
+    const { width, height } = syncCanvasHiDpi(canvas, 960, 420, ctx);
     const waveforms = getCaseWaveforms(dataset, resolvedRecord.caseId, 5000);
     render12LeadCaliperCanvas(
       ctx,
-      canvas.width,
-      canvas.height,
+      width,
+      height,
       waveforms,
       caliper,
       metrics.marchingSpikesMs,
       gradeReport !== null,
       resolvedRecord,
-      darkTheme
+      darkTheme,
+      {
+        paperSpeedMmPerSec,
+        gainMmPerMv,
+      }
     );
-  }, [dataset, resolvedRecord, caliper, metrics.marchingSpikesMs, gradeReport, darkTheme, canAccessCase]);
+  }, [
+    dataset,
+    resolvedRecord,
+    caliper,
+    metrics.marchingSpikesMs,
+    gradeReport,
+    darkTheme,
+    canAccessCase,
+    paperSpeedMmPerSec,
+    gainMmPerMv,
+  ]);
 
   // Invalid Case ID Recovery Panel (US-04.3)
   if (!resolvedRecord) {
@@ -181,48 +250,79 @@ export function CaliperView(props: CaliperViewProps) {
     }
   };
 
-  const applyPointerCoordinate = (clientX: number, clientY: number) => {
+  const applyPointerCoordinate = (
+    rawClientX: number,
+    rawClientY: number,
+    handleToMove: CaliperHandleId
+  ) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const clientX = Number.isFinite(rawClientX) ? rawClientX : 0;
+    const clientY = Number.isFinite(rawClientY) ? rawClientY : 0;
     const rect = canvas.getBoundingClientRect();
     const effWidth = rect.width > 0 ? rect.width : canvas.width || 960;
     const effHeight = rect.height > 0 ? rect.height : canvas.height || 420;
-    if (activeHandle === 't1' || activeHandle === 't2') {
+    if (handleToMove === 't1' || handleToMove === 't2') {
       const relX = Math.max(0, Math.min(1, (clientX - rect.left) / effWidth));
       const snappedMs = Math.max(0, Math.min(10000, Math.round((relX * 10000) / 2) * 2));
       setCaliper((prev) =>
-        activeHandle === 't1' ? { ...prev, t1Ms: snappedMs } : { ...prev, t2Ms: snappedMs }
+        handleToMove === 't1' ? { ...prev, t1Ms: snappedMs } : { ...prev, t2Ms: snappedMs }
       );
     } else {
       const yPx = clientY - rect.top;
       const rhythmStripTop = effHeight * 0.75;
       const rhythmMidY = rhythmStripTop + (effHeight - rhythmStripTop) * 0.5;
-      const mvScale = Math.max(1, (effHeight - rhythmStripTop) * 0.34);
+      const mvScale = Math.max(1, (effHeight - rhythmStripTop) * 0.34 * (gainMmPerMv / 10));
       const rawMv = (rhythmMidY - yPx) / mvScale;
       const clampedMv = Number(Math.max(-5.0, Math.min(5.0, rawMv)).toFixed(2));
       setCaliper((prev) =>
-        activeHandle === 'v1' ? { ...prev, v1Mv: clampedMv } : { ...prev, v2Mv: clampedMv }
+        handleToMove === 'v1' ? { ...prev, v1Mv: clampedMv } : { ...prev, v2Mv: clampedMv }
       );
     }
   };
 
   const handlePointerDown = (e: PointerEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const effWidth = rect.width > 0 ? rect.width : canvas.width || 960;
+    const effHeight = rect.height > 0 ? rect.height : canvas.height || 420;
+    const clientX = Number.isFinite(e.clientX) ? e.clientX : 0;
+    const clientY = Number.isFinite(e.clientY) ? e.clientY : 0;
+    const localX = clientX - rect.left;
+    const localY = clientY - rect.top;
+
+    const hitHandle = hitTestCaliperHandle(
+      localX,
+      localY,
+      effWidth,
+      effHeight,
+      caliper,
+      activeHandle,
+      gainMmPerMv,
+      18
+    );
+
     isDraggingRef.current = true;
+    draggingHandleRef.current = hitHandle;
+    setActiveHandle(hitHandle);
+
     try {
       (e.currentTarget as HTMLCanvasElement | null)?.setPointerCapture?.(e.pointerId);
     } catch {
       // Ignore synthetic events without active pointerId
     }
-    applyPointerCoordinate(e.clientX, e.clientY);
+    applyPointerCoordinate(e.clientX, e.clientY, hitHandle);
   };
 
   const handlePointerMove = (e: PointerEvent) => {
     if (!isDraggingRef.current) return;
-    applyPointerCoordinate(e.clientX, e.clientY);
+    applyPointerCoordinate(e.clientX, e.clientY, draggingHandleRef.current ?? activeHandle);
   };
 
   const handlePointerUpOrCancel = (e: PointerEvent) => {
     isDraggingRef.current = false;
+    draggingHandleRef.current = null;
     try {
       (e.currentTarget as HTMLCanvasElement | null)?.releasePointerCapture?.(e.pointerId);
     } catch {
@@ -231,7 +331,7 @@ export function CaliperView(props: CaliperViewProps) {
   };
 
   const handlePointerPlotClick = (e: MouseEvent) => {
-    applyPointerCoordinate(e.clientX, e.clientY);
+    applyPointerCoordinate(e.clientX, e.clientY, activeHandle);
   };
 
   const handleAutofillFromFiducials = () => {
@@ -287,33 +387,71 @@ export function CaliperView(props: CaliperViewProps) {
             </span>
           </h1>
           <p class="text-sm m-0" style={{ color: 'var(--text-muted)' }}>
-            25 mm/s · 10 mm/mV calibration · Patient {resolvedRecord.age}
+            {paperSpeedMmPerSec} mm/s · {gainMmPerMv} mm/mV calibration · 1 mV Square Pulse · Patient{' '}
+            {resolvedRecord.age}
             {resolvedRecord.sex} · SCP-ECG Record #{resolvedRecord.ptbxlRecordId}
           </p>
         </div>
 
-        <div class="flex items-center gap-3">
-          <label htmlFor="caliper-case-switcher" class="text-sm font-medium w-fit">
-            PTB-XL Strip:
-          </label>
-          <select
-            id="caliper-case-switcher"
-            name="caseSwitcher"
-            data-testid="caliper-case-switcher"
-            value={resolvedRecord.caseId}
-            onChange={(e) => onSelectCaseId((e.target as HTMLSelectElement).value)}
-            class="tw-btn-secondary"
-          >
-            {dataset.records.map((r) => {
-              const unlocked = canAccessCase(r);
-              return (
-                <option key={r.caseId} value={r.caseId}>
-                  {r.caseId} {unlocked ? `(${r.rhythmClass})` : '(Pro Exam Strip — Locked)'}{' '}
-                  {r.freeStarter ? '· Free' : '· Pro'}
-                </option>
-              );
-            })}
-          </select>
+        <div class="flex flex-wrap items-center gap-3">
+          {/* Paper Speed Selector (25 / 50 mm/s) */}
+          <div class="flex items-center gap-1" role="group" aria-label="ECG Paper Speed">
+            <button
+              type="button"
+              data-testid="caliper-speed-25"
+              onClick={() => setPaperSpeedMmPerSec(25)}
+              class={paperSpeedMmPerSec === 25 ? 'tw-btn-primary tw-mono-vital' : 'tw-btn-secondary tw-mono-vital'}
+            >
+              25 mm/s
+            </button>
+            <button
+              type="button"
+              data-testid="caliper-speed-50"
+              onClick={() => setPaperSpeedMmPerSec(50)}
+              class={paperSpeedMmPerSec === 50 ? 'tw-btn-primary tw-mono-vital' : 'tw-btn-secondary tw-mono-vital'}
+            >
+              50 mm/s
+            </button>
+          </div>
+
+          {/* Gain Selector (5 / 10 / 20 mm/mV) */}
+          <div class="flex items-center gap-1" role="group" aria-label="ECG Amplitude Gain">
+            {([5, 10, 20] as const).map((g) => (
+              <button
+                key={g}
+                type="button"
+                data-testid={`caliper-gain-${g}`}
+                onClick={() => setGainMmPerMv(g)}
+                class={gainMmPerMv === g ? 'tw-btn-primary tw-mono-vital' : 'tw-btn-secondary tw-mono-vital'}
+              >
+                {g} mm/mV
+              </button>
+            ))}
+          </div>
+
+          <div class="flex items-center gap-2">
+            <label htmlFor="caliper-case-switcher" class="text-sm font-medium w-fit">
+              PTB-XL Strip:
+            </label>
+            <select
+              id="caliper-case-switcher"
+              name="caseSwitcher"
+              data-testid="caliper-case-switcher"
+              value={resolvedRecord.caseId}
+              onChange={(e) => onSelectCaseId((e.target as HTMLSelectElement).value)}
+              class="tw-btn-secondary"
+            >
+              {dataset.records.map((r) => {
+                const unlocked = canAccessCase(r);
+                return (
+                  <option key={r.caseId} value={r.caseId}>
+                    {r.caseId} {unlocked ? `(${r.rhythmClass})` : '(Pro Exam Strip — Locked)'}{' '}
+                    {r.freeStarter ? '· Free' : '· Pro'}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
         </div>
       </section>
 
@@ -373,7 +511,7 @@ export function CaliperView(props: CaliperViewProps) {
           height={420}
           class="w-full rounded border cursor-crosshair"
           style={{ borderColor: 'var(--border)', touchAction: 'none' }}
-          aria-label={`12-lead ECG strip for ${resolvedRecord.caseId}. Use Arrow keys to nudge caliper handles by 2 ms or 0.05 mV, Shift+Arrow for 20 ms.`}
+          aria-label={`12-lead ECG strip for ${resolvedRecord.caseId} at ${paperSpeedMmPerSec} mm/s and ${gainMmPerMv} mm/mV. Drag T1, T2, V1, or V2 hairlines directly or use Arrow keys.`}
         />
       </section>
 
