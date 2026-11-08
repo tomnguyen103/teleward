@@ -160,8 +160,21 @@ describe('Ticket 01: Continuous-Phase Cardiac Synthesis & Coupled Hemodynamics',
     } finally {
       process.stdout.write = origWrite;
     }
-    const parsed = JSON.parse(cliStdout) as { numericSeed: number; beds: unknown[] };
+    const parsed = JSON.parse(cliStdout) as {
+      numericSeed: number;
+      elapsedSec: number;
+      beds: Array<{ stabilized: boolean }>;
+    };
     expect(parsed.numericSeed).toBe(42);
+    expect(parsed.elapsedSec).toBe(300);
     expect(parsed.beds.length).toBe(4);
+
+    // Bed with an AHA violation cannot be counted as stabilized even after subsequent conversion
+    const violCtrl = new ShiftController(42);
+    violCtrl.applyIntervention(0, 'adenosine_6mg', 1000);
+    violCtrl.applyIntervention(0, 'defibrillation', 2000);
+    expect(violCtrl.getBeds()[0]?.ahaViolations.length).toBeGreaterThan(0);
+    expect(violCtrl.getBeds()[0]?.stabilized).toBe(false);
+    expect(violCtrl.computeShiftScore().bedsStabilized).toBe(0);
   });
 });

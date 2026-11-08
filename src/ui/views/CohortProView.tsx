@@ -24,6 +24,7 @@ export interface CohortProViewProps {
   onSelectSubRoute?: (subRoute: CohortSubRoute, seed?: string) => void;
   checkoutNotice: string | null;
   scoreSummary: { scorePct: number; bedsStabilized: number; totalViolations: number };
+  interventionsLog?: Array<{ bedIndex: number; action: string; atSec?: number }>;
   onActivateTier: (tier: 'exam_pass' | 'instructor_cohort') => void;
   onLaunchCohortShift: (cohortSeed: string) => void;
 }
@@ -45,6 +46,7 @@ export function CohortProView(props: CohortProViewProps) {
     onSelectSubRoute,
     checkoutNotice,
     scoreSummary,
+    interventionsLog,
     onActivateTier,
     onLaunchCohortShift,
   } = props;
@@ -140,6 +142,7 @@ export function CohortProView(props: CohortProViewProps) {
       score: scoreSummary.scorePct,
       stabilizedBeds: scoreSummary.bedsStabilized,
       violations: scoreSummary.totalViolations,
+      ...(interventionsLog !== undefined ? { interventions: interventionsLog } : {}),
     }).then((res) => {
       if (cohortReqSeqRef.current === seq) {
         setRoster(res.roster);

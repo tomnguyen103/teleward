@@ -70,7 +70,20 @@ export function App(props: AppProps) {
     report: CaliperGradeReport | null;
     record: PtbxlCaseRecord | null;
   }>({ report: null, record: null });
-  const [sessionCohortSeed, setSessionCohortSeed] = useState<string | null>(null);
+  const [sessionCohortSeed, setSessionCohortSeed] = useState<string | null>(() => {
+    if (typeof window === 'undefined' || props.initialPath) return null;
+    try {
+      const fromHistory = (window.history?.state as { cohortSeed?: string | null } | null)
+        ?.cohortSeed;
+      if (typeof fromHistory === 'string' && fromHistory.trim() !== '') {
+        return fromHistory;
+      }
+      const fromStorage = window.sessionStorage?.getItem('teleward_active_cohort_seed_v1');
+      return typeof fromStorage === 'string' && fromStorage.trim() !== '' ? fromStorage : null;
+    } catch {
+      return null;
+    }
+  });
 
   const alarmSynthRef = useRef<Iec60601AlarmSynthesizer | null>(null);
   if (!alarmSynthRef.current) {
@@ -106,6 +119,11 @@ export function App(props: AppProps) {
   useEffect(() => {
     if (parsedRoute.cohortSeed) {
       setSessionCohortSeed(parsedRoute.cohortSeed);
+      try {
+        window.sessionStorage?.setItem('teleward_active_cohort_seed_v1', parsedRoute.cohortSeed);
+      } catch {
+        // Ignore storage restrictions
+      }
     }
   }, [parsedRoute.cohortSeed]);
 
@@ -134,8 +152,22 @@ export function App(props: AppProps) {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const onPopState = () => {
-      setCurrentPath(window.location.pathname + window.location.search);
+    const onPopState = (e: PopStateEvent) => {
+      const nextUrl = window.location.pathname + window.location.search;
+      const poppedRoute = parseTelewardRoute(nextUrl);
+      const stateSeed = (e.state as { cohortSeed?: string | null } | null)?.cohortSeed;
+      const resolvedSeed = poppedRoute.cohortSeed ?? (stateSeed !== undefined ? stateSeed : null);
+      setSessionCohortSeed(resolvedSeed);
+      try {
+        if (resolvedSeed) {
+          window.sessionStorage?.setItem('teleward_active_cohort_seed_v1', resolvedSeed);
+        } else {
+          window.sessionStorage?.removeItem('teleward_active_cohort_seed_v1');
+        }
+      } catch {
+        // Ignore storage restrictions
+      }
+      setCurrentPath(nextUrl);
     };
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -198,10 +230,15 @@ export function App(props: AppProps) {
     }
   }, [darkTheme]);
 
-  const navigate = (nextPath: string) => {
+  const navigate = (nextPath: string, explicitCohortSeed?: string | null) => {
+    const nextRoute = parseTelewardRoute(nextPath);
+    const seedToStore =
+      explicitCohortSeed !== undefined
+        ? explicitCohortSeed
+        : nextRoute.cohortSeed ?? validCohortSeed;
     setCurrentPath(nextPath);
     if (typeof window !== 'undefined' && !props.initialPath) {
-      window.history.pushState({}, '', nextPath);
+      window.history.pushState({ cohortSeed: seedToStore }, '', nextPath);
     }
   };
 
@@ -209,6 +246,20 @@ export function App(props: AppProps) {
   const beds = controller.getBeds();
   const activeBed = beds[selectedBedIndex] ?? beds[0]!;
   const scoreSummary = controller.computeShiftScore();
+  const shiftInterventionsLog = shiftRef.current
+    .getBeds()
+    .flatMap((b) =>
+      b.causalTimeline
+        .filter((ev) => ev.action !== 'SCENARIO_START' && ev.action !== 'ISCHEMIC_ARREST')
+        .map((ev) => ({
+          bedIndex: b.bedIndex,
+          action: String(ev.action),
+          atSec: ev.timeSec,
+          tick: ev.tick,
+        }))
+    )
+    .sort((a, b) => a.tick - b.tick)
+    .map(({ bedIndex, action, atSec }) => ({ bedIndex, action, atSec }));
 
   const handleApplyIntervention = (bedIndex: number, action: AclsInterventionId) => {
     controller.applyIntervention(bedIndex, action);
@@ -248,9 +299,11 @@ export function App(props: AppProps) {
     const synth = alarmSynthRef.current!;
     if (!synth.isArmed()) {
       const ok = synth.armAudio();
-      void synth.arm();
       setAudioArmed(ok);
       setAudioMuted(false);
+      void synth.arm().then((armed) => {
+        setAudioArmed(armed);
+      });
       const priorities = controller.getBeds().map((b) => b.alarmPriority);
       synth.arbitratePriority(priorities);
       synth.triggerBurstIfDue(activeBed.vitals.spo2);
@@ -501,14 +554,20 @@ export function App(props: AppProps) {
           activeCohortSeed={validCohortSeed}
           cohortSubRoute={parsedRoute.cohortSubRoute}
           onSelectSubRoute={(sub, seed) =>
-            navigate(buildCohortSubPath(sub, seed ?? validCohortSeed))
+            navigate(buildCohortSubPath(sub, seed ?? validCohortSeed), seed ?? validCohortSeed)
           }
           checkoutNotice={checkoutNotice}
           scoreSummary={scoreSummary}
+          interventionsLog={shiftInterventionsLog}
           onActivateTier={handleActivateTier}
           onLaunchCohortShift={(seed) => {
             setSessionCohortSeed(seed);
-            navigate(`/shift/cohort/${encodeURIComponent(seed)}`);
+            try {
+              window.sessionStorage?.setItem('teleward_active_cohort_seed_v1', seed);
+            } catch {
+              // Ignore storage restrictions
+            }
+            navigate(`/shift/cohort/${encodeURIComponent(seed)}`, seed);
           }}
         />
       ) : null}

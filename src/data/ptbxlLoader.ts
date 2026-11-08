@@ -183,8 +183,8 @@ export function loadPtbxlBinary(
   }
 
   if (
-    manifest.sha256Hex !== undefined &&
-    (typeof manifest.sha256Hex !== 'string' || !/^[0-9a-f]{64}$/i.test(manifest.sha256Hex))
+    typeof manifest.sha256Hex !== 'string' ||
+    !/^[0-9a-f]{64}$/i.test(manifest.sha256Hex)
   ) {
     throw new TelewardBinaryError(
       'MANIFEST_MISMATCH',
@@ -193,7 +193,7 @@ export function loadPtbxlBinary(
   }
 
   if (
-    manifest.binaryByteLength !== undefined &&
+    typeof manifest.binaryByteLength !== 'number' ||
     manifest.binaryByteLength !== buffer.byteLength
   ) {
     throw new TelewardBinaryError(

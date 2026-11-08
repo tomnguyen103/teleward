@@ -842,7 +842,8 @@ export class ShiftController {
         });
         bed.stabilized = isBedStabilized(
           bed.vitals,
-          Boolean(this.rescuedFlags[i] && !bed.arrested)
+          Boolean(this.rescuedFlags[i] && !bed.arrested),
+          bed.ahaViolations
         );
         bed.alarmPriority =
           bed.ahaViolations.length > 0
@@ -915,7 +916,8 @@ export class ShiftController {
     });
     bed.stabilized = isBedStabilized(
       bed.vitals,
-      Boolean(this.rescuedFlags[bedIndex] && !bed.arrested)
+      Boolean(this.rescuedFlags[bedIndex] && !bed.arrested),
+      bed.ahaViolations
     );
     bed.alarmPriority =
       bed.ahaViolations.length > 0
@@ -944,7 +946,13 @@ export class ShiftController {
     let bedsStabilized = 0;
     let totalViolations = 0;
     for (const b of this.beds) {
-      if (isBedStabilized(b.vitals, Boolean(this.rescuedFlags[b.bedIndex] && !b.arrested))) {
+      if (
+        isBedStabilized(
+          b.vitals,
+          Boolean(this.rescuedFlags[b.bedIndex] && !b.arrested),
+          b.ahaViolations
+        )
+      ) {
         bedsStabilized += 1;
       }
       totalViolations += b.ahaViolations.length;

@@ -168,8 +168,8 @@ export function CaliperView(props: CaliperViewProps) {
     if (!canvas || typeof window === 'undefined') return;
     const updateWidth = () => {
       const rect = canvas.getBoundingClientRect();
-      if (rect.width >= 300) {
-        setCanvasLogicalWidth(Math.round(rect.width));
+      if (rect.width > 0) {
+        setCanvasLogicalWidth(Math.max(240, Math.round(rect.width)));
       }
     };
     updateWidth();
@@ -578,7 +578,9 @@ export function CaliperView(props: CaliperViewProps) {
           <div class="flex flex-wrap items-center gap-2">
             <button
               type="button"
+              disabled={prExempt}
               onClick={() => {
+                if (prExempt) return;
                 setPrInput(String(Math.round(metrics.deltaMs)));
                 setFormError(null);
               }}
@@ -621,7 +623,7 @@ export function CaliperView(props: CaliperViewProps) {
         <form onSubmit={handleSubmitGrade} class="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
           <div>
             <label htmlFor="input-pr-ms" class="block text-sm font-medium mb-1 w-fit">
-              PR Interval (ms) *
+              PR Interval (ms) {prExempt ? '(Exempt)' : '*'}
             </label>
             <input
               id="input-pr-ms"
@@ -629,6 +631,7 @@ export function CaliperView(props: CaliperViewProps) {
               type="text"
               inputMode="numeric"
               autocomplete="off"
+              placeholder={prExempt ? 'Exempt (No P)' : undefined}
               value={prInput}
               onInput={(e) => setPrInput((e.target as HTMLInputElement).value)}
               class="w-full h-10 px-3 rounded tw-mono-vital text-sm tw-input"
@@ -717,8 +720,11 @@ export function CaliperView(props: CaliperViewProps) {
           <div data-testid="caliper-grade-result" class="mt-4 pt-3 border-t text-sm tw-border">
             <strong>{gradeReport.overallPass ? 'OVERALL PASS' : 'NEEDS REVIEW'}</strong> · Ground Truth:{' '}
             <span class="tw-mono-vital">
-              PR {resolvedRecord.fiducials.prMs} ms ({gradeReport.prPass ? 'PASS' : 'FAIL'}) · QRS{' '}
-              {resolvedRecord.fiducials.qrsMs} ms ({gradeReport.qrsPass ? 'PASS' : 'FAIL'}) · QTc{' '}
+              PR{' '}
+              {gradeReport.prExempt
+                ? 'EXEMPT'
+                : `${resolvedRecord.fiducials.prMs} ms (${gradeReport.prPass ? 'PASS' : 'FAIL'})`}{' '}
+              · QRS {resolvedRecord.fiducials.qrsMs} ms ({gradeReport.qrsPass ? 'PASS' : 'FAIL'}) · QTc{' '}
               {resolvedRecord.fiducials.qtcMs} ms ({gradeReport.qtcPass ? 'PASS' : 'FAIL'}) · ST{' '}
               {resolvedRecord.fiducials.stMv} mV ({gradeReport.stPass ? 'PASS' : 'FAIL'}) ·{' '}
               {resolvedRecord.rhythmClass}

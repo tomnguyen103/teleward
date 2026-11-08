@@ -157,6 +157,9 @@ export function executeCli(argv: string[]): number {
               ? fnv1a32(seedRaw.trim().toUpperCase())
               : 42;
       const ctrl = new ShiftController(numericSeed);
+      for (let step = 0; step < 30; step++) {
+        ctrl.stepSeconds(10);
+      }
       const summary = ctrl.computeShiftScore();
       const payload = {
         seed: typeof seedRaw === 'string' ? seedRaw.trim() : numericSeed,

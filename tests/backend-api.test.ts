@@ -583,9 +583,27 @@ describe('Ticket 01: Full-Stack Telemetry, Cohort & Entitlement REST Backend (/a
     expect(attempts).toBe(3);
 
     // 3. F-02 & F-08: verifyShiftReplay supports atSec interventions, returns 422 on forged score, and never leaks expectedReceipt
+    const { ShiftController } = await import('../src/engine/aclsEngine.ts');
     const numericSeed = parseCohortSeed(seed).numericSeed!;
-    const replayCheck = verifyShiftReplay(numericSeed, [{ atSec: 2, bedIndex: 0, action: 'defibrillation' }]);
+    const refCtrl = new ShiftController(numericSeed);
+    refCtrl.stepSeconds(2);
+    refCtrl.applyIntervention(0, 'defibrillation', 1000);
+    const refScore = refCtrl.computeShiftScore();
+    const replayCheck = verifyShiftReplay(numericSeed, [
+      { atSec: 2, bedIndex: 0, action: 'defibrillation' },
+    ]);
     expect(replayCheck.valid).toBe(true);
+    if (replayCheck.valid) {
+      expect(replayCheck.scorePct).toBe(refScore.scorePct);
+      expect(replayCheck.bedsStabilized).toBe(refScore.bedsStabilized);
+      expect(replayCheck.violations).toBe(refScore.totalViolations);
+    }
+
+    const overHorizonReplay = verifyShiftReplay(numericSeed, [
+      { dtSec: 200, bedIndex: 0, action: 'defibrillation' },
+      { dtSec: 150, bedIndex: 1, action: 'epinephrine_1mg' },
+    ]);
+    expect(overHorizonReplay.valid).toBe(false);
 
     const forgedInterventionsRes = await fetch(`${baseUrl}/api/cohorts/${seed}/submissions`, {
       method: 'POST',
@@ -600,8 +618,42 @@ describe('Ticket 01: Full-Stack Telemetry, Cohort & Entitlement REST Backend (/a
       }),
     });
     expect(forgedInterventionsRes.status).toBe(422);
-    const forgedInterventionsBody = await forgedInterventionsRes.text();
-    expect(forgedInterventionsBody).not.toContain('expectedReceipt');
+
+    const expectedValidReceipt = generateCohortReceipt({
+      cohort: seed,
+      scorePct: refScore.scorePct,
+      bedsStabilized: refScore.bedsStabilized,
+      violations: refScore.totalViolations,
+    });
+    const receiptMismatchRes = await fetch(`${baseUrl}/api/cohorts/${seed}/submissions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentAlias: 'Bad Receipt RN',
+        score: refScore.scorePct,
+        stabilizedBeds: refScore.bedsStabilized,
+        violations: refScore.totalViolations,
+        receipt: `TW-${seed}-${refScore.scorePct}-DEAD`,
+        interventions: [{ atSec: 2, bedIndex: 0, action: 'defibrillation' }],
+      }),
+    });
+    expect(receiptMismatchRes.status).toBe(422);
+    const receiptMismatchText = await receiptMismatchRes.text();
+    expect(receiptMismatchText).toContain('CRC16_MISMATCH');
+    expect(receiptMismatchText).not.toContain('expectedReceipt');
+    expect(receiptMismatchText).not.toContain(expectedValidReceipt);
+
+    const badCalendarDateRes = await fetch(`${baseUrl}/api/daily/2026-02-30/submissions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clinicianAlias: 'Calendar Tester',
+        scorePct: 50,
+        bedsStabilized: 2,
+        violations: 0,
+      }),
+    });
+    expect(badCalendarDateRes.status).toBe(400);
 
     // 4. F-03: CSV export neutralizes leading formula characters (=, +, -, @, \t, \r), leading whitespace, and CR/LF
     expect(sanitizeCsvCell('=cmd|\'/C calc\'!A0')).toBe("'=cmd|'/C calc'!A0");

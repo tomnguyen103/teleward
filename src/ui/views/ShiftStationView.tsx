@@ -379,7 +379,7 @@ export function ShiftStationView(props: ShiftStationViewProps) {
         aria-label="ACLS Crash Cart Interventions"
         aria-hidden={codeCartOpen ? 'false' : 'true'}
         class={`${
-          codeCartOpen ? 'block' : 'hidden'
+          codeCartOpen ? 'block sticky bottom-2 z-20 max-h-[75vh] overflow-y-auto' : 'hidden'
         } tw-surface divide-y tw-border`}
       >
         <div class="px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">

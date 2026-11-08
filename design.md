@@ -58,7 +58,7 @@ colors:
   lightCaliperPaper: "#FFFDF9"
   lightBorder: "#D5D1C8"
   lightText: "#111820"
-  lightTextMuted: "#4A5562"
+  lightTextMuted: "#333C48"
   lightPrimary: "#0F766E"
   lightOnPrimary: "#FFFFFF"
   lightAccentCyan: "#0369A1"
@@ -92,7 +92,7 @@ TeleWard models a commercial nocturnal ICU central telemetry station (`Philips I
 | `--caliper-paper` | `#0A0F16` | `#FFFDF9` | 12-lead ECG millimeter grid surface |
 | `--border` | `#1E2936` (`oklch(0.25 0.020 245)`) | `#D5D1C8` (`oklch(0.86 0.014 245)`) | `1px solid` structural hairlines |
 | `--text` | `#ECF2F8` (`oklch(0.95 0.010 245)`) | `#111820` (`oklch(0.18 0.020 245)`) | Primary UI copy |
-| `--text-muted` | `#94A6B8` (`oklch(0.72 0.022 245)`) | `#4A5562` (`oklch(0.42 0.022 245)`) | Secondary metadata (WCAG AAA) |
+| `--text-muted` | `#94A6B8` (`oklch(0.72 0.022 245)`) | `#333C48` (`oklch(0.35 0.022 245)`) | Secondary metadata (WCAG AAA) |
 | `--primary` | `#10B981` (`oklch(0.76 0.16 168)`) | `#0F766E` (`oklch(0.52 0.14 168)`) | Interactive focus ring & primary CTA |
 | `--trace-ecg` | `#00E676` (`oklch(0.80 0.20 148)`) | `#0F766E` | Lead II ECG trace & HR numeric |
 | `--trace-abp` | `#FF5252` (`oklch(0.64 0.23 22)`) | `#FF5252` | Arterial blood pressure (`ABP`) & crisis alarm |
