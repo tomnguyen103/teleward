@@ -275,10 +275,10 @@ describe('US-03 & US-04: 60fps 2D Canvas 4-Bed ICU Telemetry, IEC 60601-1-8 Alar
 
     // Switch to another starter case (ptbxl-003) and verify active case title updates
     const caseSelect = getByTestId('caliper-case-switcher') as HTMLSelectElement;
-    // Locked Pro cases in <select> must show "(Pro Exam Strip — Locked)" and never leak rhythm diagnosis
+    // Locked Pro cases in <select> must show "(Pro Exam Strip: Locked)" and never leak rhythm diagnosis
     const lockedOptionText =
       Array.from(caseSelect.options).find((o) => o.value === 'ptbxl-051')?.textContent ?? '';
-    expect(lockedOptionText).toContain('(Pro Exam Strip — Locked)');
+    expect(lockedOptionText).toContain('(Pro Exam Strip: Locked)');
     expect(lockedOptionText).not.toContain(DATASET.records[50]!.rhythmClass);
 
     fireEvent.change(caseSelect, { target: { value: 'ptbxl-003' } });

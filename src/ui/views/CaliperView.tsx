@@ -477,7 +477,7 @@ export function CaliperView(props: CaliperViewProps) {
                 const unlocked = canAccessCase(r);
                 return (
                   <option key={r.caseId} value={r.caseId}>
-                    {r.caseId} {unlocked ? `(${r.rhythmClass})` : '(Pro Exam Strip — Locked)'}{' '}
+                    {r.caseId} {unlocked ? `(${r.rhythmClass})` : '(Pro Exam Strip: Locked)'}{' '}
                     {r.freeStarter ? '· Free' : '· Pro'}
                   </option>
                 );
