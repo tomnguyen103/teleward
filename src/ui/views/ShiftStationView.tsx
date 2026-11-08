@@ -120,6 +120,9 @@ const ISO_26825_DRUG_BADGES: Record<
   },
 };
 
+/**
+ * Looks up ACLS intervention metadata by intervention identifier.
+ */
 function getMetadataById(id: AclsInterventionId): InterventionMetadata {
   return (
     ACLS_INTERVENTION_METADATA.find((m) => m.id === id) ?? ACLS_INTERVENTION_METADATA[0]!
@@ -146,17 +149,21 @@ export function ShiftStationView(props: ShiftStationViewProps) {
     isShiftComplete = false,
   } = props;
 
-  const [activeDockBay, setActiveDockBay] = useState<'all' | 'electrical' | 'pharmacology'>('all');
+  const activeDockBayState = useState<'all' | 'electrical' | 'pharmacology'>('all');
+  const activeDockBay = activeDockBayState[0];
+  const setActiveDockBay = activeDockBayState[1];
   const [codeCartOpen, setCodeCartOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const canvasRefs = useRef<Array<HTMLCanvasElement | null>>([null, null, null, null]);
   const ringBuffersRef = useRef<TelemetryRingBuffer[] | null>(null);
   const lastResetKeyRef = useRef<string | undefined>(undefined);
   const accumSimMsRef = useRef(0);
+  const lastFrameTimeRef = useRef<number | null>(null);
 
   if (!ringBuffersRef.current || lastResetKeyRef.current !== shiftResetKey) {
     lastResetKeyRef.current = shiftResetKey;
     accumSimMsRef.current = 0;
+    lastFrameTimeRef.current = null;
     ringBuffersRef.current = beds.map((b) => {
       const rb = new TelemetryRingBuffer(2500, 90);
       rb.prefill(b.vitals, 1250);
@@ -165,6 +172,10 @@ export function ShiftStationView(props: ShiftStationViewProps) {
   }
 
   const activeBed = beds[selectedBedIndex] ?? beds[0]!;
+
+  useEffect(() => {
+    lastFrameTimeRef.current = null;
+  }, [isPaused, isShiftComplete, shiftResetKey]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || disableHotkeys) return;
@@ -190,11 +201,11 @@ export function ShiftStationView(props: ShiftStationViewProps) {
 
   useEffect(() => {
     let rafId = 0;
-    let lastTime = performance.now();
 
     const tick = (now: number) => {
-      const rawDelta = now - lastTime;
-      lastTime = now;
+      const prevTime = lastFrameTimeRef.current ?? now;
+      const rawDelta = now - prevTime;
+      lastFrameTimeRef.current = now;
       const clampedDelta = Math.max(0, Math.min(100, rawDelta));
 
       if (!isPaused && !isShiftComplete) {

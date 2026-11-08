@@ -16,6 +16,9 @@ export interface ParsedTelewardRoute {
   checkoutToken: string | null;
 }
 
+/**
+ * Decodes a URL path segment and returns the raw segment when percent-encoding is malformed.
+ */
 function safeDecodeSegment(raw: string): string {
   try {
     return decodeURIComponent(raw);

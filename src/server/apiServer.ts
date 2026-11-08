@@ -134,12 +134,18 @@ export function checkRateLimit(
   return { allowed: true, bucketCount: rateLimitBuckets.size };
 }
 
+/**
+ * Clears all in-memory IP rate-limit buckets.
+ */
 export function resetRateLimitBuckets(): void {
   rateLimitBuckets.clear();
 }
 
 let storeMutexQueue: Promise<void> = Promise.resolve();
 
+/**
+ * Serializes store file read-modify-write operations behind an async FIFO mutex.
+ */
 export async function withStoreLock<T>(fn: () => T | Promise<T>): Promise<T> {
   let release!: () => void;
   const next = new Promise<void>((res) => {
@@ -155,6 +161,9 @@ export async function withStoreLock<T>(fn: () => T | Promise<T>): Promise<T> {
   }
 }
 
+/**
+ * Blocks synchronously for the given duration in milliseconds.
+ */
 function sleepSync(ms: number): void {
   if (ms <= 0) return;
   try {
@@ -168,6 +177,9 @@ function sleepSync(ms: number): void {
   }
 }
 
+/**
+ * Renames a temporary store file synchronously with exponential backoff on Windows EPERM, EACCES, and EBUSY locks.
+ */
 export function renameWithRetrySync(
   tmpFile: string,
   targetFile: string,
@@ -193,6 +205,9 @@ export function renameWithRetrySync(
   throw lastErr;
 }
 
+/**
+ * Renames a temporary store file asynchronously with exponential backoff on Windows EPERM, EACCES, and EBUSY locks.
+ */
 export async function renameWithRetryAsync(
   tmpFile: string,
   targetFile: string,
@@ -219,6 +234,9 @@ export async function renameWithRetryAsync(
   throw lastErr;
 }
 
+/**
+ * Decodes a URI component and returns null on malformed percent-encoding.
+ */
 function safeDecodeUriComponent(raw: string): string | null {
   try {
     return decodeURIComponent(raw);
@@ -227,6 +245,9 @@ function safeDecodeUriComponent(raw: string): string | null {
   }
 }
 
+/**
+ * Computes the deterministic 4-bed Daily Shift Seed specification for a UTC date.
+ */
 export function getDailyChallengeSpec(date: Date = new Date()): DailyChallengeSpec {
   const dateKey = getUtcDateKey(date);
   const seed = getDailySeed(date);
@@ -244,6 +265,9 @@ export function getDailyChallengeSpec(date: Date = new Date()): DailyChallengeSp
   };
 }
 
+/**
+ * Reads and normalizes the JSON store file from disk.
+ */
 function readStore(storeFilePath: string, failOnReadError = false): TelewardStoreData {
   if (!existsSync(storeFilePath)) {
     return {
@@ -471,13 +495,37 @@ export function verifyShiftReplay(
           detail: 'Intervention entry requires bedIndex (0..3) and a valid ACLS intervention id.',
         };
       }
-      const fallbackMs = Math.max(stepIdx * 1000, lastAttemptedMs + 1000);
-      const attemptedAtMs =
-        typeof entry.attemptedAtMs === 'number' && Number.isFinite(entry.attemptedAtMs)
-          ? entry.attemptedAtMs
-          : fallbackMs;
+      const minCooldownStep = Math.max(
+        1000,
+        Math.abs(lastAttemptedMs) * Number.EPSILON * 2 + 250
+      );
+      const fallbackMs = Math.max(stepIdx * 1000, lastAttemptedMs + minCooldownStep);
+      let attemptedAtMs = fallbackMs;
+      if (entry.attemptedAtMs !== undefined) {
+        if (
+          typeof entry.attemptedAtMs !== 'number' ||
+          !Number.isFinite(entry.attemptedAtMs) ||
+          entry.attemptedAtMs < 0
+        ) {
+          return {
+            valid: false,
+            detail: 'Intervention attemptedAtMs must be a finite non-negative number.',
+          };
+        }
+        attemptedAtMs = entry.attemptedAtMs;
+      }
       lastAttemptedMs = Math.max(lastAttemptedMs, attemptedAtMs);
-      controller.applyIntervention(bedIndex, action as AclsInterventionId, attemptedAtMs);
+      const outcome = controller.applyIntervention(
+        bedIndex,
+        action as AclsInterventionId,
+        attemptedAtMs
+      );
+      if (!outcome.applied) {
+        return {
+          valid: false,
+          detail: 'Intervention was rejected by the 250ms bed cooldown guard.',
+        };
+      }
     }
   }
 

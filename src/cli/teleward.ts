@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { generateCohortReceipt } from '../billing/cohortAndEntitlement.ts';
+import { generateCohortReceipt, parseCohortSeed } from '../billing/cohortAndEntitlement.ts';
 import { loadPtbxlBinary } from '../data/ptbxlLoader.ts';
 import {
   ShiftController,
@@ -13,6 +13,9 @@ import { fnv1a32 } from '../engine/prng.ts';
 import { startTelewardServer } from '../server/apiServer.ts';
 import type { Rfc7807Error } from '../types/teleward.ts';
 
+/**
+ * Resolves the absolute path to compiler/compile_ptbxl.py.
+ */
 function resolveCompilerScriptPath(): string {
   try {
     const fromModule = fileURLToPath(new URL('../../compiler/compile_ptbxl.py', import.meta.url));
@@ -25,6 +28,9 @@ function resolveCompilerScriptPath(): string {
   return resolve(process.cwd(), 'compiler/compile_ptbxl.py');
 }
 
+/**
+ * Executes the Python PTB-XL compiler with python3 fallback on ENOENT.
+ */
 function runPythonCompiler(args: string[]): string {
   try {
     return execFileSync('python', args, { encoding: 'utf-8' });
@@ -37,6 +43,9 @@ function runPythonCompiler(args: string[]): string {
   }
 }
 
+/**
+ * Parses CLI --key value and boolean flags into a lookup map.
+ */
 function parseArgMap(argv: string[]): Map<string, string | boolean> {
   const map = new Map<string, string | boolean>();
   for (let i = 0; i < argv.length; i++) {
@@ -55,6 +64,9 @@ function parseArgMap(argv: string[]): Map<string, string | boolean> {
   return map;
 }
 
+/**
+ * Executes TeleWard CLI subcommands (compile, verify, sim, simulate, serve).
+ */
 export function executeCli(argv: string[]): number {
   const subcommand = argv[0] ?? 'sim';
   const flags = parseArgMap(argv.slice(1));
@@ -149,25 +161,28 @@ export function executeCli(argv: string[]): number {
 
     if (subcommand === 'simulate') {
       const seedRaw = flags.get('seed');
+      const parsedSeed = typeof seedRaw === 'string' ? parseCohortSeed(seedRaw.trim()) : null;
       const numericSeed =
         seedRaw === undefined
           ? 42
           : typeof seedRaw === 'string' && /^\d+$/.test(seedRaw.trim())
             ? Number(seedRaw.trim()) >>> 0
-            : typeof seedRaw === 'string' && seedRaw.trim() !== ''
-              ? fnv1a32(seedRaw.trim().toUpperCase())
-              : 42;
+            : parsedSeed?.valid && parsedSeed.numericSeed !== null
+              ? parsedSeed.numericSeed
+              : typeof seedRaw === 'string' && seedRaw.trim() !== ''
+                ? fnv1a32(seedRaw.trim().toUpperCase())
+                : 42;
       const ctrl = new ShiftController(numericSeed);
       for (let step = 0; step < 30; step++) {
         ctrl.stepSeconds(10);
       }
       const summary = ctrl.computeShiftScore();
       const cohortLabel =
-        typeof seedRaw === 'string' && seedRaw.trim() !== ''
-          ? seedRaw.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '') || `SIM-${numericSeed}`
+        parsedSeed && parsedSeed.valid && parsedSeed.cohort
+          ? parsedSeed.cohort
           : `SIM-${numericSeed}`;
       const receipt = generateCohortReceipt({
-        cohort: cohortLabel.slice(0, 24),
+        cohort: cohortLabel,
         scorePct: summary.scorePct,
         bedsStabilized: summary.bedsStabilized,
         violations: summary.totalViolations,

@@ -623,6 +623,12 @@ describe('Ticket 01: Full-Stack Telemetry, Cohort & Entitlement REST Backend (/a
     ]);
     expect(overHorizonReplay.valid).toBe(false);
 
+    const cooldownRejectedReplay = verifyShiftReplay(numericSeed, [
+      { atSec: 2, bedIndex: 0, action: 'defibrillation', attemptedAtMs: 1000 },
+      { atSec: 2, bedIndex: 0, action: 'epinephrine_1mg', attemptedAtMs: 1100 },
+    ]);
+    expect(cooldownRejectedReplay.valid).toBe(false);
+
     const forgedInterventionsRes = await fetch(`${baseUrl}/api/cohorts/${seed}/submissions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

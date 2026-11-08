@@ -156,8 +156,12 @@ export function App(props: AppProps) {
     const onPopState = (e: PopStateEvent) => {
       const nextUrl = window.location.pathname + window.location.search;
       const poppedRoute = parseTelewardRoute(nextUrl);
-      const stateSeed = (e.state as { cohortSeed?: string | null } | null)?.cohortSeed;
+      const historyState = (e.state as { cohortSeed?: string | null; dailyMode?: boolean } | null) ?? null;
+      const stateSeed = historyState?.cohortSeed;
       const resolvedSeed = poppedRoute.cohortSeed ?? (stateSeed !== undefined ? stateSeed : null);
+      const nextDailyMode =
+        poppedRoute.area === 'shift' && !poppedRoute.cohortSeed && Boolean(historyState?.dailyMode);
+      setDailySeedActive(nextDailyMode);
       setSessionCohortSeed(resolvedSeed);
       try {
         if (resolvedSeed) {
@@ -231,19 +235,36 @@ export function App(props: AppProps) {
     }
   }, [darkTheme]);
 
-  const navigate = (nextPath: string, explicitCohortSeed?: string | null) => {
+  const navigate = (
+    nextPath: string,
+    explicitCohortSeed?: string | null,
+    options?: { dailyMode?: boolean }
+  ) => {
     const nextRoute = parseTelewardRoute(nextPath);
     const seedToStore =
       explicitCohortSeed !== undefined
         ? explicitCohortSeed
         : nextRoute.cohortSeed ?? validCohortSeed;
+    const nextDailyMode =
+      options?.dailyMode !== undefined
+        ? options.dailyMode
+        : nextRoute.area === 'shift' || nextRoute.area === 'cohort' || Boolean(nextRoute.cohortSeed)
+          ? false
+          : dailySeedActive;
+    setDailySeedActive(nextDailyMode);
     setCurrentPath(nextPath);
     if (typeof window !== 'undefined' && !props.initialPath) {
-      window.history.pushState({ cohortSeed: seedToStore }, '', nextPath);
+      window.history.pushState(
+        { cohortSeed: seedToStore, dailyMode: nextDailyMode },
+        '',
+        nextPath
+      );
     }
   };
 
-  const useDailyController = activeArea === 'daily' || dailySeedActive;
+  const useDailyController =
+    activeArea === 'daily' ||
+    (activeArea === 'shift' && !parsedRoute.cohortSeed && dailySeedActive);
   const controller = useDailyController ? dailyShiftRef.current : shiftRef.current;
   const beds = controller.getBeds();
   const activeBed = beds[selectedBedIndex] ?? beds[0]!;
@@ -554,8 +575,7 @@ export function App(props: AppProps) {
           interventionsLog={dailyInterventionsLog}
           elapsedSec={dailyShiftRef.current.getElapsedSec()}
           onLaunchDailyShift={() => {
-            setDailySeedActive(true);
-            navigate('/shift');
+            navigate('/shift', undefined, { dailyMode: true });
           }}
         />
       ) : null}
@@ -587,14 +607,13 @@ export function App(props: AppProps) {
           elapsedSec={shiftRef.current.getElapsedSec()}
           onActivateTier={handleActivateTier}
           onLaunchCohortShift={(seed) => {
-            setDailySeedActive(false);
             setSessionCohortSeed(seed);
             try {
               window.sessionStorage?.setItem('teleward_active_cohort_seed_v1', seed);
             } catch {
               // Ignore storage restrictions
             }
-            navigate(`/shift/cohort/${encodeURIComponent(seed)}`, seed);
+            navigate(`/shift/cohort/${encodeURIComponent(seed)}`, seed, { dailyMode: false });
           }}
         />
       ) : null}

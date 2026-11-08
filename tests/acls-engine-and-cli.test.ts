@@ -325,5 +325,15 @@ describe('US-02: Deterministic Coupled Cardiopulmonary & ACLS State Engine + CLI
     expect(simShiftJson.score).toBe(simShiftJson.scorePct);
     expect(simShiftJson.stabilizedBeds).toBe(simShiftJson.bedsStabilized);
     expect(simShiftJson.receipt).toMatch(/^TW-42-\d+-[0-9A-F]{4}$/);
+
+    const longSeedRes = runCli(['simulate', '--seed', 'NURS_402_LONG_COHORT_2026_SEED', '--json']);
+    expect(longSeedRes.status).toBe(0);
+    const longSeedJson = JSON.parse(longSeedRes.stdout.trim()) as { receipt: string };
+    expect(longSeedJson.receipt).toMatch(/^TW-NURS_402_LONG_COHORT_2026_SEED-\d+-[0-9A-F]{4}$/);
+
+    const reservedSeedRes = runCli(['simulate', '--seed', 'constructor', '--json']);
+    expect(reservedSeedRes.status).toBe(0);
+    const reservedSeedJson = JSON.parse(reservedSeedRes.stdout.trim()) as { receipt: string };
+    expect(reservedSeedJson.receipt).toMatch(/^TW-SIM-\d+-\d+-[0-9A-F]{4}$/);
   });
 });
