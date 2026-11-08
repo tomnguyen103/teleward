@@ -6,7 +6,12 @@ import { startTelewardServer } from '../src/server/apiServer.ts';
 import { executeCli } from '../src/cli/teleward.ts';
 import { generateCohortReceipt } from '../src/billing/cohortAndEntitlement.ts';
 import { runSimulation } from '../src/engine/aclsEngine.ts';
-import { fetchCohortSubmissions, submitCohortRun, verifyReceiptRemote } from '../src/ui/apiClient.ts';
+import {
+  fetchCohortSubmissions,
+  requestEntitlementCheckout,
+  submitCohortRun,
+  verifyReceiptRemote,
+} from '../src/ui/apiClient.ts';
 
 describe('Ticket 01: Full-Stack Telemetry, Cohort & Entitlement REST Backend (/api/*)', () => {
   let tempDir: string;
@@ -114,6 +119,37 @@ describe('Ticket 01: Full-Stack Telemetry, Cohort & Entitlement REST Backend (/a
       body: JSON.stringify({ scenario: 'VFIB', seed: -9, durationSec: 30 }),
     });
     expect(invalidSeedRes.status).toBe(400);
+
+    // Verify malformed URI component returns 400 INVALID_URI_PARAM instead of 500
+    const badUriRes = await fetch(`${baseUrl}/api/cases/%E0%A4%A`);
+    expect(badUriRes.status).toBe(400);
+
+    // Verify short duration (<10s) with intervention defaults atSec to durationSec and succeeds
+    const shortSimRes = await fetch(`${baseUrl}/api/sim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        scenario: 'VFIB',
+        seed: 42,
+        durationSec: 5,
+        intervene: 'defibrillation',
+      }),
+    });
+    expect(shortSimRes.status).toBe(200);
+
+    // Verify atSec > durationSec returns 400
+    const outOfRangeAtSecRes = await fetch(`${baseUrl}/api/sim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        scenario: 'VFIB',
+        seed: 42,
+        durationSec: 30,
+        intervene: 'defibrillation',
+        atSec: 45,
+      }),
+    });
+    expect(outOfRangeAtSecRes.status).toBe(400);
   });
 
   it('US-01.3: persists classroom cohort submissions in .teleward-data/store.json, computes summary stats, and rejects tampered receipts', async () => {
@@ -169,7 +205,7 @@ describe('Ticket 01: Full-Stack Telemetry, Cohort & Entitlement REST Backend (/a
     });
     expect(forgedSub.status).toBe(400);
 
-    // Reject invalid cohort seed or >32 char alias
+    // Reject invalid cohort seed or >32 char alias or reserved prototype keys
     const badSeedRes = await fetch(`${baseUrl}/api/cohorts/X/submissions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -181,6 +217,21 @@ describe('Ticket 01: Full-Stack Telemetry, Cohort & Entitlement REST Backend (/a
       }),
     });
     expect(badSeedRes.status).toBe(400);
+
+    const protoSeedRes = await fetch(`${baseUrl}/api/cohorts/constructor/submissions`);
+    expect(protoSeedRes.status).toBe(400);
+
+    const protoPostRes = await fetch(`${baseUrl}/api/cohorts/__proto__/submissions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentAlias: 'Proto',
+        score: 80,
+        stabilizedBeds: 3,
+        violations: 0,
+      }),
+    });
+    expect(protoPostRes.status).toBe(400);
   });
 
   it('US-01.4: verifies receipts via POST /api/receipts/verify, syncs daily leaderboard (/api/daily), and signs/verifies entitlements', async () => {
@@ -296,6 +347,19 @@ describe('Ticket 01: Full-Stack Telemetry, Cohort & Entitlement REST Backend (/a
       'http://127.0.0.1:1'
     );
     expect(offlineVerify.valid).toBe(true);
+
+    const onlineCheckout = await requestEntitlementCheckout('exam_pass', baseUrl);
+    expect(onlineCheckout.online).toBe(true);
+    expect(onlineCheckout.valid).toBe(true);
+    expect(onlineCheckout.tier).toBe('exam_pass');
+
+    const offlineCheckout = await requestEntitlementCheckout(
+      'instructor_cohort',
+      'http://127.0.0.1:1'
+    );
+    expect(offlineCheckout.online).toBe(false);
+    expect(offlineCheckout.valid).toBe(true);
+    expect(offlineCheckout.tier).toBe('instructor_cohort');
 
     // Verify CLI serve subcommand validation
     expect(executeCli(['serve', '--port', '0', '--once'])).toBe(0);

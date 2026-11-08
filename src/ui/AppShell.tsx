@@ -1,5 +1,5 @@
 import type { ComponentChildren } from 'preact';
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { RHYTHM_CLASSES, type AlarmPriority, type PtbxlCaseRecord, type RhythmClass } from '../types/teleward.ts';
 import type { BedState } from '../engine/aclsEngine.ts';
 
@@ -63,6 +63,8 @@ export function AppShell(props: AppShellProps) {
   });
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [silenceRemainingSec, setSilenceRemainingSec] = useState(0);
+  const mutedBySilenceRef = useRef(false);
+  const prevSilenceSecRef = useRef(0);
 
   const toggleSidebar = () => {
     setSidebarCollapsed((prev) => {
@@ -99,6 +101,16 @@ export function AppShell(props: AppShellProps) {
     return () => clearInterval(timer);
   }, [silenceRemainingSec]);
 
+  useEffect(() => {
+    if (prevSilenceSecRef.current > 0 && silenceRemainingSec === 0) {
+      if (mutedBySilenceRef.current && audioMuted) {
+        onToggleAudioArmOrMute();
+      }
+      mutedBySilenceRef.current = false;
+    }
+    prevSilenceSecRef.current = silenceRemainingSec;
+  }, [silenceRemainingSec, audioMuted, onToggleAudioArmOrMute]);
+
   let highestPriority: AlarmPriority = 'NORMAL';
   for (const b of beds) {
     if (b.alarmPriority === 'CRISIS') {
@@ -125,6 +137,7 @@ export function AppShell(props: AppShellProps) {
 
   const handleToggleSilence120s = () => {
     if (silenceRemainingSec > 0) {
+      mutedBySilenceRef.current = false;
       setSilenceRemainingSec(0);
       if (audioMuted) {
         onToggleAudioArmOrMute();
@@ -132,7 +145,10 @@ export function AppShell(props: AppShellProps) {
     } else {
       setSilenceRemainingSec(120);
       if (audioArmed && !audioMuted) {
+        mutedBySilenceRef.current = true;
         onToggleAudioArmOrMute();
+      } else {
+        mutedBySilenceRef.current = false;
       }
     }
   };
@@ -258,6 +274,7 @@ export function AppShell(props: AppShellProps) {
 
             <button
               type="button"
+              data-testid="arm-audio-btn"
               onClick={onToggleAudioArmOrMute}
               class="min-h-8 px-2 hidden md:inline-flex items-center text-xs font-semibold rounded border whitespace-nowrap"
               style={{
@@ -266,7 +283,7 @@ export function AppShell(props: AppShellProps) {
                 color: audioArmed && !audioMuted ? 'var(--primary)' : 'var(--text)',
               }}
             >
-              {audioArmed && !audioMuted ? 'Audio Armed' : 'Arm Audio'}
+              {!audioArmed ? 'Arm Audio' : audioMuted ? 'Audio Muted' : 'Audio Armed'}
             </button>
 
             <button

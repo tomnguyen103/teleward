@@ -304,7 +304,7 @@ export function CohortProView(props: CohortProViewProps) {
                   data-testid="cohort-receipt-input"
                   type="text"
                   autocomplete="off"
-                  placeholder="TW-NURS402-FALL26-92-4B1V-A4F1"
+                  placeholder="TW-NURS402-FALL26-92-FD37"
                   value={receiptToVerify}
                   onInput={(e) => setReceiptToVerify((e.target as HTMLInputElement).value)}
                   class="w-full h-10 px-3 rounded border tw-mono-vital text-sm"

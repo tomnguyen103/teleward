@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
+import { formatDailyReceipt } from '../../billing/cohortAndEntitlement.ts';
 import type { BedState } from '../../engine/aclsEngine.ts';
 import { getUtcDateKey } from '../../engine/prng.ts';
 import type { AclsInterventionId } from '../../types/teleward.ts';
@@ -57,7 +58,11 @@ export function DailyChallengeView(props: DailyChallengeViewProps) {
   }, [utcDateKey]);
 
   const handleFinishDaily = () => {
-    const receiptCode = `TW-DAILY-${utcDateKey}-${props.scoreSummary.scorePct}-${props.scoreSummary.bedsStabilized}B`;
+    const receiptCode = formatDailyReceipt(
+      utcDateKey,
+      props.scoreSummary.scorePct,
+      props.scoreSummary.bedsStabilized
+    );
     setDailyReceipt(receiptCode);
     try {
       window.localStorage.setItem(

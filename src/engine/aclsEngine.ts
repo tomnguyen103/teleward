@@ -141,7 +141,7 @@ export function validateSimulationOptions(opts: SimulationOptions): ValidatedSim
     );
   }
 
-  const defaultAtSec = normalizedIntervention === null ? Math.min(10, durationSec) : 10;
+  const defaultAtSec = Math.min(10, durationSec);
   const atSec = opts.atSec ?? defaultAtSec;
   if (!Number.isFinite(atSec) || atSec < 0 || atSec > durationSec) {
     throw new TelewardCliValidationError(

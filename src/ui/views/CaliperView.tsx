@@ -13,6 +13,7 @@ import {
   type CaliperState,
 } from '../../engine/caliperGrading.ts';
 import {
+  getCaliperStripGeometry,
   getSafe2dContext,
   render12LeadCaliperCanvas,
   syncCanvasHiDpi,
@@ -42,15 +43,14 @@ export function hitTestCaliperHandle(
   caliper: CaliperState,
   fallbackHandle: CaliperHandleId,
   gainMmPerMv: 5 | 10 | 20 = 10,
-  thresholdPx = 18
+  thresholdPx = 18,
+  paperSpeedMmPerSec: 25 | 50 = 25
 ): CaliperHandleId {
-  const xT1 = (caliper.t1Ms / 10000) * width;
-  const xT2 = (caliper.t2Ms / 10000) * width;
-  const stripTop = height * 0.75;
-  const stripMid = stripTop + (height - stripTop) * 0.5;
-  const stripScale = Math.max(1, (height - stripTop) * 0.34 * (gainMmPerMv / 10));
-  const yV1 = stripMid - caliper.v1Mv * stripScale;
-  const yV2 = stripMid - caliper.v2Mv * stripScale;
+  const geom = getCaliperStripGeometry(width, height, paperSpeedMmPerSec, gainMmPerMv);
+  const xT1 = geom.msToX(caliper.t1Ms);
+  const xT2 = geom.msToX(caliper.t2Ms);
+  const yV1 = geom.mvToY(caliper.v1Mv);
+  const yV2 = geom.mvToY(caliper.v2Mv);
 
   const candidates: Array<{ handle: CaliperHandleId; dist: number }> = [
     { handle: 't1', dist: Math.abs(localX - xT1) },
@@ -262,18 +262,20 @@ export function CaliperView(props: CaliperViewProps) {
     const rect = canvas.getBoundingClientRect();
     const effWidth = rect.width > 0 ? rect.width : canvas.width || 960;
     const effHeight = rect.height > 0 ? rect.height : canvas.height || 420;
+    const geom = getCaliperStripGeometry(effWidth, effHeight, paperSpeedMmPerSec, gainMmPerMv);
     if (handleToMove === 't1' || handleToMove === 't2') {
-      const relX = Math.max(0, Math.min(1, (clientX - rect.left) / effWidth));
-      const snappedMs = Math.max(0, Math.min(10000, Math.round((relX * 10000) / 2) * 2));
+      const clampedX = Math.max(0, Math.min(effWidth, clientX - rect.left));
+      const rawMs = geom.xToMs(clampedX);
+      const snappedMs = Math.max(
+        0,
+        Math.min(geom.visibleDurationMs, Math.round(rawMs / 2) * 2)
+      );
       setCaliper((prev) =>
         handleToMove === 't1' ? { ...prev, t1Ms: snappedMs } : { ...prev, t2Ms: snappedMs }
       );
     } else {
       const yPx = clientY - rect.top;
-      const rhythmStripTop = effHeight * 0.75;
-      const rhythmMidY = rhythmStripTop + (effHeight - rhythmStripTop) * 0.5;
-      const mvScale = Math.max(1, (effHeight - rhythmStripTop) * 0.34 * (gainMmPerMv / 10));
-      const rawMv = (rhythmMidY - yPx) / mvScale;
+      const rawMv = geom.yToMv(yPx);
       const clampedMv = Number(Math.max(-5.0, Math.min(5.0, rawMv)).toFixed(2));
       setCaliper((prev) =>
         handleToMove === 'v1' ? { ...prev, v1Mv: clampedMv } : { ...prev, v2Mv: clampedMv }
@@ -300,7 +302,8 @@ export function CaliperView(props: CaliperViewProps) {
       caliper,
       activeHandle,
       gainMmPerMv,
-      18
+      18,
+      paperSpeedMmPerSec
     );
 
     isDraggingRef.current = true;

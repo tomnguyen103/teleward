@@ -140,28 +140,17 @@ export function ShiftStationView(props: ShiftStationViewProps) {
 
   const canvasRefs = useRef<Array<HTMLCanvasElement | null>>([null, null, null, null]);
   const ringBuffersRef = useRef<TelemetryRingBuffer[] | null>(null);
-  const lastRhythmsRef = useRef<string[]>([]);
   const lastResetKeyRef = useRef<string | undefined>(undefined);
   const accumSimMsRef = useRef(0);
 
   if (!ringBuffersRef.current || lastResetKeyRef.current !== shiftResetKey) {
     lastResetKeyRef.current = shiftResetKey;
     accumSimMsRef.current = 0;
-    lastRhythmsRef.current = beds.map((b) => b.vitals.rhythm);
     ringBuffersRef.current = beds.map((b) => {
       const rb = new TelemetryRingBuffer(2500, 90);
       rb.prefill(b.vitals, 1250);
       return rb;
     });
-  } else {
-    for (let i = 0; i < 4; i++) {
-      const bed = beds[i];
-      const rb = ringBuffersRef.current[i];
-      if (bed && rb && lastRhythmsRef.current[i] !== bed.vitals.rhythm) {
-        lastRhythmsRef.current[i] = bed.vitals.rhythm;
-        rb.prefill(bed.vitals, 1250);
-      }
-    }
   }
 
   const activeBed = beds[selectedBedIndex] ?? beds[0]!;

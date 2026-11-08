@@ -1,113 +1,48 @@
 import {
+  buildBaselineCohortEntries,
+  buildBaselineDailyEntries,
+  computeCohortSummary,
   createSignedEntitlementToken,
+  formatDailyReceipt,
   generateCohortReceipt,
+  parseCohortSeed,
   verifyCohortReceipt,
+  type CohortSubmissionRecord,
+  type CohortSummaryMetrics,
+  type DailyLeaderboardEntry,
   type EntitlementTier,
   type VerifiedCohortReceipt,
 } from '../billing/cohortAndEntitlement.ts';
-import { fnv1a32, getDailySeed, getUtcDateKey, mulberry32 } from '../engine/prng.ts';
+import { getDailySeed, getUtcDateKey } from '../engine/prng.ts';
 
-export interface CohortSubmissionRecord {
-  id: string;
-  cohortSeed: string;
-  studentAlias: string;
-  score: number;
-  stabilizedBeds: number;
-  violations: number;
-  receipt: string;
-  submittedAt: string;
-  verified: boolean;
-}
-
-export interface CohortSummaryMetrics {
-  totalSubmissions: number;
-  meanScore: number;
-  fullStabilizationRate: number;
-}
-
-export interface DailyLeaderboardEntry {
-  rank?: number;
-  clinicianAlias: string;
-  dateKey: string;
-  scorePct: number;
-  bedsStabilized: number;
-  violations: number;
-  receipt: string;
-  submittedAt: string;
-}
+export type {
+  CohortSubmissionRecord,
+  CohortSummaryMetrics,
+  DailyLeaderboardEntry,
+};
 
 const OFFLINE_COHORT_STORAGE_KEY = 'teleward_cohort_roster_v1';
 const OFFLINE_DAILY_LB_STORAGE_KEY = 'teleward_daily_leaderboard_v1';
 
-export function getFallbackBaselineCohortRoster(cohortSeed: string): CohortSubmissionRecord[] {
-  const rng = mulberry32(fnv1a32(`BASELINE:${cohortSeed}`));
-  const aliases = ['R. Patel, BSN RN', 'J. Kim, EM-R2', 'A. Morales, NRP'];
-  const templates = [
-    { beds: 4, violations: 0, score: 100 },
-    { beds: 4, violations: 1, score: 92 },
-    { beds: 3, violations: 0, score: 75 },
-  ];
-  return aliases.map((alias, idx) => {
-    const tpl = templates[idx]!;
-    const jitterMin = Math.floor(rng() * 25) + 5;
-    const receipt = generateCohortReceipt({
-      cohort: cohortSeed,
-      scorePct: tpl.score,
-      bedsStabilized: tpl.beds,
-      violations: tpl.violations,
-    });
-    return {
-      id: `ref-${cohortSeed}-${idx + 1}`,
-      cohortSeed,
-      studentAlias: alias,
-      score: tpl.score,
-      stabilizedBeds: tpl.beds,
-      violations: tpl.violations,
-      receipt,
-      submittedAt: new Date(Date.UTC(2026, 2, 15, 14, jitterMin, 0)).toISOString(),
-      verified: true,
-    };
-  });
-}
+export const getFallbackBaselineCohortRoster = buildBaselineCohortEntries;
+export const getFallbackDailyLeaderboard = buildBaselineDailyEntries;
 
-export function getFallbackDailyLeaderboard(dateKey: string): DailyLeaderboardEntry[] {
-  const templates = [
-    { alias: 'Dr. M. Al-Mansoor (ICU)', scorePct: 100, beds: 4, violations: 0 },
-    { alias: 'C. Lindholm, CCRN', scorePct: 92, beds: 4, violations: 1 },
-    { alias: 'T. Nguyen, Flight Paramedic', scorePct: 84, beds: 4, violations: 2 },
-  ];
-  return templates.map((t, idx) => ({
-    rank: idx + 1,
-    clinicianAlias: t.alias,
-    dateKey,
-    scorePct: t.scorePct,
-    bedsStabilized: t.beds,
-    violations: t.violations,
-    receipt: `TW-DAILY-${dateKey}-${t.scorePct}-${t.beds}B`,
-    submittedAt: `${dateKey}T08:${String(12 + idx * 9).padStart(2, '0')}:00.000Z`,
-  }));
-}
-
-function computeSummaryFromRoster(roster: readonly CohortSubmissionRecord[]): CohortSummaryMetrics {
-  if (roster.length === 0) {
-    return { totalSubmissions: 0, meanScore: 0, fullStabilizationRate: 0 };
-  }
-  const totalScore = roster.reduce((acc, r) => acc + r.score, 0);
-  const fullStabCount = roster.filter((r) => r.stabilizedBeds === 4).length;
-  return {
-    totalSubmissions: roster.length,
-    meanScore: Math.round(totalScore / roster.length),
-    fullStabilizationRate: Math.round((fullStabCount / roster.length) * 100),
-  };
+function resolveSafeCohortSeed(rawSeed: string): string {
+  const parsed = parseCohortSeed(rawSeed);
+  return parsed.valid && parsed.cohort ? parsed.cohort : 'NURS402-FALL26';
 }
 
 function readOfflineCohortCustom(cohortSeed: string): CohortSubmissionRecord[] {
   if (typeof window === 'undefined') return [];
+  const safeSeed = resolveSafeCohortSeed(cohortSeed);
   try {
     const raw = window.localStorage?.getItem(OFFLINE_COHORT_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as Record<string, CohortSubmissionRecord[]>;
-    return Array.isArray(parsed[cohortSeed]) ? parsed[cohortSeed]! : [];
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return [];
+    return Object.hasOwn(parsed, safeSeed) && Array.isArray(parsed[safeSeed])
+      ? parsed[safeSeed]!
+      : [];
   } catch {
     return [];
   }
@@ -115,11 +50,17 @@ function readOfflineCohortCustom(cohortSeed: string): CohortSubmissionRecord[] {
 
 function writeOfflineCohortCustom(cohortSeed: string, item: CohortSubmissionRecord): void {
   if (typeof window === 'undefined') return;
+  const safeSeed = resolveSafeCohortSeed(cohortSeed);
   try {
     const raw = window.localStorage?.getItem(OFFLINE_COHORT_STORAGE_KEY);
-    const parsed = raw ? (JSON.parse(raw) as Record<string, CohortSubmissionRecord[]>) : {};
-    const existing = Array.isArray(parsed[cohortSeed]) ? parsed[cohortSeed]! : [];
-    parsed[cohortSeed] = [item, ...existing].slice(0, 50);
+    const parsedRaw = raw ? (JSON.parse(raw) as Record<string, CohortSubmissionRecord[]>) : {};
+    const parsed =
+      parsedRaw && typeof parsedRaw === 'object' && !Array.isArray(parsedRaw) ? parsedRaw : {};
+    const existing =
+      Object.hasOwn(parsed, safeSeed) && Array.isArray(parsed[safeSeed])
+        ? parsed[safeSeed]!
+        : [];
+    parsed[safeSeed] = [item, ...existing].slice(0, 50);
     window.localStorage?.setItem(OFFLINE_COHORT_STORAGE_KEY, JSON.stringify(parsed));
   } catch {
     // Ignore localStorage quota errors
@@ -139,19 +80,27 @@ async function fetchJsonWithTimeout<T>(
   init?: RequestInit,
   timeoutMs = 1200
 ): Promise<T> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const isJsdom =
+    typeof navigator !== 'undefined' && /jsdom/i.test(navigator.userAgent);
+  const controller = !isJsdom && typeof AbortController !== 'undefined' ? new AbortController() : null;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      controller?.abort();
+      reject(new Error('FETCH_TIMEOUT'));
+    }, timeoutMs);
+  });
   try {
-    const res = await fetch(url, {
-      ...init,
-      signal: controller.signal,
-    });
+    const res = await Promise.race([
+      fetch(url, controller ? { ...init, signal: controller.signal } : init),
+      timeoutPromise,
+    ]);
     if (!res.ok) {
       throw new Error(`HTTP_${res.status}`);
     }
     return (await res.json()) as T;
   } finally {
-    clearTimeout(timer);
+    if (timer !== undefined) clearTimeout(timer);
   }
 }
 
@@ -164,7 +113,7 @@ export async function fetchCohortSubmissions(
   summary: CohortSummaryMetrics;
   online: boolean;
 }> {
-  const cleanSeed = cohortSeed.trim() || 'NURS402-FALL26';
+  const cleanSeed = resolveSafeCohortSeed(cohortSeed);
   if (shouldAttemptNetworkFetch(baseUrl)) {
     try {
       const prefix = baseUrl ?? '';
@@ -186,7 +135,7 @@ export async function fetchCohortSubmissions(
   return {
     cohortSeed: cleanSeed,
     roster,
-    summary: computeSummaryFromRoster(roster),
+    summary: computeCohortSummary(roster),
     online: false,
   };
 }
@@ -207,7 +156,7 @@ export async function submitCohortRun(
   roster: CohortSubmissionRecord[];
   online: boolean;
 }> {
-  const cleanSeed = cohortSeed.trim() || 'NURS402-FALL26';
+  const cleanSeed = resolveSafeCohortSeed(cohortSeed);
   if (shouldAttemptNetworkFetch(baseUrl)) {
     try {
       const prefix = baseUrl ?? '';
@@ -256,7 +205,7 @@ export async function submitCohortRun(
   return {
     submission,
     roster,
-    summary: computeSummaryFromRoster(roster),
+    summary: computeCohortSummary(roster),
     online: false,
   };
 }
@@ -394,7 +343,7 @@ export async function submitDailyChallenge(
   const scorePct = Math.max(0, Math.min(100, Math.round(input.scorePct)));
   const bedsStabilized = Math.max(0, Math.min(4, Math.round(input.bedsStabilized)));
   const violations = Math.max(0, Math.min(15, Math.round(input.violations)));
-  const receipt = `TW-DAILY-${dateKey}-${scorePct}-${bedsStabilized}B`;
+  const receipt = formatDailyReceipt(dateKey, scorePct, bedsStabilized);
   const entry: DailyLeaderboardEntry = {
     clinicianAlias: input.clinicianAlias.trim() || 'ICU Operator',
     dateKey,

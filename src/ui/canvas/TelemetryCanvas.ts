@@ -188,6 +188,49 @@ export interface CaliperCanvasRenderOptions {
   gainMmPerMv?: 5 | 10 | 20;
 }
 
+export interface CaliperStripGeometry {
+  speedScale: number;
+  gainScale: number;
+  visibleDurationMs: number;
+  stripSamples: number;
+  stripTop: number;
+  stripMid: number;
+  stripScale: number;
+  msToX: (ms: number) => number;
+  xToMs: (x: number) => number;
+  mvToY: (mv: number) => number;
+  yToMv: (y: number) => number;
+}
+
+export function getCaliperStripGeometry(
+  width: number,
+  height: number,
+  paperSpeedMmPerSec: 25 | 50 = 25,
+  gainMmPerMv: 5 | 10 | 20 = 10
+): CaliperStripGeometry {
+  const speedScale = paperSpeedMmPerSec / 25;
+  const gainScale = gainMmPerMv / 10;
+  const visibleDurationMs = 10000 / speedScale;
+  const stripSamples = Math.max(2500, Math.round(5000 / speedScale));
+  const stripTop = height * 0.75;
+  const stripMid = stripTop + (height - stripTop) * 0.5;
+  const stripScale = Math.max(1, (height - stripTop) * 0.34 * gainScale);
+  const safeWidth = Math.max(1, width);
+  return {
+    speedScale,
+    gainScale,
+    visibleDurationMs,
+    stripSamples,
+    stripTop,
+    stripMid,
+    stripScale,
+    msToX: (ms: number) => (ms / visibleDurationMs) * safeWidth,
+    xToMs: (x: number) => (x / safeWidth) * visibleDurationMs,
+    mvToY: (mv: number) => stripMid - mv * stripScale,
+    yToMv: (y: number) => (stripMid - y) / stripScale,
+  };
+}
+
 export function render12LeadCaliperCanvas(
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -202,8 +245,9 @@ export function render12LeadCaliperCanvas(
 ): void {
   const paperSpeed = options?.paperSpeedMmPerSec ?? 25;
   const gain = options?.gainMmPerMv ?? 10;
-  const speedScale = paperSpeed / 25;
-  const gainScale = gain / 10;
+  const geom = getCaliperStripGeometry(width, height, paperSpeed, gain);
+  const { speedScale, gainScale, stripTop, stripMid, stripScale, stripSamples, msToX, mvToY } =
+    geom;
 
   ctx.fillStyle = darkTheme ? '#0A0F16' : '#FFFDF9';
   ctx.fillRect(0, 0, width, height);
@@ -289,11 +333,7 @@ export function render12LeadCaliperCanvas(
   }
 
   // Bottom full-width Lead II rhythm strip (where T1/T2 calipers operate directly)
-  const stripTop = height * 0.75;
-  const stripMid = stripTop + (height - stripTop) * 0.5;
-  const stripScale = (height - stripTop) * 0.34 * gainScale;
   const leadII = waveforms.II;
-  const stripSamples = Math.max(2500, Math.round(5000 / speedScale));
 
   // 1 mV calibration pulse on the bottom rhythm strip
   ctx.strokeStyle = darkTheme ? '#00E5FF' : '#0369A1';
@@ -316,7 +356,7 @@ export function render12LeadCaliperCanvas(
   ctx.beginPath();
   for (let s = 0; s < stripSamples; s += 4) {
     const px = (s / stripSamples) * width;
-    const py = stripMid - (leadII[s] ?? 0) * stripScale;
+    const py = mvToY(leadII[s] ?? 0);
     if (s === 0) ctx.moveTo(px, py);
     else ctx.lineTo(px, py);
   }
@@ -327,15 +367,17 @@ export function render12LeadCaliperCanvas(
   ctx.lineWidth = 1;
   ctx.beginPath();
   for (const mMs of marchingSpikesMs) {
-    const mx = (mMs / 10000) * width;
-    ctx.moveTo(mx, stripTop);
-    ctx.lineTo(mx, height);
+    const mx = msToX(mMs);
+    if (mx >= 0 && mx <= width) {
+      ctx.moveTo(mx, stripTop);
+      ctx.lineTo(mx, height);
+    }
   }
   ctx.stroke();
 
   // Primary T1 & T2 vertical time calipers (diagnostic cyan #0EA5E9)
-  const xT1 = (caliper.t1Ms / 10000) * width;
-  const xT2 = (caliper.t2Ms / 10000) * width;
+  const xT1 = msToX(caliper.t1Ms);
+  const xT2 = msToX(caliper.t2Ms);
   ctx.strokeStyle = '#0EA5E9';
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -379,8 +421,8 @@ export function render12LeadCaliperCanvas(
   }
 
   // Horizontal V1 & V2 amplitude calipers on the bottom Lead II strip
-  const yV1 = stripMid - caliper.v1Mv * stripScale;
-  const yV2 = stripMid - caliper.v2Mv * stripScale;
+  const yV1 = mvToY(caliper.v1Mv);
+  const yV2 = mvToY(caliper.v2Mv);
   ctx.strokeStyle = '#FF5252';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
@@ -399,8 +441,8 @@ export function render12LeadCaliperCanvas(
 
   if (showGroundTruth) {
     const f = record.fiducials;
-    const xQrsOn = ((f.qrsOnSample * 2) / 10000) * width;
-    const xTOff = ((f.tOffSample * 2) / 10000) * width;
+    const xQrsOn = msToX(f.qrsOnSample * 2);
+    const xTOff = msToX(f.tOffSample * 2);
     ctx.strokeStyle = '#00E676';
     ctx.lineWidth = 1.5;
     ctx.beginPath();

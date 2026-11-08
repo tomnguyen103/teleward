@@ -19,6 +19,7 @@ import type {
   RhythmClass,
 } from './types/teleward.ts';
 import type { CaliperGradeReport } from './engine/caliperGrading.ts';
+import { requestEntitlementCheckout } from './ui/apiClient.ts';
 import { AppShell, type ActiveRouteArea } from './ui/AppShell.tsx';
 import { Iec60601AlarmSynthesizer } from './ui/audio/iec60601Alarms.ts';
 import { CaliperView } from './ui/views/CaliperView.tsx';
@@ -285,6 +286,14 @@ export function App(props: AppProps) {
     setCheckoutNotice(
       `Sandbox Checkout completed: ${activated.tier} entitlement signed and persisted to localStorage.`
     );
+    void requestEntitlementCheckout(tier).then((remote) => {
+      if (remote.valid && remote.token) {
+        const synced = activateEntitlement(tier, remote.token);
+        if (synced.valid) {
+          setEntitlementTier(synced.tier);
+        }
+      }
+    });
   };
 
   const canAccessCase = (record: PtbxlCaseRecord): boolean => {

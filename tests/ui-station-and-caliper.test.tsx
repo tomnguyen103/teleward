@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { render, fireEvent, cleanup } from '@testing-library/preact';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { render, fireEvent, cleanup, act } from '@testing-library/preact';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { loadPtbxlBinary } from '../src/data/ptbxlLoader.ts';
@@ -60,8 +60,57 @@ describe('Ticket 02: Obsidian ICU Telemetry Cockpit, Unified 64px Header & 2-Bay
     const silenceBtn = getByTestId('alarm-silence-120s-btn');
     expect(silenceBtn).toBeTruthy();
     expect(silenceBtn.textContent).toContain('120s');
-    fireEvent.click(silenceBtn);
-    expect(silenceBtn.textContent).toContain('SILENCED');
+
+    // Arm audio first so silence 120s mutes and then auto-unmutes when the 120s timer expires
+    const prevAudioCtx = window.AudioContext;
+    (window as unknown as { AudioContext: unknown }).AudioContext = class MockAudioContext {
+      public state = 'running';
+      public currentTime = 0;
+      public destination = {};
+      public resume() {
+        return Promise.resolve();
+      }
+      public createOscillator() {
+        return {
+          type: 'sine',
+          frequency: { setValueAtTime: () => {} },
+          connect: () => {},
+          start: () => {},
+          stop: () => {},
+          disconnect: () => {},
+        };
+      }
+      public createGain() {
+        return {
+          gain: {
+            setValueAtTime: () => {},
+            linearRampToValueAtTime: () => {},
+            exponentialRampToValueAtTime: () => {},
+          },
+          connect: () => {},
+          disconnect: () => {},
+        };
+      }
+    };
+    vi.useFakeTimers();
+    try {
+      const armBtn = getByTestId('arm-audio-btn');
+      fireEvent.click(armBtn);
+      expect(armBtn.textContent?.toUpperCase()).toContain('ARMED');
+
+      fireEvent.click(silenceBtn);
+      expect(silenceBtn.textContent).toContain('SILENCED');
+      expect(armBtn.textContent?.toUpperCase()).toContain('MUTED');
+
+      act(() => {
+        vi.advanceTimersByTime(120_000);
+      });
+      expect(silenceBtn.textContent).toContain('120s');
+      expect(armBtn.textContent?.toUpperCase()).toContain('ARMED');
+    } finally {
+      vi.useRealTimers();
+      (window as unknown as { AudioContext: unknown }).AudioContext = prevAudioCtx;
+    }
   });
 
   it('US-02.3 & US-02.4: renders 4-channel trace labels (II 1.0mV, ART mmHg, PLETH, CO2 mmHg), RR vital readout, and 2-Bay Crash Cart with hotkeys 1-8', () => {
@@ -146,5 +195,13 @@ describe('Ticket 02: Obsidian ICU Telemetry Cockpit, Unified 64px Header & 2-Bay
     fireEvent.pointerMove(canvasEl, { clientX: 500, clientY: 332 });
     fireEvent.pointerUp(canvasEl);
     expect(getByTestId('caliper-v1-mv').textContent).not.toBe('0 mV');
+
+    // At 50 mm/s (5000 ms visible across 960px canvas), T2 at 1040ms is at x = (1040/5000)*960 = 199.68px.
+    // Dragging T2 to x = 480px (midpoint of 960px canvas) must map to 2500 ms (not 5000 ms).
+    fireEvent.click(speed50Btn);
+    fireEvent.pointerDown(canvasEl, { clientX: 200, clientY: 120 });
+    fireEvent.pointerMove(canvasEl, { clientX: 480, clientY: 120 });
+    fireEvent.pointerUp(canvasEl);
+    expect(getByTestId('caliper-t2-ms').textContent).toBe('2500 ms');
   });
 });

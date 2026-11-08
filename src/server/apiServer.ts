@@ -2,10 +2,18 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import {
+  buildBaselineCohortEntries,
+  buildBaselineDailyEntries,
+  computeCohortSummary,
   createSignedEntitlementToken,
+  formatDailyReceipt,
   generateCohortReceipt,
+  parseCohortSeed,
   verifyCohortReceipt,
   verifyEntitlementToken,
+  type CohortSubmissionRecord,
+  type CohortSummaryMetrics,
+  type DailyLeaderboardEntry,
   type EntitlementTier,
 } from '../billing/cohortAndEntitlement.ts';
 import {
@@ -16,39 +24,20 @@ import {
   type PtbxlIndexManifest,
   type RhythmClass,
 } from '../types/teleward.ts';
-import { ShiftController, runSimulation } from '../engine/aclsEngine.ts';
-import { fnv1a32, getDailySeed, getUtcDateKey, mulberry32 } from '../engine/prng.ts';
+import { ShiftController, TelewardCliValidationError, runSimulation } from '../engine/aclsEngine.ts';
+import { getDailySeed, getUtcDateKey } from '../engine/prng.ts';
+
+export {
+  buildBaselineCohortEntries,
+  buildBaselineDailyEntries,
+  computeCohortSummary,
+  formatDailyReceipt,
+  type CohortSubmissionRecord,
+  type CohortSummaryMetrics,
+  type DailyLeaderboardEntry,
+};
 
 export const runAclsSimulation = runSimulation;
-
-export interface CohortSubmissionRecord {
-  id: string;
-  cohortSeed: string;
-  studentAlias: string;
-  score: number;
-  stabilizedBeds: number;
-  violations: number;
-  receipt: string;
-  submittedAt: string;
-  verified: boolean;
-}
-
-export interface CohortSummaryMetrics {
-  totalSubmissions: number;
-  meanScore: number;
-  fullStabilizationRate: number;
-}
-
-export interface DailyLeaderboardEntry {
-  rank?: number;
-  clinicianAlias: string;
-  dateKey: string;
-  scorePct: number;
-  bedsStabilized: number;
-  violations: number;
-  receipt: string;
-  submittedAt: string;
-}
 
 export interface DailyChallengeSpec {
   dateKey: string;
@@ -72,8 +61,15 @@ export interface TelewardApiOptions {
   indexJsonPath?: string;
 }
 
-const API_COHORT_SEED_REGEX = /^[A-Za-z0-9_-]{2,24}$/;
 const MAX_BODY_BYTES = 64 * 1024;
+
+function safeDecodeUriComponent(raw: string): string | null {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
+}
 
 export function getDailyChallengeSpec(date: Date = new Date()): DailyChallengeSpec {
   const dateKey = getUtcDateKey(date);
@@ -89,68 +85,6 @@ export function getDailyChallengeSpec(date: Date = new Date()): DailyChallengeSp
       caseId: b.caseId,
       initialRhythm: b.vitals.rhythm,
     })),
-  };
-}
-
-export function buildBaselineCohortEntries(cohortSeed: string): CohortSubmissionRecord[] {
-  const rng = mulberry32(fnv1a32(`BASELINE:${cohortSeed}`));
-  const aliases = ['R. Patel, BSN RN', 'J. Kim, EM-R2', 'A. Morales, NRP'];
-  const templates = [
-    { beds: 4, violations: 0, score: 100 },
-    { beds: 4, violations: 1, score: 92 },
-    { beds: 3, violations: 0, score: 75 },
-  ];
-  return aliases.map((alias, idx) => {
-    const tpl = templates[idx]!;
-    const jitterMin = Math.floor(rng() * 25) + 5;
-    const receipt = generateCohortReceipt({
-      cohort: cohortSeed,
-      scorePct: tpl.score,
-      bedsStabilized: tpl.beds,
-      violations: tpl.violations,
-    });
-    return {
-      id: `ref-${cohortSeed}-${idx + 1}`,
-      cohortSeed,
-      studentAlias: alias,
-      score: tpl.score,
-      stabilizedBeds: tpl.beds,
-      violations: tpl.violations,
-      receipt,
-      submittedAt: new Date(Date.UTC(2026, 2, 15, 14, jitterMin, 0)).toISOString(),
-      verified: true,
-    };
-  });
-}
-
-export function buildBaselineDailyEntries(dateKey: string): DailyLeaderboardEntry[] {
-  const templates = [
-    { alias: 'Dr. M. Al-Mansoor (ICU)', scorePct: 100, beds: 4, violations: 0 },
-    { alias: 'C. Lindholm, CCRN', scorePct: 92, beds: 4, violations: 1 },
-    { alias: 'T. Nguyen, Flight Paramedic', scorePct: 84, beds: 4, violations: 2 },
-  ];
-  return templates.map((t, idx) => ({
-    rank: idx + 1,
-    clinicianAlias: t.alias,
-    dateKey,
-    scorePct: t.scorePct,
-    bedsStabilized: t.beds,
-    violations: t.violations,
-    receipt: `TW-DAILY-${dateKey}-${t.scorePct}-${t.beds}B`,
-    submittedAt: `${dateKey}T08:${String(12 + idx * 9).padStart(2, '0')}:00.000Z`,
-  }));
-}
-
-export function computeCohortSummary(roster: readonly CohortSubmissionRecord[]): CohortSummaryMetrics {
-  if (roster.length === 0) {
-    return { totalSubmissions: 0, meanScore: 0, fullStabilizationRate: 0 };
-  }
-  const totalScore = roster.reduce((acc, r) => acc + r.score, 0);
-  const fullStabCount = roster.filter((r) => r.stabilizedBeds === 4).length;
-  return {
-    totalSubmissions: roster.length,
-    meanScore: Math.round(totalScore / roster.length),
-    fullStabilizationRate: Math.round((fullStabCount / roster.length) * 100),
   };
 }
 
@@ -255,7 +189,11 @@ export function createTelewardApiMiddleware(
 
   const getMergedCohortRoster = (cohortSeed: string, store: TelewardStoreData): CohortSubmissionRecord[] => {
     const baseline = buildBaselineCohortEntries(cohortSeed);
-    const custom = store.cohortSubmissions[cohortSeed] ?? [];
+    const custom =
+      Object.hasOwn(store.cohortSubmissions, cohortSeed) &&
+      Array.isArray(store.cohortSubmissions[cohortSeed])
+        ? store.cohortSubmissions[cohortSeed]!
+        : [];
     const combined = [...custom, ...baseline];
     return combined.sort((a, b) => b.score - a.score);
   };
@@ -331,7 +269,15 @@ export function createTelewardApiMiddleware(
         // 3. GET /api/cases/:caseId
         const caseMatch = /^\/api\/cases\/([^/]+)$/.exec(pathname);
         if (method === 'GET' && caseMatch) {
-          const caseId = decodeURIComponent(caseMatch[1]!);
+          const caseId = safeDecodeUriComponent(caseMatch[1]!);
+          if (caseId === null) {
+            sendJson(res, 400, {
+              error: 'INVALID_URI_PARAM',
+              status: 400,
+              detail: 'Malformed URI component in caseId.',
+            });
+            return;
+          }
           const found = getCasesCatalog().find((c) => c.caseId === caseId);
           if (!found) {
             sendJson(res, 404, {
@@ -436,6 +382,18 @@ export function createTelewardApiMiddleware(
             }
           }
 
+          if (
+            atSec !== undefined &&
+            (!Number.isFinite(atSec) || atSec < 0 || atSec > durationRaw)
+          ) {
+            sendJson(res, 400, {
+              error: 'INVALID_AT_SEC',
+              status: 400,
+              detail: `atSec must be between 0 and durationSec (${durationRaw}s).`,
+            });
+            return;
+          }
+
           const transcript = runSimulation({
             scenario: scenarioRaw as RhythmClass,
             intervention,
@@ -450,15 +408,30 @@ export function createTelewardApiMiddleware(
         // 5. GET & POST /api/cohorts/:seed/submissions
         const cohortMatch = /^\/api\/cohorts\/([^/]+)\/submissions$/.exec(pathname);
         if (cohortMatch) {
-          const rawSeed = decodeURIComponent(cohortMatch[1]!).trim();
-          if (!API_COHORT_SEED_REGEX.test(rawSeed)) {
+          const decodedSeed = safeDecodeUriComponent(cohortMatch[1]!);
+          if (decodedSeed === null) {
             sendJson(res, 400, {
-              error: 'INVALID_COHORT_SEED',
+              error: 'INVALID_URI_PARAM',
               status: 400,
-              detail: 'Cohort seed must match /^[A-Za-z0-9_-]{2,24}$/.',
+              detail: 'Malformed URI component in cohort seed.',
             });
             return;
           }
+          const parsedSeed = parseCohortSeed(decodedSeed);
+          if (
+            !parsedSeed.valid ||
+            !parsedSeed.cohort ||
+            parsedSeed.cohort.length < 2 ||
+            parsedSeed.cohort.length > 32
+          ) {
+            sendJson(res, 400, {
+              error: 'INVALID_COHORT_SEED',
+              status: 400,
+              detail: 'Cohort seed must be 2..32 alphanumeric, hyphen, or underscore characters.',
+            });
+            return;
+          }
+          const rawSeed = parsedSeed.cohort.toUpperCase();
 
           const store = readStore(storeFilePath);
 
@@ -546,7 +519,11 @@ export function createTelewardApiMiddleware(
               verified: true,
             };
 
-            const existing = store.cohortSubmissions[rawSeed] ?? [];
+            const existing =
+              Object.hasOwn(store.cohortSubmissions, rawSeed) &&
+              Array.isArray(store.cohortSubmissions[rawSeed])
+                ? store.cohortSubmissions[rawSeed]!
+                : [];
             store.cohortSubmissions[rawSeed] = [submission, ...existing].slice(0, 250);
             writeStore(storeFilePath, store);
 
@@ -604,7 +581,11 @@ export function createTelewardApiMiddleware(
         if (method === 'GET' && pathname === '/api/daily') {
           const spec = getDailyChallengeSpec();
           const store = readStore(storeFilePath);
-          const custom = store.dailySubmissions[spec.dateKey] ?? [];
+          const custom =
+            Object.hasOwn(store.dailySubmissions, spec.dateKey) &&
+            Array.isArray(store.dailySubmissions[spec.dateKey])
+              ? store.dailySubmissions[spec.dateKey]!
+              : [];
           const baseline = buildBaselineDailyEntries(spec.dateKey);
           const leaderboard = [...custom, ...baseline]
             .sort((a, b) => b.scorePct - a.scorePct)
@@ -658,7 +639,7 @@ export function createTelewardApiMiddleware(
           const scorePct = Math.round(scoreRaw);
           const bedsStabilized = Math.max(0, Math.min(4, Math.round(bedsRaw)));
           const violations = Math.max(0, Math.min(15, Math.round(violationsRaw)));
-          const receipt = `TW-DAILY-${spec.dateKey}-${scorePct}-${bedsStabilized}B`;
+          const receipt = formatDailyReceipt(spec.dateKey, scorePct, bedsStabilized);
 
           const entry: DailyLeaderboardEntry = {
             clinicianAlias: aliasRaw,
@@ -671,7 +652,11 @@ export function createTelewardApiMiddleware(
           };
 
           const store = readStore(storeFilePath);
-          const existing = store.dailySubmissions[spec.dateKey] ?? [];
+          const existing =
+            Object.hasOwn(store.dailySubmissions, spec.dateKey) &&
+            Array.isArray(store.dailySubmissions[spec.dateKey])
+              ? store.dailySubmissions[spec.dateKey]!
+              : [];
           store.dailySubmissions[spec.dateKey] = [entry, ...existing].slice(0, 100);
           writeStore(storeFilePath, store);
 
@@ -739,6 +724,14 @@ export function createTelewardApiMiddleware(
           detail: `Unknown API route: ${method} ${pathname}`,
         });
       } catch (err: unknown) {
+        if (err instanceof TelewardCliValidationError) {
+          sendJson(res, 400, {
+            error: err.problem.code ?? 'VALIDATION_ERROR',
+            status: 400,
+            detail: err.problem.detail,
+          });
+          return;
+        }
         const msg = err instanceof Error ? err.message : String(err);
         if (msg === 'PAYLOAD_TOO_LARGE') {
           sendJson(res, 400, {
@@ -759,7 +752,7 @@ export function createTelewardApiMiddleware(
         sendJson(res, 500, {
           error: 'INTERNAL_SERVER_ERROR',
           status: 500,
-          detail: msg,
+          detail: 'An unexpected internal server error occurred.',
         });
       }
     })();
