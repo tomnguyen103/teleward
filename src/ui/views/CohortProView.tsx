@@ -24,6 +24,9 @@ export interface CohortProViewProps {
   onLaunchCohortShift: (cohortSeed: string) => void;
 }
 
+/**
+ * Renders the Cohort Pro workspace with segmented tabs for Cohort Roster, Receipt Verifier, and Pro Access.
+ */
 export function CohortProView(props: CohortProViewProps) {
   const {
     entitlementTier,
@@ -167,7 +170,7 @@ export function CohortProView(props: CohortProViewProps) {
                 aria-selected={activeTab === 'roster'}
                 data-active={activeTab === 'roster' ? 'true' : 'false'}
                 onClick={() => setActiveTab('roster')}
-                class="tw-seg-btn"
+                class={activeTab === 'roster' ? 'tw-seg-btn-active' : 'tw-seg-btn'}
               >
                 Cohort Roster
               </button>
@@ -177,7 +180,7 @@ export function CohortProView(props: CohortProViewProps) {
                 aria-selected={activeTab === 'verifier'}
                 data-active={activeTab === 'verifier' ? 'true' : 'false'}
                 onClick={() => setActiveTab('verifier')}
-                class="tw-seg-btn"
+                class={activeTab === 'verifier' ? 'tw-seg-btn-active' : 'tw-seg-btn'}
               >
                 Receipt Verifier
               </button>
@@ -187,7 +190,7 @@ export function CohortProView(props: CohortProViewProps) {
                 aria-selected={activeTab === 'access'}
                 data-active={activeTab === 'access' ? 'true' : 'false'}
                 onClick={() => setActiveTab('access')}
-                class="tw-seg-btn"
+                class={activeTab === 'access' ? 'tw-seg-btn-active' : 'tw-seg-btn'}
               >
                 Pro Access
               </button>
@@ -225,7 +228,7 @@ export function CohortProView(props: CohortProViewProps) {
                     autocomplete="off"
                     value={cohortInput}
                     onInput={(e) => setCohortInput((e.target as HTMLInputElement).value)}
-                    class="w-full h-10 px-3 rounded border tw-mono-vital text-sm tw-input"
+                    class="w-full h-10 px-3 rounded tw-mono-vital text-sm tw-input"
                   />
                 </div>
 
@@ -247,7 +250,7 @@ export function CohortProView(props: CohortProViewProps) {
                     autocomplete="off"
                     value={studentAlias}
                     onInput={(e) => setStudentAlias((e.target as HTMLInputElement).value)}
-                    class="w-full h-10 px-3 rounded border text-sm tw-input"
+                    class="w-full h-10 px-3 rounded text-sm tw-input"
                   />
                 </div>
 
@@ -345,7 +348,7 @@ export function CohortProView(props: CohortProViewProps) {
                     setVerificationResult(null);
                     setReceiptToVerify((e.target as HTMLInputElement).value);
                   }}
-                  class="w-full h-10 px-3 rounded border tw-mono-vital text-sm tw-input"
+                  class="w-full h-10 px-3 rounded tw-mono-vital text-sm tw-input"
                 />
               </div>
 

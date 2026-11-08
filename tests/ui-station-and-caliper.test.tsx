@@ -217,11 +217,24 @@ describe('Ticket 02: Obsidian ICU Telemetry Cockpit, Unified 64px Header & 2-Bay
       <App initialPath="/caliper/ptbxl-001" preloadedDataset={DATASET} />
     );
     const autofillBtn = getByTestId('autofill-caliper-fiducials-btn');
+    const setQtBtn = getByTestId('set-caliper-qt-btn');
     const qtcField = container.querySelector('#input-qtc-ms') as HTMLInputElement;
+    const calCanvas = getByTestId('caliper-12lead-canvas') as HTMLCanvasElement;
     fireEvent.click(autofillBtn);
     expect(qtcField.value).toBe('894');
     fireEvent.click(autofillBtn);
     expect(qtcField.value).toBe('894');
+
+    // Measure QT = 380 ms (T1 = 240 ms, T2 = 620 ms -> x = 59.52px on 960px 10000ms canvas), click Set QT, then restore T2 = 1040 ms (RR = 800 ms -> x = 99.84px)
+    fireEvent.click(calCanvas, { clientX: 59.52, clientY: 120 });
+    expect(getByTestId('caliper-t2-ms').textContent).toBe('620 ms');
+    fireEvent.click(setQtBtn);
+    fireEvent.click(calCanvas, { clientX: 99.84, clientY: 120 });
+    expect(getByTestId('caliper-t2-ms').textContent).toBe('1040 ms');
+    fireEvent.click(autofillBtn);
+    expect(qtcField.value).toBe('425');
+    fireEvent.click(autofillBtn);
+    expect(qtcField.value).toBe('425');
 
     const sidebar = container.querySelector('#tw-scope-sidebar')!;
     const nsrBtn = Array.from(sidebar.querySelectorAll('button')).find(
@@ -254,6 +267,7 @@ describe('Ticket 02: Obsidian ICU Telemetry Cockpit, Unified 64px Header & 2-Bay
     )!;
     fireEvent.click(standingsTab);
     expect(standingsTab.getAttribute('aria-selected')).toBe('true');
+    expect(standingsTab.classList.contains('tw-seg-btn-active')).toBe(true);
     const lbSection = getDailyTestId('daily-leaderboard-table').closest('section')!;
     expect(lbSection.classList.contains('flex')).toBe(true);
     const wardWrapper = getDailyTestId('bed-card-0').closest('div.hidden, div.block')!;
@@ -277,6 +291,7 @@ describe('Ticket 02: Obsidian ICU Telemetry Cockpit, Unified 64px Header & 2-Bay
     )!;
     fireEvent.click(verifierTab);
     expect(verifierTab.getAttribute('aria-selected')).toBe('true');
+    expect(verifierTab.classList.contains('tw-seg-btn-active')).toBe(true);
     const receiptInput = getCohortTestId('cohort-receipt-input') as HTMLInputElement;
     fireEvent.input(receiptInput, { target: { value: mismatchedReceipt } });
     fireEvent.click(getCohortTestId('verify-cohort-receipt-btn'));

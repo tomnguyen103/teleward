@@ -225,6 +225,9 @@ export async function submitCohortRun(
   };
 }
 
+/**
+ * Verifies a cohort completion receipt against the remote TeleWard API with offline CRC16 fallback.
+ */
 export async function verifyReceiptRemote(
   receipt: string,
   expectedCohort?: string,
@@ -247,7 +250,11 @@ export async function verifyReceiptRemote(
   }
 
   const local = verifyCohortReceipt(receipt);
-  if (expectedCohort && local.cohort && local.cohort !== expectedCohort) {
+  if (
+    expectedCohort &&
+    local.cohort &&
+    local.cohort.toUpperCase() !== expectedCohort.trim().toUpperCase()
+  ) {
     return {
       ...local,
       valid: false,

@@ -85,6 +85,9 @@ export interface CaliperViewProps {
   onGradeUpdate?: (report: CaliperGradeReport | null, record: PtbxlCaseRecord | null) => void;
 }
 
+/**
+ * Renders the 12-lead PTB-XL diagnostic strip caliper view with interactive T1/T2/V1/V2 calipers and interval adjudication.
+ */
 export function CaliperView(props: CaliperViewProps) {
   const {
     dataset,
@@ -416,7 +419,7 @@ export function CaliperView(props: CaliperViewProps) {
           <h1 class="m-0">Diagnostic Strip Calipers</h1>
           <span
             data-testid="active-caliper-case-id"
-            class="tw-mono-vital text-xs px-2 py-0.5 rounded border tw-chip-muted"
+            class="tw-mono-vital text-xs px-2 py-1 rounded tw-chip-muted"
           >
             {resolvedRecord.caseId} · {paperSpeedMmPerSec} mm/s · {gainMmPerMv} mm/mV
           </span>
@@ -538,7 +541,7 @@ export function CaliperView(props: CaliperViewProps) {
           onClick={handlePointerPlotClick}
           width={960}
           height={420}
-          class="w-full rounded border cursor-crosshair tw-border"
+          class="w-full rounded cursor-crosshair tw-canvas-frame"
           style={{ touchAction: 'none' }}
           aria-label={`12-lead ECG strip for ${resolvedRecord.caseId} at ${paperSpeedMmPerSec} mm/s and ${gainMmPerMv} mm/mV`}
         />
@@ -568,6 +571,17 @@ export function CaliperView(props: CaliperViewProps) {
               class="tw-btn-secondary text-sm"
             >
               Set QRS
+            </button>
+            <button
+              type="button"
+              data-testid="set-caliper-qt-btn"
+              onClick={() => {
+                setMeasuredQtMs(Math.round(metrics.deltaMs));
+                setFormError(null);
+              }}
+              class="tw-btn-secondary text-sm"
+            >
+              Set QT
             </button>
             <button
               type="button"
@@ -624,16 +638,7 @@ export function CaliperView(props: CaliperViewProps) {
               inputMode="numeric"
               autocomplete="off"
               value={qtcInput}
-              onInput={(e) => {
-                const rawVal = (e.target as HTMLInputElement).value;
-                setQtcInput(rawVal);
-                const parsedQt = Number(rawVal);
-                setMeasuredQtMs(
-                  rawVal.trim() !== '' && Number.isFinite(parsedQt) && parsedQt > 0
-                    ? parsedQt
-                    : null
-                );
-              }}
+              onInput={(e) => setQtcInput((e.target as HTMLInputElement).value)}
               class="w-full h-10 px-3 rounded tw-mono-vital text-sm tw-input"
             />
           </div>

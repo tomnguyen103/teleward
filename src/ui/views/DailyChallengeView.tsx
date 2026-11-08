@@ -23,6 +23,9 @@ export interface DailyChallengeViewProps {
   shiftResetKey?: string;
 }
 
+/**
+ * Renders the UTC-seeded Daily Telemetry Challenge view with segmented sub-views for Live Ward and Standings.
+ */
 export function DailyChallengeView(props: DailyChallengeViewProps) {
   const utcDateKey = getUtcDateKey();
   const [activeSubView, setActiveSubView] = useState<'ward' | 'standings'>('ward');
@@ -106,7 +109,7 @@ export function DailyChallengeView(props: DailyChallengeViewProps) {
       <section class="tw-surface px-4 py-3 flex flex-wrap items-center justify-between gap-4">
         <div class="flex flex-wrap items-center gap-3">
           <h1 class="m-0">Daily Telemetry Challenge</h1>
-          <span class="tw-mono-vital text-xs px-2 py-0.5 rounded border tw-chip-muted">
+          <span class="tw-mono-vital text-xs px-2 py-1 rounded tw-chip-muted">
             UTC {utcDateKey}
           </span>
           <div class="tw-seg-group" role="tablist" aria-label="Daily Challenge Sub-View">
@@ -116,7 +119,7 @@ export function DailyChallengeView(props: DailyChallengeViewProps) {
               aria-selected={activeSubView === 'ward'}
               data-active={activeSubView === 'ward' ? 'true' : 'false'}
               onClick={() => setActiveSubView('ward')}
-              class="tw-seg-btn"
+              class={activeSubView === 'ward' ? 'tw-seg-btn-active' : 'tw-seg-btn'}
             >
               Live Ward
             </button>
@@ -126,7 +129,7 @@ export function DailyChallengeView(props: DailyChallengeViewProps) {
               aria-selected={activeSubView === 'standings'}
               data-active={activeSubView === 'standings' ? 'true' : 'false'}
               onClick={() => setActiveSubView('standings')}
-              class="tw-seg-btn"
+              class={activeSubView === 'standings' ? 'tw-seg-btn-active' : 'tw-seg-btn'}
             >
               Standings
             </button>
@@ -152,7 +155,7 @@ export function DailyChallengeView(props: DailyChallengeViewProps) {
           </div>
 
           {dailyReceipt ? (
-            <div class="px-3 py-2 rounded border text-sm tw-border">
+            <div class="px-3 py-2 rounded text-sm tw-chip-muted">
               <span>Receipt: </span>
               <strong class="tw-mono-vital">{dailyReceipt}</strong>
             </div>

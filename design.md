@@ -38,7 +38,7 @@ TeleWard is a high-density ICU Central Telemetry Station and 12-lead ECG Caliper
   - Stays mounted in the DOM for instant inspection and test accessibility while sliding over on demand when toggled via the top-bar `Causal Log` button. Holds the **ACLS Causal Timeline & Hemodynamic Receipt** and **PTB-XL Cardiologist Fiducial Ground Truth**.
 
 ## 3. Typography (`30-ui.md` & `impeccable` Craft Floor)
-- **Display & UI Sans (`--font-sans`)**: `'Instrument Sans', 'Segoe UI', system-ui, sans-serif` (banned default hero faces like Inter, Roboto, Space Grotesk, Plus Jakarta Sans, Geist are excluded).
+- **Display & UI Sans (`--font-sans`)**: `'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif` (banned default hero faces like Inter, Roboto, Space Grotesk, Plus Jakarta Sans, Geist, Instrument Sans are excluded).
 - **Data, Vitals & Caliper Monospace (`--font-mono`)**: `'IBM Plex Mono', ui-monospace, monospace` — restricted strictly to ECG intervals (`ms`, `mV`), physiological vital readouts (`HR`, `ABP`, `SpO2`, `EtCO2`, `RR`), `PTB-XL` case IDs, and `TW-...` receipt codes. Never used on navigation labels, buttons, or headings.
 - **Scale & Hierarchy (`>= 1.25x` separation, `font-style: normal` on all headings)**:
   - Page heading (`h1`): `1.5rem` (`24px`), `font-weight: 600`, `letter-spacing: -0.02em`, `line-height: 1.3`.

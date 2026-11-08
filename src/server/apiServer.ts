@@ -162,6 +162,75 @@ function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
   });
 }
 
+/**
+ * Replays a sequence of timestamped ACLS interventions against a deterministic ShiftController to verify submitted shift scores.
+ */
+function verifyActionLogReplay(
+  seed: number | string,
+  actionLog: unknown
+):
+  | { valid: true; scorePct: number; bedsStabilized: number; violations: number }
+  | { valid: false; detail: string } {
+  if (!Array.isArray(actionLog) || actionLog.length > 64) {
+    return {
+      valid: false,
+      detail: 'actionLog must be an array of at most 64 intervention steps.',
+    };
+  }
+  const numericSeed =
+    typeof seed === 'number'
+      ? seed >>> 0
+      : (parseCohortSeed(seed).numericSeed ?? 42) >>> 0;
+  const validInterventionIds = new Set<string>(ACLS_INTERVENTIONS);
+  const controller = new ShiftController(numericSeed);
+
+  let stepIdx = 0;
+  for (const item of actionLog) {
+    stepIdx += 1;
+    if (!item || typeof item !== 'object') {
+      return { valid: false, detail: 'Each actionLog entry must be an object.' };
+    }
+    const entry = item as Record<string, unknown>;
+    const dtSec = typeof entry.dtSec === 'number' ? entry.dtSec : 0;
+    if (!Number.isFinite(dtSec) || dtSec < 0 || dtSec > 300) {
+      return { valid: false, detail: 'actionLog dtSec must be within 0..300 seconds.' };
+    }
+    let remaining = dtSec;
+    while (remaining > 0) {
+      const chunk = Math.min(10, remaining);
+      controller.stepSeconds(chunk);
+      remaining -= chunk;
+    }
+    if (entry.action !== undefined) {
+      const bedIndex = Number(entry.bedIndex ?? 0);
+      const action = String(entry.action);
+      if (
+        !Number.isInteger(bedIndex) ||
+        bedIndex < 0 ||
+        bedIndex > 3 ||
+        !validInterventionIds.has(action)
+      ) {
+        return {
+          valid: false,
+          detail: 'actionLog entry requires bedIndex (0..3) and a valid ACLS intervention id.',
+        };
+      }
+      controller.applyIntervention(bedIndex, action as AclsInterventionId, stepIdx * 1000);
+    }
+  }
+
+  const summary = controller.computeShiftScore();
+  return {
+    valid: true,
+    scorePct: summary.scorePct,
+    bedsStabilized: summary.bedsStabilized,
+    violations: summary.totalViolations,
+  };
+}
+
+/**
+ * Creates the HTTP request handler middleware for all TeleWard /api/* endpoints.
+ */
 export function createTelewardApiMiddleware(
   options?: TelewardApiOptions
 ): (req: IncomingMessage, res: ServerResponse, next?: () => void) => void {
@@ -529,6 +598,26 @@ export function createTelewardApiMiddleware(
             }
 
             const score = Math.round(scoreRaw);
+            if (body.actionLog !== undefined) {
+              const replay = verifyActionLogReplay(rawSeed, body.actionLog);
+              if (
+                !replay.valid ||
+                replay.scorePct !== score ||
+                replay.bedsStabilized !== bedsRaw ||
+                replay.violations !== violationsRaw
+              ) {
+                sendJson(res, 400, {
+                  valid: false,
+                  error: 'INVALID_ACTION_LOG',
+                  status: 400,
+                  detail: !replay.valid
+                    ? replay.detail
+                    : `Action log replay produced score ${replay.scorePct}% (${replay.bedsStabilized} beds, ${replay.violations} violations) instead of ${score}%.`,
+                });
+                return;
+              }
+            }
+
             const expectedReceipt = generateCohortReceipt({
               cohort: rawSeed,
               scorePct: score,
@@ -592,11 +681,15 @@ export function createTelewardApiMiddleware(
           const receiptStr = typeof body.receipt === 'string' ? body.receipt.trim() : '';
           const expectedCohort =
             typeof body.expectedCohort === 'string' && body.expectedCohort.trim() !== ''
-              ? body.expectedCohort.trim()
+              ? body.expectedCohort.trim().toUpperCase()
               : null;
 
           const verified = verifyCohortReceipt(receiptStr);
-          if (expectedCohort && verified.cohort !== expectedCohort) {
+          if (
+            expectedCohort &&
+            verified.cohort &&
+            verified.cohort.toUpperCase() !== expectedCohort
+          ) {
             sendJson(res, 200, {
               ...verified,
               valid: false,
@@ -686,6 +779,26 @@ export function createTelewardApiMiddleware(
           const scorePct = Math.round(scoreRaw);
           const bedsStabilized = Math.max(0, Math.min(4, Math.round(bedsRaw)));
           const violations = Math.max(0, Math.min(15, Math.round(violationsRaw)));
+
+          if (body.actionLog !== undefined) {
+            const replay = verifyActionLogReplay(spec.seed, body.actionLog);
+            if (
+              !replay.valid ||
+              replay.scorePct !== scorePct ||
+              replay.bedsStabilized !== bedsStabilized ||
+              replay.violations !== violations
+            ) {
+              sendJson(res, 400, {
+                valid: false,
+                error: 'INVALID_ACTION_LOG',
+                status: 400,
+                detail: !replay.valid
+                  ? replay.detail
+                  : `Action log replay produced score ${replay.scorePct}% (${replay.bedsStabilized} beds, ${replay.violations} violations) instead of ${scorePct}%.`,
+              });
+              return;
+            }
+          }
           const receipt = formatDailyReceipt(spec.dateKey, scorePct, bedsStabilized);
 
           const entry: DailyLeaderboardEntry = {
