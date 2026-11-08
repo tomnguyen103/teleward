@@ -8,8 +8,10 @@ import hashlib
 import json
 import math
 import os
+import shutil
 import struct
 import sys
+import time
 import zlib
 from pathlib import Path
 
@@ -42,6 +44,7 @@ RECORD_COUNT = 120
 
 
 def mulberry32(seed: int):
+    """Create a deterministic 32-bit PRNG closure seeded with seed."""
     state = seed & 0xFFFFFFFF
 
     def rand() -> float:
@@ -57,12 +60,14 @@ def mulberry32(seed: int):
 
 
 def periodic_gauss(s: int, center: float, width: float, period: float) -> float:
+    """Evaluate a periodic Gaussian kernel wrapped over period samples."""
     half = period * 0.5
     diff = ((s - center + half) % period) - half
     return math.exp(-0.5 * (diff / width) ** 2)
 
 
 def synthesize_12lead_record(rhythm: str, rec_offset: int, seed: int) -> tuple[list[float], dict]:
+    """Synthesize a 12-lead 500 Hz tile and ground-truth fiducials for a rhythm class."""
     rng = mulberry32(seed + rec_offset * 7919)
     spec_map = {row[0]: row for row in RHYTHM_SPECS}
     _, scp_codes, summary, base_hr, base_pr, base_qrs, base_qt, base_st = spec_map[rhythm]
@@ -311,12 +316,14 @@ def synthesize_12lead_record(rhythm: str, rec_offset: int, seed: int) -> tuple[l
 
 
 def reject_if_symlink(path: Path, raw_label: str) -> None:
+    """Exit with code 2 if path is a symbolic link."""
     if path.is_symlink():
         sys.stderr.write(f"ERR_PATH_TRAVERSAL: Symlink rejected for '{raw_label}'\n")
         sys.exit(2)
 
 
 def validate_safe_path(raw_path: str, workspace_root: Path) -> Path:
+    """Resolve raw_path and verify it stays within workspace_root without symlinks."""
     candidate = (workspace_root / raw_path) if not Path(raw_path).is_absolute() else Path(raw_path)
     reject_if_symlink(candidate, raw_path)
     resolved = candidate.resolve()
@@ -326,6 +333,45 @@ def validate_safe_path(raw_path: str, workspace_root: Path) -> Path:
         sys.stderr.write(f"ERR_PATH_TRAVERSAL: Path '{raw_path}' escapes workspace root '{workspace_root}'\n")
         sys.exit(2)
     return resolved
+
+
+def replace_with_retry(src: Path, dst: Path, retries: int = 8, base_delay_sec: float = 0.04) -> None:
+    """
+    Atomically replace dst with src, retrying transient Windows PermissionError
+    (WinError 5 / WinError 32) caused by file watchers or indexers.
+    """
+    if retries < 1:
+        raise ValueError("retries must be >= 1")
+    for attempt in range(retries):
+        try:
+            os.replace(src, dst)
+            return
+        except PermissionError:
+            if attempt + 1 >= retries:
+                raise
+            time.sleep(base_delay_sec * (attempt + 1))
+
+
+def unlink_with_retry(
+    target: Path,
+    retries: int = 5,
+    base_delay_sec: float = 0.02,
+    ignore_final_error: bool = False,
+) -> None:
+    """
+    Remove target if present, retrying transient Windows PermissionError.
+    """
+    max_attempts = max(1, retries)
+    for attempt in range(max_attempts):
+        try:
+            target.unlink(missing_ok=True)
+            return
+        except PermissionError:
+            if attempt + 1 >= max_attempts:
+                if ignore_final_error:
+                    return
+                raise
+            time.sleep(base_delay_sec * (attempt + 1))
 
 
 def load_optional_local_wfdb_metadata(ptbxl_dir: Path, conn: duckdb.DuckDBPyConnection) -> dict[int, tuple[int, int, str]]:
@@ -355,6 +401,7 @@ def load_optional_local_wfdb_metadata(ptbxl_dir: Path, conn: duckdb.DuckDBPyConn
 
 
 def main() -> None:
+    """CLI entrypoint that compiles 120 PTB-XL records into ptbxl_120.bin and ptbxl_index.json."""
     parser = argparse.ArgumentParser(description="Compile 120 curated PhysioNet PTB-XL records into TWEC Float32 binary.")
     parser.add_argument("--out-dir", default="public/data", help="Target directory inside workspace")
     parser.add_argument("--ptbxl-dir", default="public/data/wfdb", help="Optional raw WFDB input directory")
@@ -371,7 +418,7 @@ def main() -> None:
     # Clean up any stale temporary files from interrupted runs (US-01.5)
     for stale in out_dir.glob("*.tmp*"):
         reject_if_symlink(stale, str(stale))
-        stale.unlink(missing_ok=True)
+        unlink_with_retry(stale)
 
     conn = duckdb.connect(":memory:")
     local_wfdb_meta = load_optional_local_wfdb_metadata(_ptbxl_dir, conn)
@@ -508,10 +555,11 @@ def main() -> None:
     pid = os.getpid()
     bin_target = out_dir / "ptbxl_120.bin"
     bin_tmp = out_dir / f"ptbxl_120.bin.tmp.{pid}"
+    bin_bak = out_dir / f"ptbxl_120.bin.tmp.bak.{pid}"
     idx_target = out_dir / "ptbxl_index.json"
     idx_tmp = out_dir / f"ptbxl_index.json.tmp.{pid}"
 
-    for p in (bin_target, bin_tmp, idx_target, idx_tmp):
+    for p in (bin_target, bin_tmp, bin_bak, idx_target, idx_tmp):
         reject_if_symlink(p, str(p))
 
     try:
@@ -526,11 +574,20 @@ def main() -> None:
             f_idx.flush()
             os.fsync(f_idx.fileno())
 
-        os.replace(bin_tmp, bin_target)
-        os.replace(idx_tmp, idx_target)
+        if bin_target.exists():
+            shutil.copy2(bin_target, bin_bak)
+
+        replace_with_retry(bin_tmp, bin_target)
+        try:
+            replace_with_retry(idx_tmp, idx_target)
+        except Exception:
+            if bin_bak.exists():
+                replace_with_retry(bin_bak, bin_target)
+            raise
     finally:
-        bin_tmp.unlink(missing_ok=True)
-        idx_tmp.unlink(missing_ok=True)
+        unlink_with_retry(bin_tmp, ignore_final_error=True)
+        unlink_with_retry(bin_bak, ignore_final_error=True)
+        unlink_with_retry(idx_tmp, ignore_final_error=True)
 
     print(
         json.dumps(

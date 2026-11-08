@@ -179,7 +179,7 @@ describe('US-01: PhysioNet PTB-XL 120-Record Python + DuckDB Binary Compiler & L
     expect(shaAfter).toBe(shaBefore);
   });
 
-  it('US-01.5: cleans up stale .tmp files and succeeds offline when raw WFDB archives are absent', () => {
+  it('US-01.5: cleans up stale .tmp files, retries transient Windows PermissionError on os.replace, and succeeds offline when raw WFDB archives are absent', () => {
     const staleTmp = resolve(DATA_DIR, 'ptbxl_120.bin.tmp.99999');
     writeFileSync(staleTmp, 'partial-corrupt-bytes', 'utf-8');
     expect(existsSync(staleTmp)).toBe(true);
@@ -193,6 +193,61 @@ describe('US-01: PhysioNet PTB-XL 120-Record Python + DuckDB Binary Compiler & L
     const remainingTmp = readdirSync(DATA_DIR).filter((name) => name.includes('.tmp'));
     expect(remainingTmp.length).toBe(0);
     expect(readFileSync(BIN_PATH).byteLength).toBe(7200032);
+
+    // Verify bounded retry/backoff recovers from transient PermissionError and raises when retries are exhausted
+    const retryProbeScript = [
+      'import sys, os',
+      'from pathlib import Path',
+      'sys.path.insert(0, "compiler")',
+      'import compile_ptbxl as c',
+      'calls = []',
+      'orig_replace = os.replace',
+      'orig_unlink = Path.unlink',
+      'try:',
+      '    def flaky_replace(src, dst):',
+      '        calls.append((str(src), str(dst)))',
+      '        if len(calls) < 3:',
+      '            raise PermissionError(5, "Access is denied")',
+      '    os.replace = flaky_replace',
+      '    c.replace_with_retry(Path("a.tmp"), Path("a.bin"), retries=4, base_delay_sec=0.001)',
+      '    assert len(calls) == 3, f"expected 3 calls, got {len(calls)}"',
+      '    def always_locked(src, dst):',
+      '        raise PermissionError(5, "Access is denied")',
+      '    os.replace = always_locked',
+      '    exhausted = False',
+      '    try:',
+      '        c.replace_with_retry(Path("a.tmp"), Path("a.bin"), retries=2, base_delay_sec=0.001)',
+      '    except PermissionError:',
+      '        exhausted = True',
+      '    assert exhausted, "expected PermissionError when retries exhausted"',
+      '    unlink_calls = []',
+      '    def flaky_unlink(self, missing_ok=False):',
+      '        unlink_calls.append(str(self))',
+      '        if len(unlink_calls) < 3:',
+      '            raise PermissionError(5, "Access is denied")',
+      '    Path.unlink = flaky_unlink',
+      '    c.unlink_with_retry(Path("a.tmp"), retries=4, base_delay_sec=0.001)',
+      '    assert len(unlink_calls) == 3, f"expected 3 unlink calls, got {len(unlink_calls)}"',
+      '    def locked_unlink(self, missing_ok=False):',
+      '        raise PermissionError(5, "Access is denied")',
+      '    Path.unlink = locked_unlink',
+      '    unlink_exhausted = False',
+      '    try:',
+      '        c.unlink_with_retry(Path("a.tmp"), retries=2, base_delay_sec=0.001, ignore_final_error=False)',
+      '    except PermissionError:',
+      '        unlink_exhausted = True',
+      '    assert unlink_exhausted, "expected PermissionError when ignore_final_error=False"',
+      '    c.unlink_with_retry(Path("a.tmp"), retries=2, base_delay_sec=0.001, ignore_final_error=True)',
+      'finally:',
+      '    os.replace = orig_replace',
+      '    Path.unlink = orig_unlink',
+      'print("RETRY_OK")',
+    ].join('\n');
+    const probeOut = execFileSync('python', ['-c', retryProbeScript], {
+      cwd: WORKSPACE_ROOT,
+      stdio: 'pipe',
+    }).toString('utf-8');
+    expect(probeOut).toContain('RETRY_OK');
   });
 
   it('US-01.6: rejects path-traversal --out-dir outside the workspace with exit code 2 and ERR_PATH_TRAVERSAL', () => {
